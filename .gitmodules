@@ -1,0 +1,4 @@
+[submodule "3rdParty/picotcp"]
+	path = 3rdParty/picotcp
+	url = ssh://git@bitbucket.hensoldt-cyber.systems:7999/ext/picotcp.git
+	branch = SEOS-330

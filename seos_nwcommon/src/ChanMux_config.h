@@ -2,6 +2,8 @@
  *  WAN/LAN Channel MUX
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
+ *  
+ *  TODO: Get these values at run time from Chanmux. For now it is required for compilation
  */
 
 #pragma once

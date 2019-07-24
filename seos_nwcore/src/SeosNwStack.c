@@ -3,6 +3,8 @@
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  *
+ * As of now supports single application and does not support multithreading.
+ * Multi app support to be added later
  */
 
 #include "SeosNwChanmuxIf.h"
@@ -13,7 +15,7 @@
 #include "pico_stack.h"
 #include "pico_ipv4.h"
 #include "pico_icmp4.h"
-#include "pico_dev_chan_mux_tap.h"
+#include "Seos_pico_dev_chan_mux.h"
 #include "pico_socket.h"
 
 
@@ -122,7 +124,7 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
     if (ev & PICO_SOCK_EV_RD)
     {
        Debug_LOG_TRACE("Read event Rx. for socket =%p\n",s);
-       int len = 4096;
+       int len = PAGE_SIZE;
 
        nwpStack->read = nwpStack->vtable->nw_socket_read(nwpStack->socket,(unsigned char*) NwAppDataPort,len);
        nwpStack->event = 0;
@@ -245,7 +247,7 @@ int NwStackIf_write(int len)
     int bytes_written = 0;
 
     c_write_wait();
-    if(nwpStack->event == PICO_SOCK_EV_WR)
+    if(nwpStack->event & PICO_SOCK_EV_WR)
     {
         bytes_written = nwpStack->vtable->nw_socket_write(nwpStack->socket,(unsigned char*) NwAppDataPort ,len);
         nwpStack->event = 0;
@@ -394,124 +396,18 @@ NwStack_seos_init()
 }
 
 
-//------------------------------------------------------------------------------
-// called by PicoTCP
-
-/*
- *   Function: NwStack_write_data()
- *
- *   Return values:
- *   written bytes = success
- *   0 = failure
- */
+// run() when you instantiate SeosNwStack component  must call this
 int
-NwStack_write_data(
-    void*   buffer,
-    size_t  len)
+Seos_NwStack_init()
 {
-    int written= NwCamkes_chanWriteSyncData(
-                                        buffer,
-                                        len);
-    return written;
-}
+    Debug_LOG_INFO("starting network stack...\n");
+    int ret;
 
+    ret = NwStack_seos_init();  // should never return as this starts pico_stack_tick().
 
-//------------------------------------------------------------------------------
-/*
- *   Function: NwStack_read_data()
- *
- *   Return values:
- *   read bytes = success
- *   0 = nothing to read
- */
-// called by PicoTCP
-int
-NwStack_read_data(
-    void*   buffer,
-    size_t  len)
-{
-    int chan = CHANNEL_NW_STACK_DATA;
-    return (NwCamkes_chanRead(chan, buffer,len));
-}
-
-/*
- *   Function: NwStack_get_mac()
- *
- *   Return values:
- *   0 and gets the mac address filled
- */
-//------------------------------------------------------------------------------
-// called by PicoTCP
-int
-NwStack_get_mac(
-    char*     name,
-    uint8_t*  mac)
-{
-
-    char command[2];
-    char response[8];
-
-    Debug_LOG_INFO("%s\n",__FUNCTION__);
-
-   /* First we send the OPEN and then the GETMAC cmd. This is for proxy which first needs to Open/activate the socket */
-    command[0] = NW_CTRL_CMD_OPEN;
-    command[1] = CHANNEL_NW_STACK_DATA;
-
-    unsigned result = NwCamkes_chanWriteSyncCtrl(
-                              command,
-                              sizeof(command));
-
-   if(result != sizeof(command))
-   {
-     Debug_LOG_INFO("%s could not write OPEN cmd , result = %d\n",__FUNCTION__,result);
-     return -1;
-   }
-
-   /* Read back 2 bytes for OPEN CNF response, is a blocking call */
-
-   size_t read = NwCamkes_chanReadBlocking(CHANNEL_NW_STACK_CTRL,response,2);
-
-   if(read != 2)
-   {
-       Debug_LOG_INFO("%s could not read OPEN CNF response, result = %d\n",__FUNCTION__,result);
-       return -1;
-   }
-   if(response[0] == NW_CTRL_CMD_OPEN_CNF)
-   {
-       // now start reading the mac
-
-        command[0] = NW_CTRL_CMD_GETMAC;
-        command[1] = CHANNEL_NW_STACK_DATA;   // this is required due to proxy
-
-        Debug_LOG_INFO("Sending Get mac cmd: \n");
-
-        unsigned result = NwCamkes_chanWriteSyncCtrl(
-                                   command,
-                                   sizeof(command));
-        if(result != sizeof(command))
-        {
-           Debug_LOG_INFO("%s result = %d\n",__FUNCTION__,result);
-           return -1;
-        }
-       size_t read = NwCamkes_chanReadBlocking(CHANNEL_NW_STACK_CTRL,response,sizeof(response));
-
-        if(read != sizeof(response))
-        {
-           Debug_LOG_INFO("%s read = %d\n",__FUNCTION__,result);
-           return -1;
-        }
-        /* response[1] must contain 0 as this is set by proxy when success */
-        if((NW_CTRL_CMD_GETMAC_CNF == response[0]) && (response[1] == 0))
-        {
-           memcpy(mac,&response[2],6);
-           Debug_LOG_INFO ( "exit %s mac received =%x %x %x %x %x %x \n", __FUNCTION__, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] );
-           const  uint8_t empty[6] = { 0, };
-           if(memcmp(mac,empty,6) ==0)
-           {
-               return -1;    // recvd six 0's from proxy tap for mac. This is not good. Check for tap on proxy !!
-           }
-        }
-
-   }
-  return 0;
+    if(ret<0)  // is possible when proxy does not run with use_tap =1 param. Just print and exit
+    {
+        Debug_LOG_INFO("Network Stack Init() Failed...Exiting NwStack\n");
+    }
+    return 0;
 }

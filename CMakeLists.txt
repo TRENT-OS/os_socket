@@ -6,8 +6,9 @@ add_library(
     ${PROJECT_NAME} STATIC
 
     "seos_nwcore/src/SeosNwStack.c"
-    "seos_nwcore/src/SeosNwChanmuxIf.c"
+    "seos_nwdriver/src/SeosNwChanmuxIf.c"
     "seos_nwcommon/src/SeosNwCommon.c"
+    "seos_nwdriver/src/Seos_pico_dev_chan_mux.c"
 )
 if (ENABLE_LINT)
         set(CMAKE_C_CPPCHECK "cppcheck;--enable=warning;--inline-suppr")
@@ -44,6 +45,7 @@ target_include_directories(${PROJECT_NAME}
     PUBLIC
         "seos_nwcommon/src"
         "seos_nwcore/src/include"
+        "seos_nwdriver/src/include"
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -17,8 +17,7 @@
 #include "pico_icmp4.h"
 #include "Seos_pico_dev_chan_mux.h"
 #include "pico_socket.h"
-
-
+//#include "Seos_socket_Config.h"
 
 
 #define NUM_PING 10
@@ -56,18 +55,28 @@ nw_api_vtable nw_api_if =
 
 };
 
+
+
 // Structure to describe pico
 typedef struct {
 	struct pico_socket *socket;
-    const nw_api_vtable* vtable;
+    const  nw_api_vtable* vtable;
+    const  nw_camkes_glue* pCamkesglu;
 	struct pico_ip4 ip_addr;
 	struct pico_ip4 bind_ip_addr;
+	struct pico_socket *client_socket;
     int listen_port;
     int event;
     int read;
-
 }NwStack;
 
+
+const nw_chanmux_ports_glue* pChanmuxportsglu;
+uint8_t instanceID;   /* So that it can be used across other files */
+
+
+
+static void  *Appdatabuf;
 static NwStack nw;
 static NwStack *nwpStack = NULL;
 
@@ -80,7 +89,12 @@ extern const char* nw_strerror(int e);
 /* TAP IP address */
 static const char* tap_ip_address[]=
  {
-     "192.168.82.91"
+//     "192.168.82.91",
+//     "192.168.82.92"
+
+     "192.168.178.91",
+     "192.168.178.92"
+
  };
 
 static const char* subnet_masks[]=
@@ -92,7 +106,8 @@ static const char* subnet_masks[]=
 
 static const char* gateway_ip[]=
 {
-    "192.168.82.1"
+   // "192.168.82.1"
+        "192.168.178.1"
 };
 
 static const char* cloud_ip[]=
@@ -107,35 +122,99 @@ static const char* cloud_ip[]=
 static void nw_socket_event(uint16_t ev, struct pico_socket *s)
 {
      nwpStack->event = ev;
+  /* begin of client if */
+  if(instanceID  == SEOS_NWSTACK_AS_CLIENT)
+  {
+        if (ev & PICO_SOCK_EV_CONN)
+        {
+            Debug_LOG_INFO("Connection established with server. for socket =%p\n",s);
+        }
 
-    if (ev & PICO_SOCK_EV_CONN)
+        if (ev & PICO_SOCK_EV_RD)
+        {
+                Debug_LOG_TRACE("Read event Rx. for socket =%p\n",s);
+                int len = PAGE_SIZE;
+
+                nwpStack->read = nwpStack->vtable->nw_socket_read(nwpStack->socket,(unsigned char*)pChanmuxportsglu->Appdataport,len);
+                nwpStack->event = 0;
+                Debug_LOG_TRACE("Read data for socket =%p,length=%d,data%s \n",s,nwpStack->read,(char*)pChanmuxportsglu->Appdataport);
+
+                if(nwpStack->read <0)
+                {
+                    Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,strerror(pico_err));
+                    nwpStack->read = -1;
+                }
+                nwpStack->pCamkesglu->e_read_emit();   //e_read_emit();
+        }
+
+
+  }/* end of Client if */
+
+  else /* begin of server */
+  {
+        if (ev & PICO_SOCK_EV_CONN)
+        {
+            char peer[30] = {0};
+            uint32_t ka_val = 0;
+            uint16_t port = 0;
+
+            nwpStack->client_socket = NULL;
+
+            struct pico_ip4 orig = {
+                0
+            };
+
+            int yes = 1;
+            nwpStack->client_socket = nwpStack->vtable->nw_socket_accept(nwpStack->socket,&orig,&port);
+            if(nwpStack->client_socket != NULL )
+            {
+               pico_ipv4_to_string(peer, orig.addr);
+               Debug_LOG_INFO("Connection established with client %s:%d.\n", peer, short_be(port));
+               pico_socket_setoption(nwpStack->client_socket, PICO_TCP_NODELAY, &yes);
+               /* Set keepalive options */
+               ka_val = 5;
+               pico_socket_setoption(nwpStack->client_socket, PICO_SOCKET_OPT_KEEPCNT, &ka_val);
+               ka_val = 30000;
+               pico_socket_setoption(nwpStack->client_socket, PICO_SOCKET_OPT_KEEPIDLE, &ka_val);
+               ka_val = 5000;
+               pico_socket_setoption(nwpStack->client_socket, PICO_SOCKET_OPT_KEEPINTVL, &ka_val);
+               nwpStack->event = 0; //Clear the event finally
+               nwpStack->pCamkesglu->e_conn_emit();
+            }
+           else
+            {
+               Debug_LOG_INFO("%s: error accept-2 of pico socket : %s \n",__FUNCTION__,nw_strerror(pico_err));
+            }
+        }
+
+         if (ev & PICO_SOCK_EV_RD)
+         {
+               Debug_LOG_TRACE("Read from client for socket =%p\n",s);
+               int len = PAGE_SIZE;
+
+               nwpStack->read = nwpStack->vtable->nw_socket_read(nwpStack->client_socket,(unsigned char*)pChanmuxportsglu->Appdataport,len);
+
+               Debug_LOG_TRACE("Read data for socket =%p,length=%d,data%s \n",nwpStack->client_socket,nwpStack->read,(char*)pChanmuxportsglu->Appdataport);
+               nwpStack->event = 0;
+
+               if(nwpStack->read<0)
+               {
+                   Debug_LOG_INFO("%s: error read-2 of pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
+                   nwpStack->read = -1; /* Return -1 to app in case of error */
+               }
+               nwpStack->pCamkesglu->e_read_emit();
+         }
+
+  }   // end of server
+
+
+  if (ev & PICO_SOCK_EV_WR)
     {
-        Debug_LOG_INFO("Connection established with server. for socket =%p\n",s);
+             nwpStack->pCamkesglu->e_write_emit();   // emit to unblock app which is waiting to write
+             Debug_LOG_TRACE("Write event Rx. for socket =%p\n",s);
+             nwpStack->pCamkesglu->e_write_nwstacktick(); // Perform nw stack tick now as we received write event from stack
     }
 
-
-    if (ev & PICO_SOCK_EV_WR)
-    {
-        Debug_LOG_TRACE("Write event Rx. for socket =%p\n",s);
-        e_write_emit();
-        e_write_nwstacktick_emit();   // Perform tick now
-    }
-
-    if (ev & PICO_SOCK_EV_RD)
-    {
-       Debug_LOG_TRACE("Read event Rx. for socket =%p\n",s);
-       int len = PAGE_SIZE;
-
-       nwpStack->read = nwpStack->vtable->nw_socket_read(nwpStack->socket,(unsigned char*) NwAppDataPort,len);
-       nwpStack->event = 0;
-
-       if(read<0)
-       {
-           Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,strerror(pico_err));
-           nwpStack->read = -1;
-       }
-       e_read_emit();
-    }
 
     if (ev & PICO_SOCK_EV_CLOSE)
     {
@@ -187,6 +266,7 @@ int NwStackIf_socket(int domain, int type)
     }
     int yes=1;
     nwpStack->vtable->nw_socket_setoption(nwpStack->socket, PICO_TCP_NODELAY, &yes);
+
     Debug_LOG_INFO("socket address = %p\n",nwpStack->socket);
     return 0;
 }
@@ -246,10 +326,13 @@ int NwStackIf_write(int len)
 {
     int bytes_written = 0;
 
-    c_write_wait();
+    nwpStack->pCamkesglu->c_write_wait(); // wait for wr evnt from pico
+
     if(nwpStack->event & PICO_SOCK_EV_WR)
     {
-        bytes_written = nwpStack->vtable->nw_socket_write(nwpStack->socket,(unsigned char*) NwAppDataPort ,len);
+        bytes_written = nwpStack->vtable->nw_socket_write(nwpStack->socket,(unsigned char*)pChanmuxportsglu->Appdataport ,len);
+
+        Debug_LOG_TRACE(" actual write done =%s, %s\n",__FUNCTION__,(char*)pChanmuxportsglu->Appdataport);
         nwpStack->event = 0;
 
         if(bytes_written < 0)
@@ -271,13 +354,30 @@ int NwStackIf_write(int len)
  */
 int NwStackIf_bind(uint16_t port)
 {
-    int bind = nwpStack->vtable->nw_socket_bind(nwpStack->socket,&nwpStack->ip_addr,&port);
-
-    if(bind <0)
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
-       Debug_LOG_INFO("%s: error binding to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
+       int bind = nwpStack->vtable->nw_socket_bind(nwpStack->socket,&nwpStack->ip_addr,&port);
+
+       if(bind <0)
+       {
+           Debug_LOG_INFO("%s: error binding to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
+       }
+       return bind;
     }
-    return bind;
+    else
+    {
+        struct pico_ip4 ZERO_IP4 = { 0 };
+        nwpStack->bind_ip_addr = ZERO_IP4;
+        port = short_be(5555);
+
+        int bind = nwpStack->vtable->nw_socket_bind(nwpStack->socket,&nwpStack->bind_ip_addr,&port);
+        if(bind <0)
+        {
+            Debug_LOG_INFO("%s: error binding-2 to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
+        }
+        return bind;
+
+    }
 }
 
 
@@ -306,23 +406,33 @@ int NwStackIf_listen(int backlog)
  *   Return values:
  *   0 = success
  *  -1 = failure
+ *   For server wait on accept until client connects
+ *   Not much useful for client as we cannot accept incoming connections
  */
 int NwStackIf_accept(uint16_t port)
 {
-    struct pico_ip4 origin = {0};
-    struct pico_socket *sock_client = {0};
-    char peer[30] = {0};
-
-    sock_client = nwpStack->vtable->nw_socket_accept(nwpStack->socket,&origin,&port);
-
-    if(sock_client != NULL)
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT )
     {
-        pico_ipv4_to_string(peer, origin.addr);
-        Debug_LOG_INFO("Connection established with %s:%d\n",peer,short_be(port));
+        struct pico_ip4 origin = {0};
+        struct pico_socket *sock_client = {0};
+        char peer[30] = {0};
+
+        sock_client = nwpStack->vtable->nw_socket_accept(nwpStack->socket,&origin,&port);
+
+        if(sock_client != NULL)
+        {
+            pico_ipv4_to_string(peer, origin.addr);
+            Debug_LOG_INFO("Connection established with %s:%d\n",peer,short_be(port));
+            return 0;
+        }
+        Debug_LOG_INFO("%s: error accept of pico socket : %s \n",__FUNCTION__,nw_strerror(pico_err));
+        return -1;
+    }
+    else
+    {
+        nwpStack->pCamkesglu->c_conn_wait();              //for server wait for pico event
         return 0;
     }
-    Debug_LOG_INFO("%s: error accept of pico socket : %s \n",__FUNCTION__,nw_strerror(pico_err));
-    return -1;
 }
 
 /*
@@ -335,9 +445,18 @@ int NwStackIf_accept(uint16_t port)
 
 int NwStackIf_read(int len)
 {
-    c_read_wait();
+
+    nwpStack->pCamkesglu->c_read_wait();  // wait for rd event from pico
 
     return nwpStack->read;
+}
+
+
+
+void NwStackIf_App_init(char* nwAppPort)
+{
+    Appdatabuf = (void*) nwAppPort;
+
 }
 
 
@@ -352,8 +471,14 @@ NwStack_seos_init()
 
     pico_stack_init();  //init nw stack = pico
 
-
-    dev = pico_chan_mux_tap_create("tap0");   //create tap0 device
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    {
+        dev = pico_chan_mux_tap_create("tap0");   //create tap0 device
+    }
+    else
+    {
+        dev = pico_chan_mux_tap_create("tap1");   //create tap1 device
+    }
 
     if (!dev)
     {
@@ -364,7 +489,15 @@ NwStack_seos_init()
 
 
     /* assign the IP address to the tap interface */
-     pico_string_to_ipv4(tap_ip_address[0], &ipaddr.addr);
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+     {
+        pico_string_to_ipv4(tap_ip_address[0], &ipaddr.addr);
+     }
+    else
+     {
+        pico_string_to_ipv4(tap_ip_address[1], &ipaddr.addr);
+     }
+
      pico_string_to_ipv4(subnet_masks[0], &netmask.addr);
      pico_ipv4_link_add(dev, ipaddr, netmask);
 
@@ -382,26 +515,54 @@ NwStack_seos_init()
      gateway = pico_ipv4_route_get_gateway(&dst);
      Debug_LOG_INFO("gateway address dst =%x and route =%d\n",gateway.addr,route);
 
-     nwpStack = &nw;
      nwpStack->ip_addr= ipaddr;
      nwpStack->vtable = &nw_api_if;
 
-     e_initdone_emit();    // Inform Pico App which is waiting and it can now start
+     nwpStack->pCamkesglu->e_initdone();
 
      for(;;)
     {
-        c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
+
+        nwpStack->pCamkesglu->c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
         pico_stack_tick();
     }
 }
 
 
+
 // run() when you instantiate SeosNwStack component  must call this
 int
-Seos_NwStack_init()
+Seos_NwStack_init(int instance, nw_camkes_glue *pNwCamkes, nw_chanmux_ports_glue *dataportglu)
 {
-    Debug_LOG_INFO("starting network stack...\n");
     int ret;
+    nwpStack = &nw;
+    Debug_LOG_TRACE("init nwpStack value = %p\n",nwpStack);
+    if(pNwCamkes != NULL)
+    {
+        nwpStack->pCamkesglu = pNwCamkes;
+
+        pChanmuxportsglu = dataportglu;
+
+        if(instance == 0)
+        {
+            instanceID = SEOS_NWSTACK_AS_CLIENT;
+        }
+        else if (instance == 1)
+        {
+            instanceID = SEOS_NWSTACK_AS_SERVER;
+        }
+        else
+        {
+            Debug_LOG_INFO("Wrong Instance ID passed. NwStackinit() failed %d\n ", instance);
+            return -1;
+        }
+
+    }
+    else
+    {
+        return -1;
+    }
+   /* Configure stack as client or server */
 
     ret = NwStack_seos_init();  // should never return as this starts pico_stack_tick().
 

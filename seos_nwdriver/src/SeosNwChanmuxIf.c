@@ -11,7 +11,8 @@
 #include "LibDebug/Debug.h"
 #include <stdint.h>
 #include <stddef.h>
-
+extern uint8_t instanceID;
+extern nw_chanmux_ports_glue* pChanmuxportsglu;
 
 /* Function to send ctrl cmds.
  *
@@ -24,12 +25,27 @@ NwChanmux_chanWriteSyncCtrl(
         size_t        len)
 {
     size_t written = 0;
+    void * ctrlwrbuf;
+    unsigned int chan;
+
+
+    ctrlwrbuf = pChanmuxportsglu->ChanMuxCtrlPort;
+
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    {
+       chan = CHANNEL_NW_STACK_CTRL;
+    }
+    else
+    {
+       chan = CHANNEL_NW_STACK_CTRL_2;
+    }
 
     len = len < PAGE_SIZE ? len : PAGE_SIZE;
     // copy in the ctrl dataport
-    memcpy(chanMuxCtrlDataPort, buf,len);
+    memcpy(ctrlwrbuf, buf,len);
+
     // tell the other side how much data we want to send and in which channel
-    seos_err_t err = ChanMux_write(CHANNEL_NW_STACK_CTRL, len, &written);
+    seos_err_t err = ChanMux_write(chan,len, &written);
     Debug_ASSERT_PRINTFLN(!err, "seos err %d", err);
 
     return written;
@@ -48,14 +64,29 @@ NwChanmux_chanWriteSyncData(
     size_t written = 0;
     size_t remain_len = len;
     size_t w_size=0;
+    void * datawrbuf;
+    unsigned int chan;
+
+    datawrbuf = pChanmuxportsglu->ChanMuxDataPort;
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    {
+
+       chan = CHANNEL_NW_STACK_DATA;
+
+    }
+    else
+    {
+       chan = CHANNEL_NW_STACK_DATA_2;
+    }
+
 
     while(len > 0)    // loop to send all data if > PAGE_SIZE = 4096
     {
         len = len < PAGE_SIZE ? len : PAGE_SIZE;
         // copy in the normal dataport
-        memcpy(chanMuxDataPort, buf+w_size, len);
+        memcpy(datawrbuf, buf+w_size, len);
         // tell the other side how much data we want to send and in which channel
-        seos_err_t err = ChanMux_write(CHANNEL_NW_STACK_DATA, len, &written);
+        seos_err_t err = ChanMux_write(chan, len, &written);
         Debug_ASSERT_PRINTFLN(!err, "seos err %d", err);
         w_size=+written;
         len=remain_len-w_size;
@@ -77,18 +108,37 @@ NwChanmux_chanRead(
     size_t read = 0;
     seos_err_t err = ChanMux_read(chan, len, &read);
     Debug_ASSERT_PRINTFLN(!err, "seos err %d", err);
+    void *chanctrlport = pChanmuxportsglu->ChanMuxCtrlPort;
+
+    void *chandataport = pChanmuxportsglu->ChanMuxDataPort;
 
     if (read)
     {
-       // Debug_ASSERT(read <= len);
-        if(chan ==CHANNEL_NW_STACK_DATA)
-        {
-            memcpy(buf, chanMuxDataPort, read);
-        }
-        else   // it is control data
-        {
-            memcpy(buf, chanMuxCtrlDataPort, read);
-        }
+       if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+       {
+          // Debug_ASSERT(read <= len);
+           if(chan ==CHANNEL_NW_STACK_DATA)
+           {
+               memcpy(buf, chandataport, read);
+           }
+           else   // it is control data
+           {
+               memcpy(buf, chanctrlport, read);
+           }
+       }
+
+       else
+       {
+           if(chan ==CHANNEL_NW_STACK_DATA_2)
+           {
+               memcpy(buf, chandataport, read);
+           }
+           else   // it is control data
+           {
+               memcpy(buf, chanctrlport, read);
+           }
+       }
+
     }
     return read;
 }
@@ -110,7 +160,15 @@ NwChanmux_chanReadBlocking (
                                len - lenRead);
         if (0 == read)
         {
-            c_nwstacktick_wait();
+           /* if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+            {
+                c_nwstacktick_wait();
+            }
+            else
+            {
+                c_nwstacktick_2_wait();
+            }*/
+            ;
         }
         else
         {
@@ -157,7 +215,16 @@ NwChanmux_read_data(
     void*   buffer,
     size_t  len)
 {
-    int chan = CHANNEL_NW_STACK_DATA;
+    unsigned int chan;
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+     {
+        chan = CHANNEL_NW_STACK_DATA;
+     }
+    else
+    {
+        chan = CHANNEL_NW_STACK_DATA_2;
+    }
+
     return (NwChanmux_chanRead(chan, buffer,len));
 }
 
@@ -178,12 +245,23 @@ NwChanmux_get_mac(
 
     char command[2];
     char response[8];
+    uint8_t datachan, ctrlchan;
 
     Debug_LOG_INFO("%s\n",__FUNCTION__);
+    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    {
+        datachan = CHANNEL_NW_STACK_DATA;
+        ctrlchan = CHANNEL_NW_STACK_CTRL;
+    }
+    else
+    {
+        datachan = CHANNEL_NW_STACK_DATA_2;
+        ctrlchan = CHANNEL_NW_STACK_CTRL_2;
+    }
 
    /* First we send the OPEN and then the GETMAC cmd. This is for proxy which first needs to Open/activate the socket */
     command[0] = NW_CTRL_CMD_OPEN;
-    command[1] = CHANNEL_NW_STACK_DATA;
+    command[1] = datachan;
 
     unsigned result = NwChanmux_chanWriteSyncCtrl(
                               command,
@@ -195,9 +273,9 @@ NwChanmux_get_mac(
      return -1;
    }
 
-   /* Read back 2 bytes for OPEN CNF response, is a blocking call */
+   /* Read back 2 bytes for OPEN CNF response, is a blocking call. Only 2 bytes required here, for mac it is 8 bytes */
 
-   size_t read = NwChanmux_chanReadBlocking(CHANNEL_NW_STACK_CTRL,response,2);
+   size_t read = NwChanmux_chanReadBlocking(ctrlchan,response,2);
 
    if(read != 2)
    {
@@ -209,7 +287,7 @@ NwChanmux_get_mac(
        // now start reading the mac
 
         command[0] = NW_CTRL_CMD_GETMAC;
-        command[1] = CHANNEL_NW_STACK_DATA;   // this is required due to proxy
+        command[1] = datachan;   // this is required due to proxy
 
         Debug_LOG_INFO("Sending Get mac cmd: \n");
 
@@ -221,7 +299,9 @@ NwChanmux_get_mac(
            Debug_LOG_INFO("%s result = %d\n",__FUNCTION__,result);
            return -1;
         }
-       size_t read = NwChanmux_chanReadBlocking(CHANNEL_NW_STACK_CTRL,response,sizeof(response));
+        size_t read = NwChanmux_chanReadBlocking(
+                             ctrlchan,response,
+                             sizeof(response));
 
         if(read != sizeof(response))
         {

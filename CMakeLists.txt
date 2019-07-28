@@ -15,6 +15,14 @@ if (ENABLE_LINT)
         set(CMAKE_C_CLANG_TIDY "clang-tidy;-checks=*")
 endif()
 
+
+#list(APPEND PRIVATE_TARGET_COMPILE_DEFINITIONS
+#        "SEOS_NWSTACK_INSTANCE_2"
+#    )
+
+#target_compile_definitions(${PROJECT_NAME} PUBLIC SEOS_NWSTACK_INSTANCE_2=1)
+        
+
 target_compile_options(${PROJECT_NAME}
     PUBLIC
         -Wall
@@ -34,6 +42,7 @@ if (MEMORY_CONFIG_H_FILE)
 endif()
 
 
+
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC
         ${PUBLIC_TARGET_COMPILE_DEFINITIONS}
@@ -46,6 +55,7 @@ target_include_directories(${PROJECT_NAME}
         "seos_nwcommon/src"
         "seos_nwcore/src/include"
         "seos_nwdriver/src/include"
+        "configs"
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -11,8 +11,7 @@
 #include "LibDebug/Debug.h"
 #include <stdint.h>
 #include <stddef.h>
-extern uint8_t instanceID;
-extern nw_chanmux_ports_glue* pChanmuxportsglu;
+extern Seos_nw_camkes_info *pnw_camkes;
 
 /* Function to send ctrl cmds.
  *
@@ -29,9 +28,9 @@ NwChanmux_chanWriteSyncCtrl(
     unsigned int chan;
 
 
-    ctrlwrbuf = pChanmuxportsglu->ChanMuxCtrlPort;
+    ctrlwrbuf = pnw_camkes->pportsglu->ChanMuxCtrlPort;
 
-    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
        chan = CHANNEL_NW_STACK_CTRL;
     }
@@ -67,8 +66,8 @@ NwChanmux_chanWriteSyncData(
     void * datawrbuf;
     unsigned int chan;
 
-    datawrbuf = pChanmuxportsglu->ChanMuxDataPort;
-    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    datawrbuf = pnw_camkes->pportsglu->ChanMuxDataPort;
+    if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
 
        chan = CHANNEL_NW_STACK_DATA;
@@ -78,7 +77,6 @@ NwChanmux_chanWriteSyncData(
     {
        chan = CHANNEL_NW_STACK_DATA_2;
     }
-
 
     while(len > 0)    // loop to send all data if > PAGE_SIZE = 4096
     {
@@ -108,13 +106,13 @@ NwChanmux_chanRead(
     size_t read = 0;
     seos_err_t err = ChanMux_read(chan, len, &read);
     Debug_ASSERT_PRINTFLN(!err, "seos err %d", err);
-    void *chanctrlport = pChanmuxportsglu->ChanMuxCtrlPort;
 
-    void *chandataport = pChanmuxportsglu->ChanMuxDataPort;
+    void *chanctrlport = pnw_camkes->pportsglu->ChanMuxCtrlPort;
+    void *chandataport = pnw_camkes->pportsglu->ChanMuxDataPort;
 
     if (read)
     {
-       if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+       if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
        {
           // Debug_ASSERT(read <= len);
            if(chan ==CHANNEL_NW_STACK_DATA)
@@ -160,15 +158,7 @@ NwChanmux_chanReadBlocking (
                                len - lenRead);
         if (0 == read)
         {
-           /* if(instanceID == SEOS_NWSTACK_AS_CLIENT)
-            {
-                c_nwstacktick_wait();
-            }
-            else
-            {
-                c_nwstacktick_2_wait();
-            }*/
-            ;
+            ; // do nothing
         }
         else
         {
@@ -216,7 +206,7 @@ NwChanmux_read_data(
     size_t  len)
 {
     unsigned int chan;
-    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
      {
         chan = CHANNEL_NW_STACK_DATA;
      }
@@ -248,7 +238,7 @@ NwChanmux_get_mac(
     uint8_t datachan, ctrlchan;
 
     Debug_LOG_INFO("%s\n",__FUNCTION__);
-    if(instanceID == SEOS_NWSTACK_AS_CLIENT)
+    if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
         datachan = CHANNEL_NW_STACK_DATA;
         ctrlchan = CHANNEL_NW_STACK_CTRL;

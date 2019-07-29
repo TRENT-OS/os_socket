@@ -9,13 +9,6 @@
 #include <stddef.h>
 #include <limits.h>
 
- enum
-{
-     SEOS_NWSTACK_AS_CLIENT ,   //0
-     SEOS_NWSTACK_AS_SERVER ,   // 1
-     SEOS_NONE
-};
-
 /* Map cmds with uart as this is used by proxy */
 
 typedef enum
@@ -49,6 +42,7 @@ typedef enum
     }
 
 /* Camkes external components for both nwstack instances */
+#if 0
 extern void* NwAppDataPort;
 extern void* NwAppDataPort_2;
 
@@ -90,7 +84,7 @@ extern int c_nwstacktick_2_wait();
 /* inform app after nw stack is initialised */
 extern int e_initdone_emit();
 extern int e_initdone_2_emit();
-
+#endif
 /* Write and read to/from  chanmux buffer */
 extern int ChanMux_write();
 extern int ChanMux_read();

@@ -9,10 +9,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-int
-NwStack_seos_init(void);
-
-
 enum
 {
     SEOS_NWSTACK_AS_CLIENT ,   //0
@@ -33,6 +29,7 @@ typedef struct _nw_camkes_glue_t
     void (*e_write_nwstacktick)(); // tick nw stack when there is write event
     void (*c_nwstacktick_wait)();
     void (*e_initdone)();          // inform app after nw stack is initialised
+    void (*c_initdone)();
 }nw_camkes_signal_glue;
 
 
@@ -59,19 +56,3 @@ extern int
 Seos_NwStack_init(Seos_nw_camkes_info *p);
 
 extern void Seos_NwStack_App_init(void * nwAppDataPort);
-
-/*
-extern int NwStackIf_socket(int domain, int type);
-extern int NwStackIf_close();
-extern int NwStackIf_connect(const char* name, int port);
-extern int NwStackIf_write(int len);
-extern int NwStackIf_bind(uint16_t port);
-extern int NwStackIf_listen(int backlog);
-extern int NwStackIf_accept(uint16_t port);
-extern int NwStackIf_read(int len);
-*/
-
-
-
-
-

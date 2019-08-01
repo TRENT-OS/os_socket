@@ -4,7 +4,8 @@
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  *
  * As of now supports single application and does not support multithreading.
- * Multi app support to be added later
+ *
+ * Multi app support to be done later
  */
 
 #include "SeosNwChanmuxIf.h"
@@ -12,30 +13,13 @@
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
 #include "seos_socket.h"
-#include "pico_stack.h"
-#include "pico_ipv4.h"
-#include "pico_icmp4.h"
 #include "Seos_pico_dev_chan_mux.h"
-#include "pico_socket.h"
+
 
 
 #define NUM_PING 10
 
 static void nw_socket_event(uint16_t ev, struct pico_socket *s);
-
-/* Nw Api to implement */
-typedef struct _nw_api_vtable_t
-{
-    struct pico_socket * (*nw_socket_open)(uint16_t net, uint16_t proto,void (*wakeup)(uint16_t ev, struct pico_socket *s));
-    int (*nw_socket_read)(struct pico_socket *s, void *buf, int len);
-    int (*nw_socket_write)(struct pico_socket *s, const void *buf, int len);
-    int (*nw_socket_connect)(struct pico_socket *s, const void *srv_addr, uint16_t remote_port);
-    int (*nw_socket_bind)(struct pico_socket *s, void *local_addr, uint16_t *port);
-    int (*nw_socket_listen)(struct pico_socket *s, int backlog);
-    struct pico_socket* (*nw_socket_accept)(struct pico_socket *s, void *orig,uint16_t *local_port);
-    int (*nw_socket_close)(struct pico_socket *s);
-    int (*nw_socket_setoption)(struct pico_socket *s, int option, void *value);
-}nw_api_vtable;
 
 
 
@@ -54,26 +38,13 @@ nw_api_vtable nw_api_if =
 
 };
 
-// Structure to describe pico nw stack
-typedef struct _SeosNwstack_t{
-    struct pico_socket *socket;
-    const  nw_api_vtable* vtable;
-    struct pico_ip4 ip_addr;
-    struct pico_ip4 bind_ip_addr;
-    struct pico_socket *client_socket;
-    int listen_port;
-    int event;
-    int read;
-}SeosNwstack;
-
+/* As of now it is only one app or socket per Nw stack. Hence a global variable can be used
+ *  which represents the Nw Stack*/
 
 static SeosNwstack seos_nw;
 static SeosNwstack *pseos_nw = NULL;
+static SeosNwstack **ppseos_nw = NULL ;
 Seos_nw_camkes_info *pnw_camkes;
-
-
-/* To be removed later once Debug Log has support for error handling */
-extern const char* nw_strerror(int e);
 
 
 /* TAP IP address */
@@ -126,7 +97,7 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
 
              if(pseos_nw->read <0)
              {
-                 Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,strerror(pico_err));
+                 Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
                  pseos_nw->read = -1;
              }
              pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
@@ -164,12 +135,12 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
                ka_val = 5000;
                pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPINTVL, &ka_val);
                pseos_nw->event = 0; //Clear the event finally
-               pnw_camkes->pCamkesglue->e_conn_emit();
             }
            else
             {
                Debug_LOG_INFO("%s: error accept-2 of pico socket : %s \n",__FUNCTION__,nw_strerror(pico_err));
             }
+            pnw_camkes->pCamkesglue->e_conn_emit();
         }
 
          if (ev & PICO_SOCK_EV_RD)
@@ -228,7 +199,7 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
  *   false = failure
  */
 
-int seos_nw_if_socket(int domain, int type)
+seos_err_t seos_nw_if_socket(int domain, int type)
 {
 
     if (domain == AF_INET6)
@@ -246,13 +217,24 @@ int seos_nw_if_socket(int domain, int type)
     if(pseos_nw->socket == NULL)
     {
         Debug_LOG_INFO("error opening socket %s:%s\n", __FUNCTION__,nw_strerror(pico_err));
-        return -1;
+        return SEOS_ERROR_GENERIC;;
     }
     int yes=1;
     pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &yes);
 
     Debug_LOG_INFO("socket address = %p\n",pseos_nw->socket);
-    return 0;
+
+    for(int i=0;i<SEOS_MAX_NO_NW_THREADS;i++)  // For now it is just 1 app support, handle will be 0 and this code is not much useful.
+    {
+        if(ppseos_nw[i] != NULL)
+        {
+            pseos_nw->in_use =1;
+            pseos_nw->socket_fd =i;
+        }
+        else
+            return SEOS_ERROR_GENERIC;
+    }
+    return pseos_nw->socket_fd;
 }
 
 
@@ -262,16 +244,19 @@ int seos_nw_if_socket(int domain, int type)
  *   Return values:
  *   0 = success
  *  -1 = failure
+ *   handle = not used as of now
  */
-int seos_nw_if_close()
+seos_err_t seos_nw_if_close(int handle)
 {
     int close = pseos_nw->vtable->nw_socket_close(pseos_nw->socket);
 
     if(close <0)
     {
         Debug_LOG_INFO("%s: error closing pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
+        return SEOS_ERROR_GENERIC;
+
     }
-    return close;
+    return SEOS_SUCCESS;
 }
 
 /*
@@ -281,7 +266,7 @@ int seos_nw_if_close()
  *   0 = success
  *  -1 = failure
  */
-int seos_nw_if_connect(const char* name, int port)
+seos_err_t seos_nw_if_connect(int handle,const char* name, int port)
 {
     struct pico_ip4 dst;
     uint16_t send_port = short_be(port);
@@ -293,8 +278,9 @@ int seos_nw_if_connect(const char* name, int port)
     if(connect <0)
     {
         Debug_LOG_INFO("%s: error connecting to %s: %u : %s \n", __FUNCTION__, name, short_be(send_port), nw_strerror(pico_err));
+        return SEOS_ERROR_GENERIC;
     }
-    return connect;
+    return SEOS_SUCCESS;
 }
 
 
@@ -305,7 +291,7 @@ int seos_nw_if_connect(const char* name, int port)
  *   no of written bytes = success
  *  -1 = failure
  */
-int seos_nw_if_write(int len)
+seos_err_t seos_nw_if_write(int handle, int len)
 {
     int bytes_written = 0;
 
@@ -326,7 +312,7 @@ int seos_nw_if_write(int len)
     if(bytes_written < 0)
     {
         Debug_LOG_INFO("%s: error writing to pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
-        return -1;
+        return SEOS_ERROR_GENERIC;
     }
 
    return bytes_written;
@@ -340,7 +326,7 @@ int seos_nw_if_write(int len)
  *  -1 = failure
  *  Only useful when server
  */
-int seos_nw_if_bind(uint16_t port)
+seos_err_t seos_nw_if_bind(int handle,uint16_t port)
 {
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
@@ -348,10 +334,11 @@ int seos_nw_if_bind(uint16_t port)
 
     int bind = pseos_nw->vtable->nw_socket_bind(pseos_nw->socket,&pseos_nw->bind_ip_addr,&port);
     if(bind <0)
-        {
-            Debug_LOG_INFO("%s: error binding-2 to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
-        }
-    return bind;
+    {
+        Debug_LOG_INFO("%s: error binding-2 to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
+        return SEOS_ERROR_GENERIC;
+    }
+    return SEOS_SUCCESS;
 }
 
 
@@ -362,15 +349,16 @@ int seos_nw_if_bind(uint16_t port)
  *   0 = success
  *  -1 = failure
  */
-int seos_nw_if_listen(int backlog)
+seos_err_t seos_nw_if_listen(int handle, int backlog)
 {
     int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket,backlog);
 
     if(listen <0)
     {
         Debug_LOG_INFO("%s: error listen to pico socket: %s \n",__FUNCTION__,nw_strerror(pico_err));
+        return SEOS_ERROR_GENERIC;
     }
-    return listen;
+    return SEOS_SUCCESS;
 }
 
 
@@ -383,7 +371,7 @@ int seos_nw_if_listen(int backlog)
  *   For server wait on accept until client connects
  *   Not much useful for client as we cannot accept incoming connections
  */
-int seos_nw_if_accept(uint16_t port)
+seos_err_t seos_nw_if_accept(int handle, uint16_t port)
 {
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT )
     {
@@ -397,16 +385,19 @@ int seos_nw_if_accept(uint16_t port)
         {
             pico_ipv4_to_string(peer, origin.addr);
             Debug_LOG_INFO("Connection established with %s:%d\n",peer,short_be(port));
-            return 0;
+            return SEOS_SUCCESS;
         }
         Debug_LOG_INFO("%s: error accept of pico socket : %s \n",__FUNCTION__,nw_strerror(pico_err));
-        return -1;
+        return SEOS_ERROR_GENERIC;
     }
 
     else
     {
         pnw_camkes->pCamkesglue->c_conn_wait();              //for server wait for pico event
-        return 0;
+        if(pseos_nw->client_socket != NULL )
+        return SEOS_SUCCESS;
+        else
+        return SEOS_ERROR_GENERIC;
     }
 }
 
@@ -418,10 +409,14 @@ int seos_nw_if_accept(uint16_t port)
  *   Is a blocking call. Wait until we get a read event from Stack
  */
 
-int seos_nw_if_read(int len)
+seos_err_t seos_nw_if_read(int handle,int len)
 {
 
     pnw_camkes->pCamkesglue->c_read_wait();  // wait for rd event from pico
+    if(pseos_nw->read < 0)
+    {
+        return SEOS_ERROR_GENERIC;
+    }
 
     return pseos_nw->read;
 }
@@ -433,8 +428,8 @@ void seos_nw_if_init()
 
 //------------------------------------------------------------------------------
 // called by NwStack CAmkES wrapper
-int
-seos_nw_init()
+seos_err_t
+seos_nw_init(void)
 {
     struct pico_ip4 ipaddr, netmask;
     struct pico_device* dev;
@@ -456,7 +451,7 @@ seos_nw_init()
     if (!dev)
     {
         Debug_LOG_INFO("Error creating tap dev %s\n",__FUNCTION__);
-        return -1;
+        return SEOS_ERROR_GENERIC;
     }
 
      pico_string_to_ipv4(subnet_masks[0], &netmask.addr);
@@ -478,6 +473,7 @@ seos_nw_init()
 
      pseos_nw->ip_addr= ipaddr;
      pseos_nw->vtable = &nw_api_if;
+     pseos_nw->in_use = 1;             // Required for multi threading
 
      pnw_camkes->pCamkesglue->e_initdone();  // inform app after nw stack is initialised
 
@@ -486,16 +482,19 @@ seos_nw_init()
         pnw_camkes->pCamkesglue->c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
         pico_stack_tick();
     }
+     return SEOS_ERROR_GENERIC;     // should not reach here as the stack needs to keep ticking
 }
 
 
 
 // run() when you instantiate SeosNwStack component  must call this
-int
+seos_err_t
 Seos_NwStack_init(Seos_nw_camkes_info *nw_camkes_info)
 {
     int ret;
-    pseos_nw = &seos_nw;
+    pseos_nw  = &seos_nw;
+    ppseos_nw = &pseos_nw;  // for now we have only one socket per app and hence use 0.
+
     Debug_LOG_TRACE("init pseos_nw value = %p\n",pseos_nw);
     if(nw_camkes_info != NULL)
     {
@@ -504,7 +503,7 @@ Seos_NwStack_init(Seos_nw_camkes_info *nw_camkes_info)
     else
     {
         Debug_LOG_INFO("Wrong Instance passed. NwStackinit() failed \n ");
-        return -1;
+        return SEOS_ERROR_GENERIC;
     }
    /* Configure stack as client or server */
 
@@ -514,5 +513,5 @@ Seos_NwStack_init(Seos_nw_camkes_info *nw_camkes_info)
     {
         Debug_LOG_INFO("Network Stack Init() Failed...Exiting NwStack\n");
     }
-    return 0;
+    return SEOS_SUCCESS;
 }

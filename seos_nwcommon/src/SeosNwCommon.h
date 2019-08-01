@@ -1,3 +1,15 @@
+/**
+ * Copyright (C) 2019, Hensoldt Cyber GmbH
+ *
+ * @addtogroup SEOS
+ * @{
+ *
+ * @file SeosNwCommon.h
+ *
+ * @brief Common utility functions for Network stack
+ *
+ */
+
 #pragma once
 //#include "uart_socket_guest_rpc_conventions.h"
 
@@ -40,6 +52,20 @@ typedef enum
         pico_err = PICO_ERR_EINVAL; \
         return -1; \
     }
+
+/**
+ * @brief converts pico error to string
+ *
+ * @param e (required) Error number which needs to be converted to string.
+
+ * @return Corresponding string for the error value requested.
+
+ * @retval Human readable String
+ *
+ */
+
+extern const char* nw_strerror(int e);
+
 
 /* Camkes external components for both nwstack instances */
 #if 0
@@ -85,7 +111,4 @@ extern int c_nwstacktick_2_wait();
 extern int e_initdone_emit();
 extern int e_initdone_2_emit();
 #endif
-/* Write and read to/from  chanmux buffer */
-extern int ChanMux_write();
-extern int ChanMux_read();
 

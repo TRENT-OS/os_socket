@@ -7,10 +7,12 @@
  */
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
+#include "SeosNwChanmuxIf.h"
 #include <string.h>
 #include "LibDebug/Debug.h"
 #include <stdint.h>
 #include <stddef.h>
+
 extern Seos_nw_camkes_info *pnw_camkes;
 
 /* Function to send ctrl cmds.

@@ -47,6 +47,7 @@ static SeosNwstack **ppseos_nw = NULL ;
 Seos_nw_camkes_info *pnw_camkes;
 
 
+
 /* TAP IP address */
 static const char* tap_ip_address[]=
  {
@@ -125,7 +126,7 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
             if(pseos_nw->client_socket != NULL )
             {
                pico_ipv4_to_string(peer, orig.addr);
-               Debug_LOG_INFO("Connection established with client %s:%d.\n", peer, short_be(port));
+               Debug_LOG_INFO("Connection established with client %s:%d:%d.\n", peer, short_be(port), port);
                pico_socket_setoption(pseos_nw->client_socket, PICO_TCP_NODELAY, &yes);
                /* Set keepalive options */
                ka_val = 5;
@@ -192,14 +193,14 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
 }
 
 /*
- *   Function: NwStackIf_socket()
+ *   Function: seos_socket_create()
  *
  *   Return values:
  *   true = success
  *   false = failure
  */
 
-seos_err_t seos_nw_if_socket(int domain, int type)
+seos_err_t seos_socket_create(int domain, int type, seos_socket_handle_t *pHandle )
 {
 
     if (domain == AF_INET6)
@@ -226,27 +227,29 @@ seos_err_t seos_nw_if_socket(int domain, int type)
 
     for(int i=0;i<SEOS_MAX_NO_NW_THREADS;i++)  // For now it is just 1 app support, handle will be 0 and this code is not much useful.
     {
-        if(ppseos_nw[i] != NULL)
+        if(ppseos_nw[i] != NULL)               // Relook when multi threading is supported
         {
             pseos_nw->in_use =1;
             pseos_nw->socket_fd =i;
+            *pHandle = pseos_nw->socket_fd;
+            break;
         }
         else
             return SEOS_ERROR_GENERIC;
     }
-    return pseos_nw->socket_fd;
+    return SEOS_SUCCESS;
 }
 
 
 /*
- *   Function: NwStackIf_close()
+ *   Function: seos_socket_close()
  *
  *   Return values:
  *   0 = success
  *  -1 = failure
  *   handle = not used as of now
  */
-seos_err_t seos_nw_if_close(int handle)
+seos_err_t seos_socket_close(seos_socket_handle_t handle)
 {
     int close = pseos_nw->vtable->nw_socket_close(pseos_nw->socket);
 
@@ -260,17 +263,18 @@ seos_err_t seos_nw_if_close(int handle)
 }
 
 /*
- *   Function: NwStackIf_connect()
+ *   Function: seos_socket_connect()
  *
  *   Return values:
  *   0 = success
  *  -1 = failure
  */
-seos_err_t seos_nw_if_connect(int handle,const char* name, int port)
+seos_err_t seos_socket_connect(seos_socket_handle_t handle,const char* name, int port)
 {
     struct pico_ip4 dst;
     uint16_t send_port = short_be(port);
     pico_string_to_ipv4(name, &dst.addr);
+
     Debug_LOG_INFO("Connecting socket to %p, addr: %s,send_port %x\n",pseos_nw->socket,name,send_port);
 
     int connect = pseos_nw->vtable->nw_socket_connect(pseos_nw->socket,&dst,send_port);
@@ -285,21 +289,22 @@ seos_err_t seos_nw_if_connect(int handle,const char* name, int port)
 
 
 /*
- *   Function: NwStackIf_write()
+ *   Function: seos_socket_write()
  *
  *   Return values:
  *   no of written bytes = success
  *  -1 = failure
  */
-seos_err_t seos_nw_if_write(int handle, int len)
+int seos_socket_write(seos_socket_handle_t handle, int len)
 {
     int bytes_written = 0;
 
     pnw_camkes->pCamkesglue->c_write_wait(); // wait for wr evnt from pico
 
+
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
-        bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,len);
+       bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,len);
     }
     else
     {
@@ -307,6 +312,7 @@ seos_err_t seos_nw_if_write(int handle, int len)
     }
 
     Debug_LOG_TRACE(" actual write done =%s, %s\n",__FUNCTION__,(char*)pnw_camkes->pportsglu->Appdataport);
+
     pseos_nw->event = 0;
 
     if(bytes_written < 0)
@@ -319,17 +325,19 @@ seos_err_t seos_nw_if_write(int handle, int len)
 }
 
 /*
- *   Function: NwStackIf_bind()
+ *   Function: seos_socket_bind()
  *
  *   Return values:
  *   0 = success
  *  -1 = failure
  *  Only useful when server
  */
-seos_err_t seos_nw_if_bind(int handle,uint16_t port)
+seos_err_t seos_socket_bind(seos_socket_handle_t handle,uint16_t port)
 {
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
+
+    Debug_LOG_TRACE("%s:binding port addr : %d,%d \n",__FUNCTION__,port,short_be(port));
     port = short_be(port);
 
     int bind = pseos_nw->vtable->nw_socket_bind(pseos_nw->socket,&pseos_nw->bind_ip_addr,&port);
@@ -343,13 +351,13 @@ seos_err_t seos_nw_if_bind(int handle,uint16_t port)
 
 
 /*
- *   Function: NwStackIf_listen()
+ *   Function: seos_socket_listen()
  *
  *   Return values:
  *   0 = success
  *  -1 = failure
  */
-seos_err_t seos_nw_if_listen(int handle, int backlog)
+seos_err_t seos_socket_listen(seos_socket_handle_t handle, int backlog)
 {
     int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket,backlog);
 
@@ -363,7 +371,7 @@ seos_err_t seos_nw_if_listen(int handle, int backlog)
 
 
 /*
- *   Function: NwStackIf_accept()
+ *   Function: seos_socket_accept()
  *
  *   Return values:
  *   0 = success
@@ -371,7 +379,7 @@ seos_err_t seos_nw_if_listen(int handle, int backlog)
  *   For server wait on accept until client connects
  *   Not much useful for client as we cannot accept incoming connections
  */
-seos_err_t seos_nw_if_accept(int handle, uint16_t port)
+seos_err_t seos_socket_accept(seos_socket_handle_t handle, uint16_t port)
 {
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT )
     {
@@ -402,17 +410,18 @@ seos_err_t seos_nw_if_accept(int handle, uint16_t port)
 }
 
 /*
- *   Function: NwStackIf_read()
+ *   Function: seos_socket_read()
  *   Return values:
  *   read bytes = success
  *  -1 = failure
  *   Is a blocking call. Wait until we get a read event from Stack
  */
 
-seos_err_t seos_nw_if_read(int handle,int len)
+int seos_socket_read(seos_socket_handle_t handle,int len)
 {
 
     pnw_camkes->pCamkesglue->c_read_wait();  // wait for rd event from pico
+
     if(pseos_nw->read < 0)
     {
         return SEOS_ERROR_GENERIC;
@@ -421,7 +430,7 @@ seos_err_t seos_nw_if_read(int handle,int len)
     return pseos_nw->read;
 }
 
-void seos_nw_if_init()
+void seos_network_init()
 {
     pnw_camkes->pCamkesglue->c_initdone();   // wait for nw stack to initialise
 }

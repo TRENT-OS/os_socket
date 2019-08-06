@@ -12,7 +12,6 @@
 #include "LibDebug/Debug.h"
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
-#include "seos_socket.h"
 #include "Seos_pico_dev_chan_mux.h"
 
 
@@ -379,7 +378,7 @@ seos_err_t seos_socket_listen(seos_socket_handle_t handle, int backlog)
  *   For server wait on accept until client connects
  *   Not much useful for client as we cannot accept incoming connections
  */
-seos_err_t seos_socket_accept(seos_socket_handle_t handle, uint16_t port)
+seos_err_t seos_socket_accept(seos_socket_handle_t handle, seos_socket_handle_t *pClient_handle, uint16_t port)
 {
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT )
     {
@@ -403,7 +402,10 @@ seos_err_t seos_socket_accept(seos_socket_handle_t handle, uint16_t port)
     {
         pnw_camkes->pCamkesglue->c_conn_wait();              //for server wait for pico event
         if(pseos_nw->client_socket != NULL )
-        return SEOS_SUCCESS;
+        {
+            *pClient_handle = 1;                               // Requires change when Multi threading is added. Current set to 1
+            return SEOS_SUCCESS;
+        }
         else
         return SEOS_ERROR_GENERIC;
     }

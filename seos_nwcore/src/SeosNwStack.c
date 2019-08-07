@@ -75,9 +75,12 @@ static const char* cloud_ip[]=
  *
  *  This is called as part of pico_tick every x ms.
  */
-static void nw_socket_event(uint16_t ev, struct pico_socket *s)
+static void
+nw_socket_event(uint16_t ev,
+                struct pico_socket *s)
 {
    pseos_nw->event = ev;
+   int read_len = 0;
   /* begin of client if */
   if(pnw_camkes->instanceID  == SEOS_NWSTACK_AS_CLIENT)
   {
@@ -90,17 +93,23 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
         {
              Debug_LOG_TRACE("Read event Rx. for socket =%p\n",s);
              int len = PAGE_SIZE;
-
-             pseos_nw->read = pseos_nw->vtable->nw_socket_read(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport,len);
+             pseos_nw->read = 0;
              pseos_nw->event = 0;
+             do {
+                 read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read ,len);
+                 if(pseos_nw->read < 0)
+                 {
+                     Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
+                     pseos_nw->read = -1;
+                     pnw_camkes->pCamkesglue->e_read_emit();
+                     return;
+                 }
+                 pseos_nw->read += read_len;
+             }while(read_len >0);
+             pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
+
              Debug_LOG_TRACE("Read data for socket =%p,length=%d,data=%s \n",s,pseos_nw->read,(char*)pnw_camkes->pportsglu->Appdataport);
 
-             if(pseos_nw->read <0)
-             {
-                 Debug_LOG_INFO("%s: error read of pico socket :%s \n",__FUNCTION__,nw_strerror(pico_err));
-                 pseos_nw->read = -1;
-             }
-             pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
         }
 
 
@@ -174,6 +183,7 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
   if (ev & PICO_SOCK_EV_CLOSE)
   {
       Debug_LOG_INFO("Socket received close from peer\n");
+      pnw_camkes->pCamkesglue->e_read_emit();
       return;
   }
 
@@ -199,7 +209,10 @@ static void nw_socket_event(uint16_t ev, struct pico_socket *s)
  *   false = failure
  */
 
-seos_err_t seos_socket_create(int domain, int type, seos_socket_handle_t *pHandle )
+seos_err_t
+seos_socket_create(int domain,
+                   int type,
+                   seos_socket_handle_t *pHandle )
 {
 
     if (domain == AF_INET6)
@@ -248,7 +261,8 @@ seos_err_t seos_socket_create(int domain, int type, seos_socket_handle_t *pHandl
  *  -1 = failure
  *   handle = not used as of now
  */
-seos_err_t seos_socket_close(seos_socket_handle_t handle)
+seos_err_t
+seos_socket_close(seos_socket_handle_t handle)
 {
     int close = pseos_nw->vtable->nw_socket_close(pseos_nw->socket);
 
@@ -268,7 +282,10 @@ seos_err_t seos_socket_close(seos_socket_handle_t handle)
  *   0 = success
  *  -1 = failure
  */
-seos_err_t seos_socket_connect(seos_socket_handle_t handle,const char* name, int port)
+seos_err_t
+seos_socket_connect(seos_socket_handle_t handle,
+                    const char* name,
+                    int port)
 {
     struct pico_ip4 dst;
     uint16_t send_port = short_be(port);
@@ -294,7 +311,9 @@ seos_err_t seos_socket_connect(seos_socket_handle_t handle,const char* name, int
  *   no of written bytes = success
  *  -1 = failure
  */
-int seos_socket_write(seos_socket_handle_t handle, int len)
+seos_err_t
+seos_socket_write(seos_socket_handle_t handle,
+                 int* pLen)
 {
     int bytes_written = 0;
 
@@ -303,11 +322,11 @@ int seos_socket_write(seos_socket_handle_t handle, int len)
 
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
-       bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,len);
+       bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,*pLen);
     }
     else
     {
-        bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->client_socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,len);
+        bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->client_socket,(unsigned char*)pnw_camkes->pportsglu->Appdataport ,*pLen);
     }
 
     Debug_LOG_TRACE(" actual write done =%s, %s\n",__FUNCTION__,(char*)pnw_camkes->pportsglu->Appdataport);
@@ -320,7 +339,9 @@ int seos_socket_write(seos_socket_handle_t handle, int len)
         return SEOS_ERROR_GENERIC;
     }
 
-   return bytes_written;
+    *pLen = bytes_written;   // copy actual bytes written to app
+
+   return SEOS_SUCCESS;
 }
 
 /*
@@ -331,7 +352,9 @@ int seos_socket_write(seos_socket_handle_t handle, int len)
  *  -1 = failure
  *  Only useful when server
  */
-seos_err_t seos_socket_bind(seos_socket_handle_t handle,uint16_t port)
+seos_err_t
+seos_socket_bind(seos_socket_handle_t handle,
+                 uint16_t port)
 {
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
@@ -356,7 +379,9 @@ seos_err_t seos_socket_bind(seos_socket_handle_t handle,uint16_t port)
  *   0 = success
  *  -1 = failure
  */
-seos_err_t seos_socket_listen(seos_socket_handle_t handle, int backlog)
+seos_err_t
+seos_socket_listen(seos_socket_handle_t handle,
+                   int backlog)
 {
     int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket,backlog);
 
@@ -378,7 +403,10 @@ seos_err_t seos_socket_listen(seos_socket_handle_t handle, int backlog)
  *   For server wait on accept until client connects
  *   Not much useful for client as we cannot accept incoming connections
  */
-seos_err_t seos_socket_accept(seos_socket_handle_t handle, seos_socket_handle_t *pClient_handle, uint16_t port)
+seos_err_t
+seos_socket_accept(seos_socket_handle_t handle,
+                   seos_socket_handle_t *pClient_handle,
+                   uint16_t port)
 {
     if(pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT )
     {
@@ -419,7 +447,9 @@ seos_err_t seos_socket_accept(seos_socket_handle_t handle, seos_socket_handle_t 
  *   Is a blocking call. Wait until we get a read event from Stack
  */
 
-int seos_socket_read(seos_socket_handle_t handle,int len)
+seos_err_t
+seos_socket_read(seos_socket_handle_t handle,
+                 int* pLen)
 {
 
     pnw_camkes->pCamkesglue->c_read_wait();  // wait for rd event from pico
@@ -429,7 +459,13 @@ int seos_socket_read(seos_socket_handle_t handle,int len)
         return SEOS_ERROR_GENERIC;
     }
 
-    return pseos_nw->read;
+    if(pseos_nw->event & PICO_SOCK_EV_CLOSE)
+    {
+        pseos_nw->read = 0;
+    }
+    *pLen = pseos_nw->read;   // copy the actual length read for app
+
+    return SEOS_SUCCESS;
 }
 
 void seos_network_init()

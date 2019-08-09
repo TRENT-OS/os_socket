@@ -27,7 +27,7 @@
  *
  */
 
-void pico_chan_mux_tap_destroy ( struct pico_device *tap );
+void pico_chan_mux_tap_destroy ( struct pico_device* tap );
 
 /**
  * @brief Create tap interface. Since we do not have any physical tap interface it actually triggers proxy
@@ -42,6 +42,6 @@ void pico_chan_mux_tap_destroy ( struct pico_device *tap );
  *
  */
 
-struct pico_device *pico_chan_mux_tap_create (char *name);
+struct pico_device* pico_chan_mux_tap_create (char* name);
 
 #endif

@@ -2,7 +2,7 @@
  *  WAN/LAN Channel MUX
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
- *  
+ *
  *  TODO: Get these values at run time from Chanmux. For now it is required for compilation
  */
 
@@ -12,7 +12,8 @@
 extern "C" {
 #endif
 
-enum {
+enum
+{
     CHANNEL_LAN_DATA,       // 0
     CHANNEL_WAN_DATA,       // 1
     CHANNEL_LAN_CTRL,       // 2

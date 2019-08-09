@@ -32,7 +32,7 @@
  *
  */
 
-extern seos_err_t ChanMux_write(unsigned int chan, size_t len, size_t *written);
+extern seos_err_t ChanMux_write(unsigned int chan, size_t len, size_t* written);
 
 /**
  * @brief Read data through Chan mux, Data must be read from DataPort shared between Chanmux and Network Stack.
@@ -48,7 +48,7 @@ extern seos_err_t ChanMux_write(unsigned int chan, size_t len, size_t *written);
  *
  */
 
-extern seos_err_t ChanMux_read(unsigned int chan, size_t len, size_t *read);
+extern seos_err_t ChanMux_read(unsigned int chan, size_t len, size_t* read);
 
 
 /**
@@ -82,8 +82,8 @@ NwChanmux_chanWriteSyncData(
 
 size_t
 NwChanmux_chanWriteSyncCtrl(
-        const void*   buf,
-        size_t        len);
+    const void*   buf,
+    size_t        len);
 
 /**
  * @brief This is a wrapper for Chanmux_read. It is a non blocking read.

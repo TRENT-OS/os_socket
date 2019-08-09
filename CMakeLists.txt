@@ -1,14 +1,14 @@
 # SEOS NW Library
 
-project(seos_nwcore C)
+project(seos_nw_lib C)
 
 add_library(
     ${PROJECT_NAME} STATIC
 
-    "seos_nwcore/src/SeosNwStack.c"
-    "seos_nwdriver/src/SeosNwChanmuxIf.c"
-    "seos_nwcommon/src/SeosNwCommon.c"
-    "seos_nwdriver/src/Seos_pico_dev_chan_mux.c"
+    "seos_nw_core/src/SeosNwStack.c"
+    "seos_nw_common/src/SeosNwCommon.c"
+    "seos_nw_driver/src/Seos_pico_dev_chan_mux.c"
+    "seos_nw_driver/src/SeosNwChanmuxIf.c"
 )
 if (ENABLE_LINT)
         set(CMAKE_C_CPPCHECK "cppcheck;--enable=warning;--inline-suppr")
@@ -16,12 +16,7 @@ if (ENABLE_LINT)
 endif()
 
 
-#list(APPEND PRIVATE_TARGET_COMPILE_DEFINITIONS
-#        "SEOS_NWSTACK_INSTANCE_2"
-#    )
-
-#target_compile_definitions(${PROJECT_NAME} PUBLIC SEOS_NWSTACK_INSTANCE_2=1)
-        
+       
 
 target_compile_options(${PROJECT_NAME}
     PUBLIC
@@ -52,9 +47,9 @@ target_compile_definitions(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC
-        "seos_nwcommon/src"
-        "seos_nwcore/src/include"
-        "seos_nwdriver/src/include"
+        "seos_nw_common/src"
+        "seos_nw_core/src/include"
+        "seos_nw_driver/src/include"
         "configs"
 )
 

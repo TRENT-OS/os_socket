@@ -99,7 +99,7 @@ nw_socket_event(uint16_t ev,
             do
             {
                 read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->socket,
-                           (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read, len);
+                                                            (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read, len);
                 if (read_len < 0)
                 {
                     Debug_LOG_INFO("%s: error read of pico socket :%s \n", __FUNCTION__,
@@ -171,7 +171,7 @@ nw_socket_event(uint16_t ev,
             int len = PAGE_SIZE;
 
             pseos_nw->read = pseos_nw->vtable->nw_socket_read(pseos_nw->client_socket,
-                             (unsigned char*)pnw_camkes->pportsglu->Appdataport, len);
+                                                              (unsigned char*)pnw_camkes->pportsglu->Appdataport, len);
 
             Debug_LOG_TRACE("Read data for socket =%p,length=%d,data%s \n",
                             pseos_nw->client_socket, pseos_nw->read,
@@ -252,7 +252,7 @@ seos_socket_create(int domain,
     }
 
     pseos_nw->socket = pseos_nw->vtable->nw_socket_open(domain, type,
-                       &nw_socket_event);
+                                                        &nw_socket_event);
 
     if (pseos_nw->socket == NULL)
     {
@@ -265,11 +265,12 @@ seos_socket_create(int domain,
 
     Debug_LOG_INFO("socket address = %p\n", pseos_nw->socket);
 
+    // For now it is just 1 app support, handle will be 0 and this code is not much useful.
     for (int i = 0; i < SEOS_MAX_NO_NW_THREADS;
-            i++) // For now it is just 1 app support, handle will be 0 and this code is not much useful.
+         i++)
     {
         if (ppseos_nw[i] !=
-                NULL)              // Relook when multi threading is supported
+            NULL)              // Relook when multi threading is supported
         {
             pseos_nw->in_use = 1;
             pseos_nw->socket_fd = i;
@@ -345,7 +346,7 @@ seos_socket_connect(seos_socket_handle_t handle,
                    pseos_nw->socket, name, send_port);
 
     int connect = pseos_nw->vtable->nw_socket_connect(pseos_nw->socket, &dst,
-                  send_port);
+                                                      send_port);
 
     if (connect < 0)
     {
@@ -376,12 +377,12 @@ seos_socket_write(seos_socket_handle_t handle,
     if (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
         bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,
-                        (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
+                                                          (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
     }
     else
     {
         bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->client_socket,
-                        (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
+                                                          (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
     }
 
     Debug_LOG_TRACE(" actual write done =%s, %s\n", __FUNCTION__,
@@ -421,7 +422,7 @@ seos_socket_bind(seos_socket_handle_t handle,
     port = short_be(port);
 
     int bind = pseos_nw->vtable->nw_socket_bind(pseos_nw->socket,
-               &pseos_nw->bind_ip_addr, &port);
+                                                &pseos_nw->bind_ip_addr, &port);
     if (bind < 0)
     {
         Debug_LOG_INFO("%s: error binding-2 to pico socket: %s \n", __FUNCTION__,
@@ -476,7 +477,7 @@ seos_socket_accept(seos_socket_handle_t handle,
         char peer[30] = {0};
 
         sock_client = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket, &origin,
-                      &port);
+                                                         &port);
 
         if (sock_client != NULL)
         {
@@ -494,7 +495,8 @@ seos_socket_accept(seos_socket_handle_t handle,
         pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
         if (pseos_nw->client_socket != NULL )
         {
-            *pClient_handle = 1;                // Requires change when Multi threading is added. Current set to 1
+            // Requires change when Multi threading is added. Current set to 1
+            *pClient_handle = 1;
 
             return SEOS_SUCCESS;                // as we have only one incoming connection
         }
@@ -606,7 +608,8 @@ Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
 {
     int ret;
     pseos_nw  = &seos_nw;
-    ppseos_nw = &pseos_nw;  // for now we have only one socket per app and hence use 0.
+    // for now we have only one socket per app and hence use 0.
+    ppseos_nw = &pseos_nw;
 
     Debug_LOG_TRACE("init pseos_nw value = %p\n", pseos_nw);
     if (nw_camkes_info != NULL)

@@ -13,7 +13,7 @@
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
 #include "Seos_pico_dev_chan_mux.h"
-#include "seos_nw_defines.h"
+
 
 
 

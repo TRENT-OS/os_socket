@@ -173,24 +173,35 @@ nw_socket_event(uint16_t ev,
         {
             Debug_LOG_TRACE("Read from client for socket =%p\n", s);
             int len = PAGE_SIZE;
+            pseos_nw->read = 0;
             pseos_nw->event = 0;
             end_of_read = 0;
 
-            pseos_nw->read = pseos_nw->vtable->nw_socket_read(pseos_nw->client_socket,
-                                                              (unsigned char*)pnw_camkes->pportsglu->Appdataport, len);
+
+            do
+            {
+                read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->client_socket,
+                                                              (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read,len);
+
+                 if (pseos_nw->read < 0)
+                {
+                    Debug_LOG_WARNING("%s: error read-2 of pico socket :%s \n", __FUNCTION__,
+                                      nw_strerror(pico_err));
+                    pseos_nw->read = -1; /* Return -1 to app in case of error */
+                    pnw_camkes->pCamkesglue->e_read_emit();
+                    return ;
+                }
+                pseos_nw->read += read_len;
+            }while (read_len > 0);
+
+            /* At this point read length will be 0 and its the end of read. */
+            end_of_read = 1;
+            pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
+
 
             Debug_LOG_TRACE("Read data for socket =%p,length=%d,data%s \n",
                             pseos_nw->client_socket, pseos_nw->read,
                             (char*)pnw_camkes->pportsglu->Appdataport);
-
-            if (pseos_nw->read < 0)
-            {
-                Debug_LOG_WARNING("%s: error read-2 of pico socket :%s \n", __FUNCTION__,
-                                  nw_strerror(pico_err));
-                pseos_nw->read = -1; /* Return -1 to app in case of error */
-            }
-            end_of_read = 1;
-            pnw_camkes->pCamkesglue->e_read_emit();
 
         }
 
@@ -375,7 +386,7 @@ seos_socket_connect(seos_socket_handle_t handle,
  */
 seos_err_t
 seos_socket_write(seos_socket_handle_t handle,
-                  int* pLen)
+                  size_t* pLen)
 {
     int bytes_written = 0;
 
@@ -525,7 +536,7 @@ seos_socket_accept(seos_socket_handle_t handle,
 
 seos_err_t
 seos_socket_read(seos_socket_handle_t handle,
-                 int* pLen)
+                 size_t* pLen)
 {
 
     if (end_of_read == 1)

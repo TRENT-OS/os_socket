@@ -181,9 +181,9 @@ nw_socket_event(uint16_t ev,
             do
             {
                 read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->client_socket,
-                                                              (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read,len);
+                                                            (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read, len);
 
-                 if (pseos_nw->read < 0)
+                if (pseos_nw->read < 0)
                 {
                     Debug_LOG_WARNING("%s: error read-2 of pico socket :%s \n", __FUNCTION__,
                                       nw_strerror(pico_err));
@@ -192,7 +192,8 @@ nw_socket_event(uint16_t ev,
                     return ;
                 }
                 pseos_nw->read += read_len;
-            }while (read_len > 0);
+            }
+            while (read_len > 0);
 
             /* At this point read length will be 0 and its the end of read. */
             end_of_read = 1;

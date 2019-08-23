@@ -64,4 +64,4 @@ typedef enum
  *
  */
 
-extern const char* nw_strerror(int e);
+const char* nw_strerror(int e);

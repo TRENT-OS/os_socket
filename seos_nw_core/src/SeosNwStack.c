@@ -489,42 +489,21 @@ seos_err_t
 seos_socket_accept(seos_socket_handle_t handle,
                    seos_socket_handle_t* pClient_handle,
                    uint16_t port)
+
 {
-    if (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT )
+    pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
+    if (pseos_nw->client_socket != NULL )
     {
-        struct pico_ip4 origin = {0};
-        struct pico_socket* sock_client = {0};
-        char peer[30] = {0};
-
-        sock_client = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket, &origin,
-                                                         &port);
-
-        if (sock_client != NULL)
-        {
-            pico_ipv4_to_string(peer, origin.addr);
-            Debug_LOG_INFO("Connection established with %s:%d\n", peer, short_be(port));
-            return SEOS_SUCCESS;
-        }
-        Debug_LOG_INFO("%s: error accept of pico socket : %s \n", __FUNCTION__,
-                       nw_strerror(pico_err));
+        // Requires change when Multi threading is added.
+        // As of now Incoming socket handle set to 1
+        *pClient_handle = 1;
+        return SEOS_SUCCESS; // as we have only one incoming connection
+    }
+    else
+    {
         return SEOS_ERROR_GENERIC;
     }
 
-    else
-    {
-        pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
-        if (pseos_nw->client_socket != NULL )
-        {
-            // Requires change when Multi threading is added. Current set to 1
-            *pClient_handle = 1;
-
-            return SEOS_SUCCESS;                // as we have only one incoming connection
-        }
-        else
-        {
-            return SEOS_ERROR_GENERIC;
-        }
-    }
 }
 
 /*

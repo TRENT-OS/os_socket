@@ -492,18 +492,16 @@ seos_socket_accept(seos_socket_handle_t handle,
 
 {
     pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
-    if (pseos_nw->client_socket != NULL )
+    if (pseos_nw->client_socket == NULL )
     {
-        // Requires change when Multi threading is added.
-        // As of now Incoming socket handle set to 1
-        *pClient_handle = 1;
-        return SEOS_SUCCESS; // as we have only one incoming connection
-    }
-    else
-    {
+        Debug_LOG_WARNING("%s: socket is NULL\n", __FUNCTION__);
         return SEOS_ERROR_GENERIC;
     }
 
+    // Requires change when Multi threading is added.
+    // As of now Incoming socket handle set to 1
+    *pClient_handle = 1;
+    return SEOS_SUCCESS; // as we have only one incoming connection
 }
 
 /*

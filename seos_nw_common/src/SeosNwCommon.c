@@ -3,6 +3,7 @@
  *
  *  Created on: Jun 14, 2019
  *  Author: Hensoldt cyber GmbH (@Yogesh kulkarni)
+ *  The pico errors converted to strings
  */
 
 #include "pico_protocol.h"

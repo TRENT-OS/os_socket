@@ -285,12 +285,12 @@ seos_socket_create(int domain,
 
     Debug_LOG_INFO("socket address = %p\n", pseos_nw->socket);
 
-    // For now it is just 1 app support, handle will be 0 and this code is not much useful.
-    for (int i = 0; i < SEOS_MAX_NO_NW_THREADS;
-         i++)
+    /* For now it is just 1 app support, handle will be 0 and this code is not much useful.*/
+    /* revisit when multi thread support is supported */
+    for (int i = 0; i < SEOS_MAX_NO_NW_THREADS; i++)
     {
-        if (ppseos_nw[i] !=
-            NULL)              // Relook when multi threading is supported
+        // Relook when multi threading is supported. Fine for 1 app per instance
+        if (ppseos_nw[i] != NULL)
         {
             pseos_nw->in_use = 1;
             pseos_nw->socket_fd = i;

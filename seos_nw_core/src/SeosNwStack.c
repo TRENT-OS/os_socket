@@ -13,6 +13,7 @@
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
 #include "Seos_pico_dev_chan_mux.h"
+#include "seos_nw_api.h"
 
 
 
@@ -250,7 +251,7 @@ nw_socket_event(uint16_t ev,
 seos_err_t
 seos_socket_create(int domain,
                    int type,
-                   seos_socket_handle_t* pHandle )
+                   int* pHandle )
 {
 
     if (domain == AF_INET6)
@@ -315,7 +316,7 @@ seos_socket_create(int domain,
  *   handle = not used as of now
  */
 seos_err_t
-seos_socket_close(seos_socket_handle_t handle)
+seos_socket_close(int handle)
 {
     int close;
 
@@ -354,7 +355,7 @@ seos_socket_close(seos_socket_handle_t handle)
  *  -1 = failure
  */
 seos_err_t
-seos_socket_connect(seos_socket_handle_t handle,
+seos_socket_connect(int handle,
                     const char* name,
                     int port)
 {
@@ -386,7 +387,7 @@ seos_socket_connect(seos_socket_handle_t handle,
  *  -1 = failure
  */
 seos_err_t
-seos_socket_write(seos_socket_handle_t handle,
+seos_socket_write(int handle,
                   size_t* pLen)
 {
     int bytes_written = 0;
@@ -431,7 +432,7 @@ seos_socket_write(seos_socket_handle_t handle,
  *  Only useful when server
  */
 seos_err_t
-seos_socket_bind(seos_socket_handle_t handle,
+seos_socket_bind(int handle,
                  uint16_t port)
 {
     struct pico_ip4 ZERO_IP4 = { 0 };
@@ -461,7 +462,7 @@ seos_socket_bind(seos_socket_handle_t handle,
  *  -1 = failure
  */
 seos_err_t
-seos_socket_listen(seos_socket_handle_t handle,
+seos_socket_listen(int handle,
                    int backlog)
 {
     int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket, backlog);
@@ -486,8 +487,8 @@ seos_socket_listen(seos_socket_handle_t handle,
  *   Not much useful for client as we cannot accept incoming connections
  */
 seos_err_t
-seos_socket_accept(seos_socket_handle_t handle,
-                   seos_socket_handle_t* pClient_handle,
+seos_socket_accept(int handle,
+                   int* pClient_handle,
                    uint16_t port)
 
 {
@@ -513,7 +514,7 @@ seos_socket_accept(seos_socket_handle_t handle,
  */
 
 seos_err_t
-seos_socket_read(seos_socket_handle_t handle,
+seos_socket_read(int handle,
                  size_t* pLen)
 {
 

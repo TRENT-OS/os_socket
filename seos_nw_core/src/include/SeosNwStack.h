@@ -24,6 +24,13 @@
 
 #define SEOS_MAX_NO_NW_THREADS   1
 
+enum
+{
+    SEOS_NWSTACK_AS_CLIENT,    //0
+    SEOS_NWSTACK_AS_SERVER,    // 1
+    SEOS_NONE
+};
+
 /* Nw Api to implement */
 typedef struct _nw_api_vtable_t
 {

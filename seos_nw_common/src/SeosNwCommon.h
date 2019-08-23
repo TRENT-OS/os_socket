@@ -15,7 +15,6 @@
 
 #include "ChanMux_config.h"
 #include "seos_err.h"
-#include "seos_socket.h"
 
 #include <stdint.h>
 #include <stddef.h>

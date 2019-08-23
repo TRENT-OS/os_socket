@@ -53,6 +53,8 @@ target_include_directories(${PROJECT_NAME}
         "configs"
 )
 
+add_subdirectory(3rdParty/picotcp)
+
 target_link_libraries(${PROJECT_NAME}
     picotcp
     seos_libs

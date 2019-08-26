@@ -2,3 +2,6 @@
 	path = 3rdParty/picotcp
 	url = ssh://git@bitbucket.hensoldt-cyber.systems:7999/ext/picotcp.git
 	branch = SEOS-330
+[submodule "network-client-lib"]
+	path = network-client-lib
+	url = ssh://git@bitbucket.hensoldt-cyber.systems:7999/seos/network-client-lib.git

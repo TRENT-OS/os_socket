@@ -1,14 +1,18 @@
 /*
- * SEOS Network Stack
+ *  SeosNwStack.h
  *
- * @addtogroup SEOS
- * @{
- *
+ *  Copyright (C) 2019, Hensoldt Cyber GmbH
+*/
+
+
+/**
+ * @defgroup SeosNWStack SEOS Core Nwstack
  * @file SeosNwStack.h
  *
- * @brief Core Network stack header info.
-
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+ * @brief Core Network stack.This layer mostly interacts with PicoTCP. \n
+ *        PicoTCP being the network protocol stack.
+ *        This layer mostly supports all the socket related operations.
+ *
  *
  */
 
@@ -24,89 +28,126 @@
 
 #define SEOS_MAX_NO_NW_THREADS   1
 
+/*********************************/
+ /*! Enum NW Stack configuration */
+/*********************************/
+
 enum
 {
-    SEOS_NWSTACK_AS_CLIENT,    //0
-    SEOS_NWSTACK_AS_SERVER,    // 1
-    SEOS_NONE
+    SEOS_NWSTACK_AS_CLIENT,    /*!< Nw Stack as Client */
+    SEOS_NWSTACK_AS_SERVER,    /*!< Nw Stack as Server */
+    SEOS_NONE                  /*!< Nw Stack as None   */
 };
 
-/* Nw Api to implement */
+/*****************************/
+/*        PICO API           */
+/*****************************/
+
+/**
+ * @brief   nw_api_vtable contains function pointers to picotcp api
+ * @ingroup SeosNWStack
+
+*/
 typedef struct _nw_api_vtable_t
 {
-    struct pico_socket* (*nw_socket_open)(uint16_t net, uint16_t proto,
+    struct pico_socket* (*nw_socket_open)(uint16_t net, uint16_t proto,              /**< is pico_socket_open() */
                                           void (*wakeup)(uint16_t ev, struct pico_socket* s));
-    int (*nw_socket_read)(struct pico_socket* s, void* buf, int len);
-    int (*nw_socket_write)(struct pico_socket* s, const void* buf, int len);
-    int (*nw_socket_connect)(struct pico_socket* s, const void* srv_addr,
+    int (*nw_socket_read)(struct pico_socket* s, void* buf, int len);               /**< is pico_socket_read() */
+    int (*nw_socket_write)(struct pico_socket* s, const void* buf, int len);        /**< is pico_socket_write() */
+    int (*nw_socket_connect)(struct pico_socket* s, const void* srv_addr,           /**< is pico_socket_connect() */
                              uint16_t remote_port);
-    int (*nw_socket_bind)(struct pico_socket* s, void* local_addr, uint16_t* port);
-    int (*nw_socket_listen)(struct pico_socket* s, int backlog);
-    struct pico_socket* (*nw_socket_accept)(struct pico_socket* s, void* orig,
+    int (*nw_socket_bind)(struct pico_socket* s, void* local_addr, uint16_t* port); /**< is pico_socket_bind() */
+    int (*nw_socket_listen)(struct pico_socket* s, int backlog);                    /**< is pico_socket_listen() */
+    struct pico_socket* (*nw_socket_accept)(struct pico_socket* s, void* orig,      /**< is pico_socket_accept() */
                                             uint16_t* local_port);
-    int (*nw_socket_close)(struct pico_socket* s);
-    int (*nw_socket_setoption)(struct pico_socket* s, int option, void* value);
+    int (*nw_socket_close)(struct pico_socket* s);                                  /**< is pico_socket_close() */
+    int (*nw_socket_setoption)(struct pico_socket* s, int option, void* value);     /**< is pico_socket_setoption() */
 } nw_api_vtable;
 
 
 
-// Structure to describe pico nw stack
+/**
+ * @brief   SeosNwstack contains elements representing the stack.
+            Some of them defined and not used will be required for future.
+
+ * @ingroup SeosNWStack
+
+*/
+
 typedef struct _SeosNwstack_t
 {
-    struct pico_socket* socket;
-    const    nw_api_vtable* vtable;
-    struct   pico_ip4 ip_addr;
-    struct   pico_ip4 bind_ip_addr;
-    struct   pico_socket* client_socket;
-    int      listen_port;
-    int      event;
-    int      read;
-    int      socket_fd;
-    uint8_t  in_use;
+    struct pico_socket* socket;     /**< represents an opened socket in the stack */
+    const    nw_api_vtable* vtable; /**< pointer to nw_api_vtable to call pico functions*/
+    struct   pico_ip4 ip_addr;      /**< IP addr assigned to tap devices  */
+    struct   pico_ip4 bind_ip_addr; /**<  bind ip addr */
+    struct   pico_socket* client_socket; /**< represents a connected socket when the Nw Stack is configured as server*/
+    int      listen_port; /**< listen port for server to listen */
+    int      event;       /**< Pico Internal event representing current state of connected socket */
+    int      read;        /**< Has read len */
+    int      socket_fd;   /**< defined but not used */
+    uint8_t  in_use;      /**< defined but not used */
 } SeosNwstack;
 
 
-/* Camkes structure to be filled during component instantiation */
+/**
+ * @brief   nw_camkes_signal_glue contains emitter and consumer signals inside the stack
+
+ * @ingroup SeosNWStack
+*/
+
+
 typedef struct _nw_camkes_glue_t
 {
-    void (*e_write_emit)();  // emit and wait when there is pico event to write
-    void (*c_write_wait)();
-    void (*e_read_emit)();   // emit and wait when there is event to read
-    void (*c_read_wait)();
-    void (*e_conn_emit)();   // emit and wait when connected in case of server
-    void (*c_conn_wait)();
-    void (*e_write_nwstacktick)(); // tick nw stack when there is write event
-    void (*c_nwstacktick_wait)();
-    void (*e_initdone)();          // inform app after nw stack is initialised
-    void (*c_initdone)();
+    void (*e_write_emit)(); /**< emit and unblock write  */
+    void (*c_write_wait)(); /**< block on write  */
+    void (*e_read_emit)();  /**< emit and unblock read  */
+    void (*c_read_wait)();  /**< block on read  */
+    void (*e_conn_emit)();  /**< emit and unblock connect */
+    void (*c_conn_wait)();  /**< block on connect */
+    void (*e_write_nwstacktick)(); /**< emit and unblock pico tick */
+    void (*c_nwstacktick_wait)();  /**< block for pico tick */
+    void (*e_initdone)();         /**< unblock nw stack init  */
+    void (*c_initdone)();         /**< block nw stack init */
 } nw_camkes_signal_glue;
 
 
+/**
+ * @brief   nw_ports_glue contains data ports used for data TX and RX
+
+ * @ingroup SeosNWStack
+*/
 typedef struct _nw_ports_glue_t
 {
-    void* ChanMuxDataPort;
-    void* ChanMuxCtrlPort;
-    void* Appdataport;
+    void* ChanMuxDataPort;   /**< ChanMux Data port uses Data channel */
+    void* ChanMuxCtrlPort;   /**< ChanMux Ctrl port uses Ctrl channel */
+    void* Appdataport;       /**< App data port */
 } nw_ports_glue;
 
 
 
+/**
+* @brief   Seos_nw_camkes_info contains reference to the structures
+           nw_ports_glue and nw_camkes_signal_glue.
+
+* @ingroup SeosNWStack
+*/
+
 typedef struct
-    _Seos_nw_camkes_info_t    /* So that it can be used across other files */
+    _Seos_nw_camkes_info_t
 {
-    nw_camkes_signal_glue* pCamkesglue;
-    nw_ports_glue* pportsglu;
-    uint8_t instanceID;
+    nw_camkes_signal_glue* pCamkesglue; /**< pointer to nw_camkes_signal_glue */
+    nw_ports_glue* pportsglu; /**< pointer to nw_ports_glue */
+    uint8_t instanceID;  /** instance ID Client or Server */
 } Seos_nw_camkes_info;
 
 
 /**
-* @brief Instantiate Network Stack
+* @details %Seos_NwStack_init, instanciates a Network Stack
+
+* @ingroup SeosNWStack
 *
-* @param Seos_nw_camkes_info, structure containing Camkes signals used, ports used and instance ID
-*        nw_camkes_signal_glue => contains emit and wait signals used in the Network stack
-*        nw_ports_glue         => contains data ports used by network stack. This would be Chanmux ports and App port.
-*        instanceID            => Either SEOS_NWSTACK_AS_CLIENT  or SEOS_NWSTACK_AS_SERVER
+* @param Seos_nw_camkes_info:  Structure containing Camkes signals used, ports used and instance ID
+
 * @return Success or Failure.
 * @retval SEOS_SUCCESS or SEOS_ERROR_GENERIC
 *

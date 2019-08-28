@@ -1,14 +1,15 @@
 /*
- *  SEOS Network Stack ChanMux wrapper driver Interface.
+ *  SeosNwChanmuxIf.h
  *
- * @addtogroup SEOS
- * @{
- *
- * @file SeosNwChanmuxIf.h
- *
- * @brief Chanmux Interface driver
+ *  Copyright (C) 2019, Hensoldt Cyber GmbH
+*/
 
- * Copyright (C) 2019, Hensoldt Cyber GmbH
+
+/**
+ * @defgroup SeosNwChanmuxIf SEOS Chanmux Interface
+ * @file     SeosNwChanmuxIf.h
+ * @brief    This file contains interfaces or API to interact with Chanmux \n
+             This is mostly to send and receive data to/from proxy finally over TAP
  *
  */
 
@@ -19,14 +20,18 @@
 #include "seos_err.h"
 
 /**
- * @brief Write data through Chan mux. Data is written to DataPort shared between Chanmux and Network Stack.
+ * @details %ChanMux_write, Write data using ChanMux
  *
- * @param chan, Can take values CHANNEL_NW_STACK_DATA, CHANNEL_NW_STACK_DATA_2, CHANNEL_NW_STACK_CTRL or CHANNEL_NW_STACK_CTRL_2.
+ * @ingroup SeosNwChanmuxIf
+ * @param chan: Can take values. Possible values
+                CHANNEL_NW_STACK_DATA
+                CHANNEL_NW_STACK_DATA_2
+                CHANNEL_NW_STACK_CTRL
+                CHANNEL_NW_STACK_CTRL_2
 
- * @param len, is the length of data to write
-
- * @param *written is pointer to written which will contain how much of data was actually written by Chanmux
-
+ * @param len: Length of data to write
+ * @param *written: is pointer to written which will contain how much of data was
+                    actually written by Chanmux
  * @return Success or Failure.
  * @retval SEOS_SUCCESS or SEOS_ERROR_GENERIC
  *
@@ -35,14 +40,19 @@
 extern seos_err_t ChanMux_write(unsigned int chan, size_t len, size_t* written);
 
 /**
- * @brief Read data through Chan mux, Data must be read from DataPort shared between Chanmux and Network Stack.
+ * @details %ChanMux_read, Read data using ChanMux
+ * @ingroup SeosNwChanmuxIf
 
- * @param chan, Can take values CHANNEL_NW_STACK_DATA, CHANNEL_NW_STACK_DATA_2, CHANNEL_NW_STACK_CTRL or CHANNEL_NW_STACK_CTRL_2.
+ * @param chan: Can take values. Possible values
+                CHANNEL_NW_STACK_DATA
+                CHANNEL_NW_STACK_DATA_2
+                CHANNEL_NW_STACK_CTRL
+                CHANNEL_NW_STACK_CTRL_2
 
- * @param len, is the length of data to read
+ * @param len: Length of data to read
 
- * @param *read is pointer to read which will contain how much of data was actually read by Chanmux
-
+ * @param *read: is pointer to read which will contain how much of data was
+                 actually read by Chanmux
  * @return Success or Failure.
  * @retval SEOS_SUCCESS or SEOS_ERROR_GENERIC
  *
@@ -52,11 +62,12 @@ extern seos_err_t ChanMux_read(unsigned int chan, size_t len, size_t* read);
 
 
 /**
- * @brief This is a wrapper for Chanmux_write for data channel
+ * @details %NwChanmux_chanWriteSyncData, Write wrapper for ChanMux_write Data channel
+ * @ingroup SeosNwChanmuxIf
 
- * @param *buf, Pointer of the data buffer containing data to be written
+ * @param *buf: Pointer of the data buffer containing data to be written
 
- * @param len, is the length of data to write
+ * @param len: Length of data to write
 
  * @return Total number of bytes written
  * @retval length
@@ -69,13 +80,15 @@ NwChanmux_chanWriteSyncData(
     size_t        len);
 
 /**
- * @brief This is a wrapper for Chanmux_write for ctrl channel
+ * @details %NwChanmux_chanWriteSyncCtrl, Write wrapper for ChanMux_write Ctrl channel
+ * @ingroup SeosNwChanmuxIf
 
- * @param *buf, Pointer of the data buffer containing data to be written
+ * @param *buf: Pointer of the data buffer containing data to be written
 
- * @param len, is the length of data to write
+ * @param len: Length of data to write
 
  * @return Total number of bytes written
+
  * @retval length
  *
  */
@@ -86,13 +99,14 @@ NwChanmux_chanWriteSyncCtrl(
     size_t        len);
 
 /**
- * @brief This is a wrapper for Chanmux_read. It is a non blocking read.
+ * @details %NwChanmux_chanRead, Read wrapper for ChanMux_Read non Blocking
+ * @ingroup SeosNwChanmuxIf
+ * @param chan: Chanmux Channel number to read from
 
- * @param *buf, Pointer of the data buffer to be read into
-
- * @param len, is the length of data to read
+ * @param buf: Buffer to read data into
 
  * @return Total number of bytes read
+
  * @retval length of bytes read
  *
  */
@@ -105,11 +119,12 @@ NwChanmux_chanRead(
 
 
 /**
- * @brief This is a wrapper for Chanmux_read. It is a blocking read.
+ * @details %NwChanmux_chanReadBlocking, this is a wrapper for Chanmux_read. It is a blocking read.
+ * @ingroup SeosNwChanmuxIf
 
- * @param *buf, Pointer of the data buffer to be read into
-
- * @param len, is the length of data to read
+ * @param chan: Chanmux Channel number to read from
+   @param buf:  Pointer of the data buffer to be read into
+ * @param len:  is the length of data to read
 
  * @return Total number of bytes read
  * @retval length of bytes read
@@ -124,11 +139,12 @@ NwChanmux_chanReadBlocking(
 
 
 /**
- * @brief This is a Interface for picotcp to use Chanmux, Chanmux_write. It acts as a wrapper for NwChanmux_chanWriteSyncData().
+ * @details %NwChanmux_write_data, PicoTCP uses this API as an interface to use Chanmux.
+ * @ingroup SeosNwChanmuxIf
 
- * @param *buf, Pointer of the data buffer containing data to be written
+ * @param *buffer: Pointer of the data buffer containing data to be written
 
- * @param len, is the length of data to write
+ * @param len: is the length of the data to write
 
  * @return Total number of bytes written
  * @retval length written
@@ -140,11 +156,12 @@ NwChanmux_write_data(
     size_t  len);
 
 /**
- * @brief This is a Interface for picotcp to use Chanmux, Chanmux_read. It acts as a wrapper for NwChanmux_chanRead().
+ * @details %NwChanmux_read_data, PicoTCP uses this API as an interface to use Chanmux.
+ * @ingroup SeosNwChanmuxIf
 
- * @param *buf, Pointer of the data buffer containing data to be read into
+ * @param *buffer: Pointer of the data buffer containing data to be read into
 
- * @param len, is the length of data to read
+ * @param len:  is the length of data to read
 
  * @return Total number of bytes read
  * @retval length read
@@ -156,14 +173,15 @@ NwChanmux_read_data(
     size_t  len);
 
 /**
- * @brief This is a Interface for picotcp to use Chanmux to get the tap mac address.
+ * @details %NwChanmux_get_mac, is an interface for picotcp to use Chanmux to get the tap mac address.
+ * @ingroup SeosNwChanmuxIf
 
- * @param *name, name of the tap of which mac addr is requested (e.g. "tap0" or "tap1" etc)
+ * @param *name: name of the tap of which mac addr is requested (e.g. "tap0" or "tap1" etc)
 
- * @param *mac , will contain the mac addr filled
+ * @param *mac: will contain the mac addr filled
 
  * @return Mac addr filled for tap
- * @retval mac addr
+ * @retval Mac addr filled
  *
  */
 

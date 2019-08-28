@@ -1,11 +1,15 @@
+/*
+ *  SeosNwCommon.h
+ *
+ *  Copyright (C) 2019, Hensoldt Cyber GmbH
+*/
+
+
 /**
- * Copyright (C) 2019, Hensoldt Cyber GmbH
- *
- * @addtogroup SEOS
- * @{
- *
+ * @defgroup SeosNwCommon SEOS Nwstack Common utility
+
  * @file SeosNwCommon.h
- *
+
  * @brief Common utility functions for Network stack
  *
  */
@@ -20,16 +24,21 @@
 #include <stddef.h>
 #include <limits.h>
 
-/* Map cmds with uart as this is used by proxy */
+
+
+/*********************************/
+ /*! Enum NW Stack Proxy Commands */
+/*********************************/
+
 
 typedef enum
 {
-    NW_CTRL_CMD_OPEN       =  0,
-    NW_CTRL_CMD_OPEN_CNF   =  1,
-    NW_CTRL_CMD_CLOSE      =  2,
-    NW_CTRL_CMD_CLOSE_CNF  =  3,
-    NW_CTRL_CMD_GETMAC     =  4,
-    NW_CTRL_CMD_GETMAC_CNF =  5
+    NW_CTRL_CMD_OPEN       =  0,   /*!< Open Channel */
+    NW_CTRL_CMD_OPEN_CNF   =  1,   /*!< Open Confirmation */
+    NW_CTRL_CMD_CLOSE      =  2,   /*!< Close Channel */
+    NW_CTRL_CMD_CLOSE_CNF  =  3,   /*!< Close Confirmation */
+    NW_CTRL_CMD_GETMAC     =  4,   /*!< GetMac for TAP */
+    NW_CTRL_CMD_GETMAC_CNF =  5    /*!< GetMac Confirmation */
 } NwCtrlCommand;
 
 
@@ -53,13 +62,15 @@ typedef enum
     }
 
 /**
- * @brief converts pico error to string
+ * @details %nw_strerror, convert pico error code to string
+
+ * @ingroup SeosNwCommon
  *
- * @param e (required) Error number which needs to be converted to string.
+ * @param e: Error Code which needs to be converted to string.
 
- * @return Corresponding string for the error value requested.
+ * @return String corresponding to error code
 
- * @retval Human readable String
+ * @retval String of the error code
  *
  */
 

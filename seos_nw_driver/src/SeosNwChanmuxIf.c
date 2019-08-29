@@ -21,7 +21,7 @@ extern Seos_nw_camkes_info* pnw_camkes;
  *
  */
 size_t
-NwChanmux_chanWriteSyncCtrl(
+SeosNwChanmux_chanWriteSyncCtrl(
     const void*   buf,
     size_t        len)
 {
@@ -58,7 +58,7 @@ NwChanmux_chanWriteSyncCtrl(
  * w_size finally contains how many actually bytes were written.
  */
 size_t
-NwChanmux_chanWriteSyncData(
+SeosNwChanmux_chanWriteSyncData(
     const void*   buf,
     size_t        len)
 {
@@ -100,7 +100,7 @@ NwChanmux_chanWriteSyncData(
 }
 
 size_t
-NwChanmux_chanRead(
+SeosNwChanmux_chanRead(
     unsigned int  chan,
     void*         buf,
     size_t        len)
@@ -145,7 +145,7 @@ NwChanmux_chanRead(
 
 
 size_t
-NwChanmux_chanReadBlocking (
+SeosNwChanmux_chanReadBlocking (
     unsigned int  chan,
     char*         buf,
     size_t        len)
@@ -155,7 +155,7 @@ NwChanmux_chanReadBlocking (
     while (lenRead < len)
     {
         // Non-blocking read.
-        size_t read = NwChanmux_chanRead(chan,
+        size_t read = SeosNwChanmux_chanRead(chan,
                                          &buf[lenRead],
                                          len - lenRead);
         if (0 == read)
@@ -183,11 +183,11 @@ NwChanmux_chanReadBlocking (
  *   0 = failure
  */
 int
-NwChanmux_write_data(
+SeosNwChanmux_write_data(
     void*   buffer,
     size_t  len)
 {
-    int written = NwChanmux_chanWriteSyncData(
+    int written = SeosNwChanmux_chanWriteSyncData(
                       buffer,
                       len);
     return written;
@@ -203,7 +203,7 @@ NwChanmux_write_data(
  */
 // called by PicoTCP
 int
-NwChanmux_read_data(
+SeosNwChanmux_read_data(
     void*   buffer,
     size_t  len)
 {
@@ -217,7 +217,7 @@ NwChanmux_read_data(
         chan = CHANNEL_NW_STACK_DATA_2;
     }
 
-    return (NwChanmux_chanRead(chan, buffer, len));
+    return (SeosNwChanmux_chanRead(chan, buffer, len));
 }
 
 
@@ -230,7 +230,7 @@ NwChanmux_read_data(
 //------------------------------------------------------------------------------
 // called by PicoTCP
 int
-NwChanmux_get_mac(
+SeosNwChanmux_get_mac(
     char*     name,
     uint8_t*  mac)
 {
@@ -255,7 +255,7 @@ NwChanmux_get_mac(
     command[0] = NW_CTRL_CMD_OPEN;
     command[1] = datachan;
 
-    unsigned result = NwChanmux_chanWriteSyncCtrl(
+    unsigned result = SeosNwChanmux_chanWriteSyncCtrl(
                           command,
                           sizeof(command));
 
@@ -268,7 +268,7 @@ NwChanmux_get_mac(
 
     /* Read back 2 bytes for OPEN CNF response, is a blocking call. Only 2 bytes required here, for mac it is 8 bytes */
 
-    size_t read = NwChanmux_chanReadBlocking(ctrlchan, response, 2);
+    size_t read = SeosNwChanmux_chanReadBlocking(ctrlchan, response, 2);
 
     if (read != 2)
     {
@@ -285,7 +285,7 @@ NwChanmux_get_mac(
 
         Debug_LOG_INFO("Sending Get mac cmd: \n");
 
-        unsigned result = NwChanmux_chanWriteSyncCtrl(
+        unsigned result = SeosNwChanmux_chanWriteSyncCtrl(
                               command,
                               sizeof(command));
         if (result != sizeof(command))
@@ -293,7 +293,7 @@ NwChanmux_get_mac(
             Debug_LOG_INFO("%s result = %d\n", __FUNCTION__, result);
             return -1;
         }
-        size_t read = NwChanmux_chanReadBlocking(
+        size_t read = SeosNwChanmux_chanReadBlocking(
                           ctrlchan, response,
                           sizeof(response));
 

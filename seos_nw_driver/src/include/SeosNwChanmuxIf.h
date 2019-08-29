@@ -62,7 +62,7 @@ extern seos_err_t ChanMux_read(unsigned int chan, size_t len, size_t* read);
 
 
 /**
- * @details %NwChanmux_chanWriteSyncData, Write wrapper for ChanMux_write Data channel
+ * @details %SeosNwChanmux_chanWriteSyncData, Write wrapper for ChanMux_write Data channel
  * @ingroup SeosNwChanmuxIf
 
  * @param *buf: Pointer of the data buffer containing data to be written
@@ -75,12 +75,12 @@ extern seos_err_t ChanMux_read(unsigned int chan, size_t len, size_t* read);
  */
 
 size_t
-NwChanmux_chanWriteSyncData(
+SeosNwChanmux_chanWriteSyncData(
     const void*   buf,
     size_t        len);
 
 /**
- * @details %NwChanmux_chanWriteSyncCtrl, Write wrapper for ChanMux_write Ctrl channel
+ * @details %SeosNwChanmux_chanWriteSyncCtrl, Write wrapper for ChanMux_write Ctrl channel
  * @ingroup SeosNwChanmuxIf
 
  * @param *buf: Pointer of the data buffer containing data to be written
@@ -94,12 +94,12 @@ NwChanmux_chanWriteSyncData(
  */
 
 size_t
-NwChanmux_chanWriteSyncCtrl(
+SeosNwChanmux_chanWriteSyncCtrl(
     const void*   buf,
     size_t        len);
 
 /**
- * @details %NwChanmux_chanRead, Read wrapper for ChanMux_Read non Blocking
+ * @details %SeosNwChanmux_chanRead, Read wrapper for ChanMux_Read non Blocking
  * @ingroup SeosNwChanmuxIf
  * @param chan: Chanmux Channel number to read from
 
@@ -112,14 +112,14 @@ NwChanmux_chanWriteSyncCtrl(
  */
 
 size_t
-NwChanmux_chanRead(
+SeosNwChanmux_chanRead(
     unsigned int  chan,
     void*         buf,
     size_t        len);
 
 
 /**
- * @details %NwChanmux_chanReadBlocking, this is a wrapper for Chanmux_read. It is a blocking read.
+ * @details %SeosNwChanmux_chanReadBlocking, this is a wrapper for Chanmux_read. It is a blocking read.
  * @ingroup SeosNwChanmuxIf
 
  * @param chan: Chanmux Channel number to read from
@@ -132,14 +132,14 @@ NwChanmux_chanRead(
  */
 
 size_t
-NwChanmux_chanReadBlocking(
+SeosNwChanmux_chanReadBlocking(
     unsigned int  chan,
     char*         buf,
     size_t        len);
 
 
 /**
- * @details %NwChanmux_write_data, PicoTCP uses this API as an interface to use Chanmux.
+ * @details %SeosNwChanmux_write_data, PicoTCP uses this API as an interface to use Chanmux.
  * @ingroup SeosNwChanmuxIf
 
  * @param *buffer: Pointer of the data buffer containing data to be written
@@ -151,12 +151,12 @@ NwChanmux_chanReadBlocking(
  *
  */
 int
-NwChanmux_write_data(
+SeosNwChanmux_write_data(
     void*   buffer,
     size_t  len);
 
 /**
- * @details %NwChanmux_read_data, PicoTCP uses this API as an interface to use Chanmux.
+ * @details %SeosNwChanmux_read_data, PicoTCP uses this API as an interface to use Chanmux.
  * @ingroup SeosNwChanmuxIf
 
  * @param *buffer: Pointer of the data buffer containing data to be read into
@@ -168,12 +168,12 @@ NwChanmux_write_data(
  *
  */
 int
-NwChanmux_read_data(
+SeosNwChanmux_read_data(
     void*   buffer,
     size_t  len);
 
 /**
- * @details %NwChanmux_get_mac, is an interface for picotcp to use Chanmux to get the tap mac address.
+ * @details %SeosNwChanmux_get_mac, is an interface for picotcp to use Chanmux to get the tap mac address.
  * @ingroup SeosNwChanmuxIf
 
  * @param *name: name of the tap of which mac addr is requested (e.g. "tap0" or "tap1" etc)
@@ -186,6 +186,6 @@ NwChanmux_read_data(
  */
 
 int
-NwChanmux_get_mac(
+SeosNwChanmux_get_mac(
     char*     name,
     uint8_t*  mac);

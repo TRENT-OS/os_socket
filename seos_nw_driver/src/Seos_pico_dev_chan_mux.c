@@ -23,7 +23,7 @@ struct pico_device_chan_mux_tap
 
 static int pico_chan_mux_tap_send(struct pico_device* dev, void* buf, int len)
 {
-    return (NwChanmux_write_data(buf, len));
+    return (SeosNwChanmux_write_data(buf, len));
 }
 
 /*
@@ -39,7 +39,7 @@ static int pico_chan_mux_tap_poll( struct pico_device* dev, int loop_score )
 
     while (loop_score > 0)
     {
-        len = NwChanmux_read_data(buf, TUN_MTU);
+        len = SeosNwChanmux_read_data(buf, TUN_MTU);
         if (len > 0)
         {
             loop_score--;
@@ -70,7 +70,7 @@ static int pico_chan_mux_tap_open (char* name )
 
 static int pico_chan_mux_tap_get_mac(char* name, uint8_t* mac)
 {
-    return (NwChanmux_get_mac(name, mac));
+    return (SeosNwChanmux_get_mac(name, mac));
 }
 
 struct pico_device* pico_chan_mux_tap_create (char* name)

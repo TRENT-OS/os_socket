@@ -8,7 +8,7 @@
 
 #include "pico_protocol.h"
 
-char* nw_errlist[] =
+char* seos_nw_errlist[] =
 {
     "no error",
     "Operation not permitted",
@@ -44,7 +44,7 @@ char* nw_errlist[] =
 };
 
 
-const char* nw_strerror(int e)
+const char* seos_nw_strerror(int e)
 {
-    return (nw_errlist[e]);
+    return (seos_nw_errlist[e]);
 }

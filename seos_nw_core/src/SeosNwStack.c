@@ -20,12 +20,12 @@
 
 #define NUM_PING 10
 
-static void nw_socket_event(uint16_t ev, struct pico_socket* s);
+static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
 static int end_of_read = 0;
 
 
 /* Abstraction of pico API */
-nw_api_vtable nw_api_if =
+seos_nw_api_vtable nw_api_if =
 {
     .nw_socket_open       =  pico_socket_open,
     .nw_socket_read       =  pico_socket_read,
@@ -79,7 +79,7 @@ static const char* cloud_ip[] =
  *  This is called as part of pico_tick every x ms.
  */
 static void
-nw_socket_event(uint16_t ev,
+seos_nw_socket_event(uint16_t ev,
                 struct pico_socket* s)
 {
     pseos_nw->event = ev;
@@ -106,7 +106,7 @@ nw_socket_event(uint16_t ev,
                 if (read_len < 0)
                 {
                     Debug_LOG_WARNING("%s: error read of pico socket :%s \n", __FUNCTION__,
-                                      nw_strerror(pico_err));
+                                      seos_nw_strerror(pico_err));
                     pseos_nw->read = -1;
                     pnw_camkes->pCamkesglue->e_read_emit();
                     return;
@@ -165,7 +165,7 @@ nw_socket_event(uint16_t ev,
             else
             {
                 Debug_LOG_WARNING("%s: error accept-2 of pico socket : %s \n", __FUNCTION__,
-                                  nw_strerror(pico_err));
+                                  seos_nw_strerror(pico_err));
             }
             pnw_camkes->pCamkesglue->e_conn_emit();
         }
@@ -187,7 +187,7 @@ nw_socket_event(uint16_t ev,
                 if (pseos_nw->read < 0)
                 {
                     Debug_LOG_WARNING("%s: error read-2 of pico socket :%s \n", __FUNCTION__,
-                                      nw_strerror(pico_err));
+                                      seos_nw_strerror(pico_err));
                     pseos_nw->read = -1; /* Return -1 to app in case of error */
                     pnw_camkes->pCamkesglue->e_read_emit();
                     return ;
@@ -234,7 +234,7 @@ nw_socket_event(uint16_t ev,
     if (ev & PICO_SOCK_EV_ERR)
     {
         Debug_LOG_INFO("Socket error received: %s. Bailing out.\n",
-                       nw_strerror(pico_err));
+                       seos_nw_strerror(pico_err));
         exit(1);
     }
 
@@ -254,7 +254,7 @@ seos_socket_create(int domain,
                    int* pHandle )
 {
 
-    if (domain == AF_INET6)
+    if (domain == SEOS_AF_INET6)
     {
         domain = PICO_PROTO_IPV6;
     }
@@ -263,7 +263,7 @@ seos_socket_create(int domain,
         domain = PICO_PROTO_IPV4;
     }
 
-    if (type == SOCK_STREAM)
+    if (type == SEOS_SOCK_STREAM)
     {
         type = PICO_PROTO_TCP;
     }
@@ -273,12 +273,12 @@ seos_socket_create(int domain,
     }
 
     pseos_nw->socket = pseos_nw->vtable->nw_socket_open(domain, type,
-                                                        &nw_socket_event);
+                                                        &seos_nw_socket_event);
 
     if (pseos_nw->socket == NULL)
     {
         Debug_LOG_WARNING("error opening socket %s:%s\n", __FUNCTION__,
-                          nw_strerror(pico_err));
+                          seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
     int yes = 1;
@@ -340,7 +340,7 @@ seos_socket_close(int handle)
     if (close < 0)
     {
         Debug_LOG_WARNING("%s: error closing pico socket :%s \n", __FUNCTION__,
-                          nw_strerror(pico_err));
+                          seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
 
     }
@@ -372,7 +372,7 @@ seos_socket_connect(int handle,
     if (connect < 0)
     {
         Debug_LOG_WARNING("%s: error connecting to %s: %u : %s \n", __FUNCTION__, name,
-                          short_be(send_port), nw_strerror(pico_err));
+                          short_be(send_port), seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
     return SEOS_SUCCESS;
@@ -414,7 +414,7 @@ seos_socket_write(int handle,
     if (bytes_written < 0)
     {
         Debug_LOG_WARNING("%s: error writing to pico socket :%s \n", __FUNCTION__,
-                          nw_strerror(pico_err));
+                          seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -447,7 +447,7 @@ seos_socket_bind(int handle,
     if (bind < 0)
     {
         Debug_LOG_WARNING("%s: error binding-2 to pico socket: %s \n", __FUNCTION__,
-                          nw_strerror(pico_err));
+                          seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
     return SEOS_SUCCESS;
@@ -470,7 +470,7 @@ seos_socket_listen(int handle,
     if (listen < 0)
     {
         Debug_LOG_WARNING("%s: error listen to pico socket: %s \n", __FUNCTION__,
-                          nw_strerror(pico_err));
+                          seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
     return SEOS_SUCCESS;

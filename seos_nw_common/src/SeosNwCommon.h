@@ -27,7 +27,7 @@
 
 
 /*********************************/
- /*! Enum NW Stack Proxy Commands */
+/*! Enum NW Stack Proxy Commands */
 /*********************************/
 
 
@@ -39,7 +39,7 @@ typedef enum
     NW_CTRL_CMD_CLOSE_CNF  =  3,   /*!< Close Confirmation */
     NW_CTRL_CMD_GETMAC     =  4,   /*!< GetMac for TAP */
     NW_CTRL_CMD_GETMAC_CNF =  5    /*!< GetMac Confirmation */
-} NwCtrlCommand;
+} Seos_NwCtrlCommand;
 
 
 /* MACRO's */
@@ -62,7 +62,7 @@ typedef enum
     }
 
 /**
- * @details %nw_strerror, convert pico error code to string
+ * @details %seos_nw_strerror, convert pico error code to string
 
  * @ingroup SeosNwCommon
  *
@@ -74,4 +74,4 @@ typedef enum
  *
  */
 
-const char* nw_strerror(int e);
+const char* seos_nw_strerror(int e);

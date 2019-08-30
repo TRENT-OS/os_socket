@@ -80,7 +80,7 @@ static const char* cloud_ip[] =
  */
 static void
 seos_nw_socket_event(uint16_t ev,
-                struct pico_socket* s)
+                     struct pico_socket* s)
 {
     pseos_nw->event = ev;
     int read_len = 0;

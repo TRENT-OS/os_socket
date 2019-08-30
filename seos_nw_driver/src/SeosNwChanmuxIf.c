@@ -156,8 +156,8 @@ SeosNwChanmux_chanReadBlocking (
     {
         // Non-blocking read.
         size_t read = SeosNwChanmux_chanRead(chan,
-                                         &buf[lenRead],
-                                         len - lenRead);
+                                             &buf[lenRead],
+                                             len - lenRead);
         if (0 == read)
         {
             ; // do nothing

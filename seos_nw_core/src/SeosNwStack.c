@@ -12,6 +12,7 @@
 #include "LibDebug/Debug.h"
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
+#include "SeosNwConfig.h"
 #include "Seos_pico_dev_chan_mux.h"
 #include "seos_nw_api.h"
 
@@ -48,32 +49,31 @@ static SeosNwstack** ppseos_nw = NULL ;
 Seos_nw_camkes_info* pnw_camkes;
 
 
-
+#if (SEOS_USE_TAP_INTERFACE == 1)
 /* TAP IP address */
 static const char* tap_ip_address[] =
 {
-    "192.168.82.91",
-    "192.168.82.92"
+    SEOS_TAP0_ADDR,
+    SEOS_TAP1_ADDR
 };
 
 static const char* subnet_masks[] =
 {
-    "255.255.255.0",
-    "255.255.0.0",
-    "255.0.0.0"
+    SEOS_SUBNET_MASK
 };
 
 static const char* gateway_ip[] =
 {
-    "192.168.82.1"
+    SEOS_GATEWAY_ADDR
 
 };
 
 static const char* cloud_ip[] =
 {
-    "51.144.118.31"
+    SEOS_CLOUD_ADDR
 };
 
+#endif
 /*
  *
  *  This is called as part of pico_tick every x ms.
@@ -582,6 +582,7 @@ seos_nw_init(void)
 
     pico_stack_init();  //init nw stack = pico
 
+#if (SEOS_USE_TAP_INTERFACE == 1)
     if (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
         dev = pico_chan_mux_tap_create("tap0");   //create tap0 device
@@ -627,6 +628,7 @@ seos_nw_init(void)
         pnw_camkes->pCamkesglue->c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
         pico_stack_tick();
     }
+#endif
     return SEOS_ERROR_GENERIC;     // should not reach here as the stack needs to keep ticking
 }
 

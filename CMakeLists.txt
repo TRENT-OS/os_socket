@@ -16,8 +16,6 @@ if (ENABLE_LINT)
 endif()
 
 
-       
-
 target_compile_options(${PROJECT_NAME}
     PUBLIC
         -Wall

@@ -1,7 +1,6 @@
 [submodule "3rdParty/picotcp"]
 	path = 3rdParty/picotcp
-	url = ssh://git@bitbucket.hensoldt-cyber.systems:7999/ext/picotcp.git
-
+	url = ../../ext/picotcp.git
 [submodule "network-client-lib"]
 	path = network-client-lib
-	url = ssh://git@bitbucket.hensoldt-cyber.systems:7999/seos/network-client-lib.git
+	url = ../../seos/network-client-lib.git

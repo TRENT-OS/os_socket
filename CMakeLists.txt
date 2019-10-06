@@ -59,7 +59,7 @@ target_link_libraries(${PROJECT_NAME}
     seos_core_api
 )
 
-# if invoked from the SOES sandbox, provide a documentation build target
+# if invoked from the SEOS sandbox, provide a documentation build target
 if (COMMAND seos_create_doxygen_target)
 
     # there are no pre or post steps

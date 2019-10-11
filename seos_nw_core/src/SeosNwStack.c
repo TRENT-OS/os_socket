@@ -22,7 +22,7 @@
 #define NUM_PING 10
 
 static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
-static int end_of_read = 0;
+
 
 
 /* Abstraction of pico API */
@@ -83,7 +83,6 @@ seos_nw_socket_event(uint16_t ev,
                      struct pico_socket* s)
 {
     pseos_nw->event = ev;
-    int read_len = 0;
     /* begin of client if */
     if (pnw_camkes->instanceID  == SEOS_NWSTACK_AS_CLIENT)
     {
@@ -91,38 +90,6 @@ seos_nw_socket_event(uint16_t ev,
         {
             Debug_LOG_INFO("Connection established with server. for socket =%p\n", s);
         }
-
-        if (ev & PICO_SOCK_EV_RD)
-        {
-            Debug_LOG_TRACE("Read event Rx. for socket =%p\n", s);
-            int len = PAGE_SIZE;
-            pseos_nw->read = 0;
-            pseos_nw->event = 0;
-            end_of_read = 0;
-            do
-            {
-                read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->socket,
-                                                            (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read, len);
-                if (read_len < 0)
-                {
-                    Debug_LOG_WARNING("%s: error read of pico socket :%s \n", __FUNCTION__,
-                                      seos_nw_strerror(pico_err));
-                    pseos_nw->read = -1;
-                    pnw_camkes->pCamkesglue->e_read_emit();
-                    return;
-                }
-                pseos_nw->read += read_len;
-
-            }
-            while (read_len > 0);
-            /* At this point read length will be 0 and its the end of read. */
-            end_of_read = 1;
-            pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
-            Debug_LOG_TRACE("Read data for socket =%p,length=%d,data=%s \n", s,
-                            pseos_nw->read, (char*)pnw_camkes->pportsglu->Appdataport);
-
-        }
-
 
     }/* end of Client if */
 
@@ -170,45 +137,13 @@ seos_nw_socket_event(uint16_t ev,
             pnw_camkes->pCamkesglue->e_conn_emit();
         }
 
-        if (ev & PICO_SOCK_EV_RD)
-        {
-            Debug_LOG_TRACE("Read from client for socket =%p\n", s);
-            int len = PAGE_SIZE;
-            pseos_nw->read = 0;
-            pseos_nw->event = 0;
-            end_of_read = 0;
-
-
-            do
-            {
-                read_len = pseos_nw->vtable->nw_socket_read(pseos_nw->client_socket,
-                                                            (unsigned char*)pnw_camkes->pportsglu->Appdataport + pseos_nw->read, len);
-
-                if (pseos_nw->read < 0)
-                {
-                    Debug_LOG_WARNING("%s: error read-2 of pico socket :%s \n", __FUNCTION__,
-                                      seos_nw_strerror(pico_err));
-                    pseos_nw->read = -1; /* Return -1 to app in case of error */
-                    pnw_camkes->pCamkesglue->e_read_emit();
-                    return ;
-                }
-                pseos_nw->read += read_len;
-            }
-            while (read_len > 0);
-
-            /* At this point read length will be 0 and its the end of read. */
-            end_of_read = 1;
-            pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
-
-
-            Debug_LOG_TRACE("Read data for socket =%p,length=%d,data%s \n",
-                            pseos_nw->client_socket, pseos_nw->read,
-                            (char*)pnw_camkes->pportsglu->Appdataport);
-
-        }
-
     }   // end of server
 
+    if (ev & PICO_SOCK_EV_RD)
+    {
+        Debug_LOG_TRACE("Read event Rx. for socket =%p\n", s);
+        pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
+    }
 
     if (ev & PICO_SOCK_EV_WR)
     {
@@ -220,7 +155,6 @@ seos_nw_socket_event(uint16_t ev,
     if (ev & PICO_SOCK_EV_CLOSE)
     {
         Debug_LOG_INFO("Socket received close from peer\n");
-        end_of_read = 1;
         pnw_camkes->pCamkesglue->e_read_emit();
         return;
     }
@@ -517,49 +451,98 @@ seos_err_t
 seos_socket_read(int handle,
                  size_t* pLen)
 {
+    int retval = 0;
+    int tot_len = 0;
+    size_t len = *pLen; /* App requested length */
+    void* buf = pnw_camkes->pportsglu->Appdataport; /* App data port */
 
-    if (end_of_read == 1)
+    if (len <= 0) /* nothing can be done and is an error*/
     {
-        /*nothing left to read and the connection is open */
-        *pLen = 0;
-        end_of_read = 0;
-        memset((unsigned char*)pnw_camkes->pportsglu->Appdataport, 0, PAGE_SIZE);
-        return SEOS_SUCCESS;
-    }
-
-    pnw_camkes->pCamkesglue->c_read_wait();  // wait for rd event from pico
-
-    if (pseos_nw->read < 0)
-    {
+        Debug_LOG_WARNING("%s() Invalid param length %d", __FUNCTION__, *pLen);
         return SEOS_ERROR_GENERIC;
     }
 
-    if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
+    struct pico_socket* socket_handle = (pnw_camkes->instanceID ==
+                                         SEOS_NWSTACK_AS_CLIENT) ?
+                                        pseos_nw->socket : pseos_nw->client_socket;
+
+    while (tot_len < len)
     {
-        pseos_nw->event = 0;
 
-        if (end_of_read == 1)  /*nothing left to read and the connection is closed.  */
+        retval = pseos_nw->vtable->nw_socket_read(socket_handle,
+                                                  buf + tot_len, len - tot_len);
+        /* nw_socket_read() failed */
+        if (retval < 0)
         {
-            Debug_LOG_WARNING("End of read. Socket closed !!! \n ");
-            *pLen = 0;
-            end_of_read = 0;
-            memset((unsigned char*)pnw_camkes->pportsglu->Appdataport, 0, PAGE_SIZE);
-            return SEOS_ERROR_CONNECTION_CLOSED;
+            /* data was received */
+            if (tot_len > 0)
+            {
+                Debug_LOG_WARNING("Read returning with error %d: %s\n",
+                                  tot_len, seos_nw_strerror(pico_err));
+                *pLen = tot_len;
+            }
+            /* no data was received yet
+               If no messages are available to be received and the peer has
+               performed an orderly shutdown, read shall return Success. */
+            if (pico_err == PICO_ERR_ESHUTDOWN)
+            {
+                *pLen = 0;
+                return SEOS_SUCCESS;
+            }
+            /* Otherwise, the function shall return SEOS_ERROR_GENERIC */
+            return SEOS_ERROR_GENERIC;
         }
-        else
+        /* If received 0 bytes, return  amount of bytes received */
+        if (retval == 0)
         {
-            /*data to be read and the connection is closed*/
-            Debug_LOG_WARNING("Last data to read. Socket closed !!! \n ");
-            *pLen = pseos_nw->read;
-            return SEOS_SUCCESS;
-
+            pseos_nw->event = 0;
+            if (tot_len > 0)
+            {
+                Debug_LOG_INFO("Read returning %d", tot_len);
+                *pLen = tot_len;
+                return SEOS_SUCCESS;
+            }
         }
 
+        if (retval > 0)
+        {
+            /* continue until retval = 0, socket buffer empty */
+            tot_len += retval;
+            continue;
+        }
+
+        /* We have a blocking socket. We need to wait until data becomes
+           available to be able to return from this function.
+
+           If recv bytes (retval) < len-tot_len: socket empty, we need to wait
+           for a new RD event */
+        if (retval < (len - tot_len))
+        {
+            /* wait for a new RD event -- also wait possibly for a CLOSE event */
+            pnw_camkes->pCamkesglue->c_read_wait();
+            if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
+            {
+                /* closing of socket must be done by the app after return */
+                pseos_nw->event = 0;
+                Debug_LOG_INFO("Socket close received");
+                *pLen = 0;
+                return SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+            }
+        }
+
+        tot_len += retval;
+
+    } // end of while()
+
+    Debug_LOG_TRACE("%s(), Read data length=%d, and Data: \n", __FUNCTION__,
+                    tot_len);
+    for (int i = 0; i <= tot_len; i++)
+    {
+        Debug_LOG_TRACE("%02x\t", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
     }
-    /*Normal case of PicoTCP operation.You have reached the end of read */
 
-    Debug_LOG_TRACE("Normal Read .!! \n ");
-    *pLen = pseos_nw->read;
+    Debug_LOG_TRACE("Read returning %d (full block)\n", tot_len);
+    *pLen = tot_len;
     return SEOS_SUCCESS;
 
 }

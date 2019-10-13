@@ -18,9 +18,6 @@
 
 
 
-
-#define NUM_PING 10
-
 static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
 
 

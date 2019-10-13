@@ -556,13 +556,15 @@ void seos_network_init()
 seos_err_t
 seos_nw_init(void)
 {
-    struct pico_ip4 ipaddr, netmask;
-    struct pico_device* dev;
 
 
     pico_stack_init();  //init nw stack = pico
 
 #if (SEOS_USE_TAP_INTERFACE == 1)
+
+    struct pico_ip4 ipaddr, netmask;
+    struct pico_device* dev;
+
     if (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
     {
         dev = pico_chan_mux_tap_create("tap0");   //create tap0 device

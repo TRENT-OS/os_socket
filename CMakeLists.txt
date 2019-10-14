@@ -35,6 +35,12 @@ if (MEMORY_CONFIG_H_FILE)
 endif()
 
 
+if (NETWORK_CONFIG_H_FILE)
+    list(APPEND PUBLIC_TARGET_COMPILE_DEFINITIONS
+        "NETWORK_CONFIG_H_FILE=${NETWORK_CONFIG_H_FILE}"
+    )
+endif()
+
 
 target_compile_definitions(${PROJECT_NAME}
     PUBLIC
@@ -48,7 +54,6 @@ target_include_directories(${PROJECT_NAME}
         "seos_nw_common/src"
         "seos_nw_core/src/include"
         "seos_nw_driver/src/include"
-        "configs"
 )
 
 add_subdirectory(3rdParty/picotcp)

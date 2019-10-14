@@ -8,12 +8,28 @@
 #include "LibDebug/Debug.h"
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
-#include "SeosNwConfig.h"
 #include "Seos_pico_dev_chan_mux.h"
 #include "seos_nw_api.h"
 
 
+//------------------------------------------------------------------------------
+// SEOS system configuration
 
+#if defined(NETWORK_CONFIG_H_FILE)
+
+#define NETWORK_XSTR(s)    NETWORK_STR(d)
+#define NETWORK_STR(s)     #s
+#include NETWORK_XSTR(NETWORK_CONFIG_H_FILE)
+
+#else
+
+// for legacy compatibility, we have to provide this default config file
+// until every SEOS system has been extended to provide one.
+#include "../../configs/SeosNwConfig.h"
+
+#endif
+
+//------------------------------------------------------------------------------
 static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
 
 

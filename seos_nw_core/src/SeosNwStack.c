@@ -221,32 +221,20 @@ seos_socket_create(int domain,
 seos_err_t
 seos_socket_close(int handle)
 {
-    int close;
+    struct pico_socket* socket =
+        (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT) ? pseos_nw->socket
+        : (handle == 1) ? pseos_nw->client_socket
+        : pseos_nw->socket;
 
-    if (pnw_camkes->instanceID  == SEOS_NWSTACK_AS_CLIENT)
+    int ret = pseos_nw->vtable->nw_socket_close(socket);
+    if (ret < 0)
     {
-        close = pseos_nw->vtable->nw_socket_close(pseos_nw->socket);
-    }
-    else
-    {
-        if (handle == 1)
-        {
-            close = pseos_nw->vtable->nw_socket_close(pseos_nw->client_socket);
-        }
-        else
-        {
-            close = pseos_nw->vtable->nw_socket_close(pseos_nw->socket);
-        }
-
-    }
-
-    if (close < 0)
-    {
-        Debug_LOG_WARNING("%s: error closing pico socket :%s", __FUNCTION__,
-                          seos_nw_strerror(pico_err));
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
+                        ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
-
     }
+
     return SEOS_SUCCESS;
 }
 

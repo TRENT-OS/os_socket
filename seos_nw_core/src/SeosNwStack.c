@@ -159,60 +159,79 @@ seos_nw_socket_event(uint16_t ev,
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_create(int domain,
-                   int type,
-                   int* pHandle )
+seos_socket_create(
+    int   domain,
+    int   type,
+    int*  pHandle)
 {
-
-    if (domain == SEOS_AF_INET6)
+    switch (domain)
     {
-        domain = PICO_PROTO_IPV6;
-    }
-    else
-    {
+    case SEOS_AF_INET:
         domain = PICO_PROTO_IPV4;
-    }
+        break;
 
-    if (type == SEOS_SOCK_STREAM)
-    {
-        type = PICO_PROTO_TCP;
-    }
-    else
-    {
-        type = PICO_PROTO_UDP;
-    }
+    case SEOS_AF_INET6:
+        domain = PICO_PROTO_IPV6;
+        break;
 
-    pseos_nw->socket = pseos_nw->vtable->nw_socket_open(domain, type,
-                                                        &seos_nw_socket_event);
-
-    if (pseos_nw->socket == NULL)
-    {
-        Debug_LOG_WARNING("error opening socket %s:%s", __FUNCTION__,
-                          seos_nw_strerror(pico_err));
+    default:
+        Debug_LOG_WARNING("unsupported domain %d", domain);
         return SEOS_ERROR_GENERIC;
     }
+
+    switch (type)
+    {
+    case SEOS_SOCK_STREAM:
+        type = PICO_PROTO_TCP;
+        break;
+
+    case SEOS_SOCK_DGRAM:
+        type = PICO_PROTO_UDP;
+        break;
+
+    default:
+        Debug_LOG_WARNING("unsupported type %d", domain);
+        return SEOS_ERROR_GENERIC;
+    }
+
+    pseos_nw->socket = pseos_nw->vtable->nw_socket_open(domain,
+                                                        type,
+                                                        &seos_nw_socket_event);
+    if (pseos_nw->socket == NULL)
+    {
+        // try to detailed error from PicoTCP. Actually, nw_socket_open()
+        // should return a proper error code and populate a handle passed as
+        // pointer parameter, so we don't need to access pico_err here.
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("socket opening failed, pico_err = %d, %s",
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+        return SEOS_ERROR_GENERIC;
+    }
+
+    Debug_LOG_INFO("new socket is %p", pseos_nw->socket);
+
     int yes = 1;
     pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &yes);
 
-    Debug_LOG_INFO("socket address = %p", pseos_nw->socket);
-
-    /* For now it is just 1 app support, handle will be 0 and this code is not much useful.*/
-    /* revisit when multi thread support is supported */
+    // currently we support one application only, the handle is always 0 and
+    // this code does not do really much. Revisit when we support multiple
+    // thread and more sockets
     for (int i = 0; i < SEOS_MAX_NO_NW_THREADS; i++)
     {
-        // Relook when multi threading is supported. Fine for 1 app per instance
-        if (ppseos_nw[i] != NULL)
+        if (ppseos_nw[i] == NULL)
         {
-            pseos_nw->in_use = 1;
-            pseos_nw->socket_fd = i;
-            *pHandle = pseos_nw->socket_fd;
-            break;
-        }
-        else
-        {
+            // each slot must have space allocated
             return SEOS_ERROR_GENERIC;
         }
+
+        // populate the slot. There are no check here, because we support just
+        // one socke for now
+        pseos_nw->in_use = 1;
+        pseos_nw->socket_fd = i;
+        *pHandle = pseos_nw->socket_fd;
+        break;
     }
+
     return SEOS_SUCCESS;
 }
 

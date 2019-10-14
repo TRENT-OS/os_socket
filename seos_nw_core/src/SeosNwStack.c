@@ -2,10 +2,6 @@
  *  SEOS Network Stack
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
- *
- * As of now supports single application and does not support multithreading.
- *
- * Multi app support to be done later
  */
 
 #include "SeosNwChanmuxIf.h"
@@ -37,8 +33,9 @@ seos_nw_api_vtable nw_api_if =
 
 };
 
-/* As of now it is only one app or socket per Nw stack. Hence a global variable can be used
- *  which represents the Nw Stack*/
+// As of now there is only one app per network stack and there is also only one
+// socket. Hence one global variable can be used which represents the network
+// stack
 
 static SeosNwstack seos_nw;
 static SeosNwstack* pseos_nw = NULL;
@@ -71,8 +68,9 @@ static const char* cloud_ip[] =
 };
 
 #endif
-/*
- *
+
+
+/*******************************************************************************
  *  This is called as part of pico_tick every x ms.
  */
 static void
@@ -89,7 +87,6 @@ seos_nw_socket_event(uint16_t ev,
         }
 
     }/* end of Client if */
-
     else /* begin of server */
     {
         if (ev & PICO_SOCK_EV_CONN)
@@ -168,17 +165,10 @@ seos_nw_socket_event(uint16_t ev,
                        seos_nw_strerror(pico_err));
         exit(1);
     }
-
 }
 
-/*
- *   Function: seos_socket_create()
- *
- *   Return values:
- *   true = success
- *   false = failure
- */
 
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_create(int domain,
                    int type,
@@ -238,14 +228,7 @@ seos_socket_create(int domain,
 }
 
 
-/*
- *   Function: seos_socket_close()
- *
- *   Return values:
- *   0 = success
- *  -1 = failure
- *   handle = not used as of now
- */
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_close(int handle)
 {
@@ -278,13 +261,8 @@ seos_socket_close(int handle)
     return SEOS_SUCCESS;
 }
 
-/*
- *   Function: seos_socket_connect()
- *
- *   Return values:
- *   0 = success
- *  -1 = failure
- */
+
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_connect(int handle,
                     const char* name,
@@ -310,13 +288,7 @@ seos_socket_connect(int handle,
 }
 
 
-/*
- *   Function: seos_socket_write()
- *
- *   Return values:
- *   no of written bytes = success
- *  -1 = failure
- */
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_write(int handle,
                   size_t* pLen)
@@ -354,14 +326,8 @@ seos_socket_write(int handle,
     return SEOS_SUCCESS;
 }
 
-/*
- *   Function: seos_socket_bind()
- *
- *   Return values:
- *   0 = success
- *  -1 = failure
- *  Only useful when server
- */
+
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_bind(int handle,
                  uint16_t port)
@@ -385,13 +351,7 @@ seos_socket_bind(int handle,
 }
 
 
-/*
- *   Function: seos_socket_listen()
- *
- *   Return values:
- *   0 = success
- *  -1 = failure
- */
+//------------------------------------------------------------------------------
 seos_err_t
 seos_socket_listen(int handle,
                    int backlog)
@@ -408,15 +368,9 @@ seos_socket_listen(int handle,
 }
 
 
-/*
- *   Function: seos_socket_accept()
- *
- *   Return values:
- *   0 = success
- *  -1 = failure
- *   For server wait on accept until client connects
- *   Not much useful for client as we cannot accept incoming connections
- */
+//------------------------------------------------------------------------------
+// For server wait on accept until client connects. Not much useful for client
+// as we cannot accept incoming connections
 seos_err_t
 seos_socket_accept(int handle,
                    int* pClient_handle,
@@ -436,14 +390,9 @@ seos_socket_accept(int handle,
     return SEOS_SUCCESS; // as we have only one incoming connection
 }
 
-/*
- *   Function: seos_socket_read()
- *   Return values:
- *   read bytes = success
- *  -1 = failure
- *   Is a blocking call. Wait until we get a read event from Stack
- */
 
+//------------------------------------------------------------------------------
+// Is a blocking call. Wait until we get a read event from Stack
 seos_err_t
 seos_socket_read(int handle,
                  size_t* pLen)
@@ -545,19 +494,18 @@ seos_socket_read(int handle,
 }
 
 
-
+//------------------------------------------------------------------------------
 void seos_network_init()
 {
     pnw_camkes->pCamkesglue->c_initdone();   // wait for nw stack to initialise
 }
+
 
 //------------------------------------------------------------------------------
 // called by NwStack CAmkES wrapper
 seos_err_t
 seos_nw_init(void)
 {
-
-
     pico_stack_init();  //init nw stack = pico
 
 #if (SEOS_USE_TAP_INTERFACE == 1)
@@ -610,12 +558,16 @@ seos_nw_init(void)
         pnw_camkes->pCamkesglue->c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
         pico_stack_tick();
     }
+
+    // we never arrive here, since the tick look runs forever
+
 #endif
-    return SEOS_ERROR_GENERIC;     // should not reach here as the stack needs to keep ticking
+
+    return SEOS_ERROR_GENERIC;
 }
 
 
-
+//------------------------------------------------------------------------------
 // run() when you instantiate SeosNwStack component  must call this
 seos_err_t
 Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)

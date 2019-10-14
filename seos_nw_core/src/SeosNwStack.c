@@ -83,7 +83,7 @@ seos_nw_socket_event(uint16_t ev,
     {
         if (ev & PICO_SOCK_EV_CONN)
         {
-            Debug_LOG_INFO("Connection established with server. for socket =%p\n", s);
+            Debug_LOG_INFO("Connection established with server. for socket =%p", s);
         }
 
     }/* end of Client if */
@@ -108,7 +108,7 @@ seos_nw_socket_event(uint16_t ev,
             if (pseos_nw->client_socket != NULL )
             {
                 pico_ipv4_to_string(peer, orig.addr);
-                Debug_LOG_INFO("Connection established with client %s:%d:%d.\n", peer,
+                Debug_LOG_INFO("Connection established with client %s:%d:%d", peer,
                                short_be(port), port);
                 pico_socket_setoption(pseos_nw->client_socket, PICO_TCP_NODELAY, &yes);
                 /* Set keepalive options */
@@ -125,7 +125,7 @@ seos_nw_socket_event(uint16_t ev,
             }
             else
             {
-                Debug_LOG_WARNING("%s: error accept-2 of pico socket : %s \n", __FUNCTION__,
+                Debug_LOG_WARNING("%s: error accept-2 of pico socket : %s", __FUNCTION__,
                                   seos_nw_strerror(pico_err));
             }
             pnw_camkes->pCamkesglue->e_conn_emit();
@@ -135,33 +135,33 @@ seos_nw_socket_event(uint16_t ev,
 
     if (ev & PICO_SOCK_EV_RD)
     {
-        Debug_LOG_TRACE("Read event Rx. for socket =%p\n", s);
+        Debug_LOG_TRACE("Read event Rx. for socket =%p", s);
         pnw_camkes->pCamkesglue->e_read_emit();   //e_read_emit();
     }
 
     if (ev & PICO_SOCK_EV_WR)
     {
         pnw_camkes->pCamkesglue->e_write_emit();   // emit to unblock app which is waiting to write
-        Debug_LOG_TRACE("Write event Rx. for socket =%p\n", s);
+        Debug_LOG_TRACE("Write event Rx. for socket =%p", s);
         pnw_camkes->pCamkesglue->e_write_nwstacktick(); // Perform nw stack tick now as we received write event from stack
     }
 
     if (ev & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_INFO("Socket received close from peer\n");
+        Debug_LOG_INFO("Socket received close from peer");
         pnw_camkes->pCamkesglue->e_read_emit();
         return;
     }
 
     if (ev & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_INFO("Socket closed. Exit normally. \n");
+        Debug_LOG_INFO("Socket closed. Exit normally");
         exit(1);
     }
 
     if (ev & PICO_SOCK_EV_ERR)
     {
-        Debug_LOG_INFO("Socket error received: %s. Bailing out.\n",
+        Debug_LOG_INFO("Socket error received: %s. Bailing out",
                        seos_nw_strerror(pico_err));
         exit(1);
     }
@@ -198,14 +198,14 @@ seos_socket_create(int domain,
 
     if (pseos_nw->socket == NULL)
     {
-        Debug_LOG_WARNING("error opening socket %s:%s\n", __FUNCTION__,
+        Debug_LOG_WARNING("error opening socket %s:%s", __FUNCTION__,
                           seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
     int yes = 1;
     pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &yes);
 
-    Debug_LOG_INFO("socket address = %p\n", pseos_nw->socket);
+    Debug_LOG_INFO("socket address = %p", pseos_nw->socket);
 
     /* For now it is just 1 app support, handle will be 0 and this code is not much useful.*/
     /* revisit when multi thread support is supported */
@@ -253,7 +253,7 @@ seos_socket_close(int handle)
 
     if (close < 0)
     {
-        Debug_LOG_WARNING("%s: error closing pico socket :%s \n", __FUNCTION__,
+        Debug_LOG_WARNING("%s: error closing pico socket :%s", __FUNCTION__,
                           seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
 
@@ -272,7 +272,7 @@ seos_socket_connect(int handle,
     uint16_t send_port = short_be(port);
     pico_string_to_ipv4(name, &dst.addr);
 
-    Debug_LOG_INFO("Connecting socket to %p, addr: %s,send_port %x\n",
+    Debug_LOG_INFO("Connecting socket to %p, addr: %s,send_port %x",
                    pseos_nw->socket, name, send_port);
 
     int connect = pseos_nw->vtable->nw_socket_connect(pseos_nw->socket, &dst,
@@ -280,7 +280,7 @@ seos_socket_connect(int handle,
 
     if (connect < 0)
     {
-        Debug_LOG_WARNING("%s: error connecting to %s: %u : %s \n", __FUNCTION__, name,
+        Debug_LOG_WARNING("%s: error connecting to %s: %u : %s", __FUNCTION__, name,
                           short_be(send_port), seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
@@ -309,14 +309,14 @@ seos_socket_write(int handle,
                                                           (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
     }
 
-    Debug_LOG_TRACE(" actual write done =%s, %s\n", __FUNCTION__,
+    Debug_LOG_TRACE(" actual write done =%s, %s", __FUNCTION__,
                     (char*)pnw_camkes->pportsglu->Appdataport);
 
     pseos_nw->event = 0;
 
     if (bytes_written < 0)
     {
-        Debug_LOG_WARNING("%s: error writing to pico socket :%s \n", __FUNCTION__,
+        Debug_LOG_WARNING("%s: error writing to pico socket :%s", __FUNCTION__,
                           seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
@@ -335,7 +335,7 @@ seos_socket_bind(int handle,
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
 
-    Debug_LOG_TRACE("%s:binding port addr : %d,%d \n", __FUNCTION__, port,
+    Debug_LOG_TRACE("%s:binding port addr : %d,%d", __FUNCTION__, port,
                     short_be(port));
     port = short_be(port);
 
@@ -343,7 +343,7 @@ seos_socket_bind(int handle,
                                                 &pseos_nw->bind_ip_addr, &port);
     if (bind < 0)
     {
-        Debug_LOG_WARNING("%s: error binding-2 to pico socket: %s \n", __FUNCTION__,
+        Debug_LOG_WARNING("%s: error binding-2 to pico socket: %s", __FUNCTION__,
                           seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
@@ -360,7 +360,7 @@ seos_socket_listen(int handle,
 
     if (listen < 0)
     {
-        Debug_LOG_WARNING("%s: error listen to pico socket: %s \n", __FUNCTION__,
+        Debug_LOG_WARNING("%s: error listen to pico socket: %s", __FUNCTION__,
                           seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
@@ -380,7 +380,7 @@ seos_socket_accept(int handle,
     pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
     if (pseos_nw->client_socket == NULL )
     {
-        Debug_LOG_WARNING("%s: socket is NULL\n", __FUNCTION__);
+        Debug_LOG_WARNING("%s: socket is NULL", __FUNCTION__);
         return SEOS_ERROR_GENERIC;
     }
 
@@ -423,7 +423,7 @@ seos_socket_read(int handle,
             /* data was received */
             if (tot_len > 0)
             {
-                Debug_LOG_WARNING("Read returning with error %d: %s\n",
+                Debug_LOG_WARNING("Read returning with error %d: %s",
                                   tot_len, seos_nw_strerror(pico_err));
                 *pLen = tot_len;
             }
@@ -480,14 +480,14 @@ seos_socket_read(int handle,
 
     } // end of while()
 
-    Debug_LOG_TRACE("%s(), Read data length=%d, and Data: \n", __FUNCTION__,
+    Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
                     tot_len);
     for (int i = 0; i <= tot_len; i++)
     {
         Debug_LOG_TRACE("%02x\t", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
     }
 
-    Debug_LOG_TRACE("Read returning %d (full block)\n", tot_len);
+    Debug_LOG_TRACE("Read returning %d (full block)", tot_len);
     *pLen = tot_len;
     return SEOS_SUCCESS;
 
@@ -526,7 +526,7 @@ seos_nw_init(void)
 
     if (!dev)
     {
-        Debug_LOG_INFO("Error creating tap dev %s\n", __FUNCTION__);
+        Debug_LOG_INFO("Error creating tap dev %s", __FUNCTION__);
         return SEOS_ERROR_GENERIC;
     }
 
@@ -545,7 +545,7 @@ seos_nw_init(void)
     route = pico_ipv4_route_add(dst, zero, gateway, 1, NULL);
 
     gateway = pico_ipv4_route_get_gateway(&dst);
-    Debug_LOG_INFO("gateway address dst =%x and route =%d\n", gateway.addr, route);
+    Debug_LOG_INFO("gateway address dst =%x and route =%d", gateway.addr, route);
 
     pseos_nw->ip_addr = ipaddr;
     pseos_nw->vtable = &nw_api_if;
@@ -577,14 +577,14 @@ Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
     // for now we have only one socket per app and hence use 0.
     ppseos_nw = &pseos_nw;
 
-    Debug_LOG_TRACE("init pseos_nw value = %p\n", pseos_nw);
+    Debug_LOG_TRACE("init pseos_nw value = %p", pseos_nw);
     if (nw_camkes_info != NULL)
     {
         pnw_camkes = nw_camkes_info;
     }
     else
     {
-        Debug_LOG_WARNING("Wrong Instance passed. NwStackinit() failed \n ");
+        Debug_LOG_WARNING("Wrong Instance passed. NwStackinit() failed");
         return SEOS_ERROR_GENERIC;
     }
     /* Configure stack as client or server */
@@ -593,7 +593,7 @@ Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
 
     if (ret < 0) // is possible when proxy does not run with use_tap =1 param. Just print and exit
     {
-        Debug_LOG_WARNING("Network Stack Init() Failed...Exiting NwStack\n");
+        Debug_LOG_WARNING("Network Stack Init() Failed...Exiting NwStack");
     }
     return SEOS_SUCCESS;
 }

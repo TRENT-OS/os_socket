@@ -35,7 +35,7 @@ static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
 
 
 /* Abstraction of pico API */
-seos_nw_api_vtable nw_api_if =
+const seos_nw_api_vtable nw_api_if =
 {
     .nw_socket_open       =  pico_socket_open,
     .nw_socket_read       =  pico_socket_read,
@@ -57,33 +57,6 @@ static SeosNwstack seos_nw;
 static SeosNwstack* pseos_nw = NULL;
 static SeosNwstack** ppseos_nw = NULL ;
 Seos_nw_camkes_info* pnw_camkes;
-
-
-#if (SEOS_USE_TAP_INTERFACE == 1)
-/* TAP IP address */
-static const char* tap_ip_address[] =
-{
-    SEOS_TAP0_ADDR,
-    SEOS_TAP1_ADDR
-};
-
-static const char* subnet_masks[] =
-{
-    SEOS_SUBNET_MASK
-};
-
-static const char* gateway_ip[] =
-{
-    SEOS_GATEWAY_ADDR
-
-};
-
-static const char* cloud_ip[] =
-{
-    SEOS_CLOUD_ADDR
-};
-
-#endif
 
 
 /*******************************************************************************
@@ -518,98 +491,32 @@ void seos_network_init()
 
 
 //------------------------------------------------------------------------------
-// called by NwStack CAmkES wrapper
-seos_err_t
-seos_nw_init(void)
-{
-    pico_stack_init();  //init nw stack = pico
-
-#if (SEOS_USE_TAP_INTERFACE == 1)
-
-    struct pico_ip4 ipaddr, netmask;
-    struct pico_device* dev;
-
-    if (pnw_camkes->instanceID == SEOS_NWSTACK_AS_CLIENT)
-    {
-        dev = pico_chan_mux_tap_create("tap0");   //create tap0 device
-        pico_string_to_ipv4(tap_ip_address[0], &ipaddr.addr);
-    }
-    else
-    {
-        dev = pico_chan_mux_tap_create("tap1");   //create tap1 device for server
-        pico_string_to_ipv4(tap_ip_address[1], &ipaddr.addr);
-    }
-
-    if (!dev)
-    {
-        Debug_LOG_INFO("Error creating tap dev %s", __FUNCTION__);
-        return SEOS_ERROR_GENERIC;
-    }
-
-    pico_string_to_ipv4(subnet_masks[0], &netmask.addr);
-    pico_ipv4_link_add(dev, ipaddr, netmask);
-
-    struct pico_ip4 ZERO_IP4 = { 0 };
-    struct pico_ip4 gateway, zero = ZERO_IP4;
-    int route;
-    struct pico_ip4 dst;
-
-    // add default route and gateway to cloud server
-    pico_string_to_ipv4(gateway_ip[0], &gateway.addr);
-    route = pico_ipv4_route_add(zero, zero, gateway, 1, NULL);
-    pico_string_to_ipv4(cloud_ip[0], &dst.addr);
-    route = pico_ipv4_route_add(dst, zero, gateway, 1, NULL);
-
-    gateway = pico_ipv4_route_get_gateway(&dst);
-    Debug_LOG_INFO("gateway address dst =%x and route =%d", gateway.addr, route);
-
-    pseos_nw->ip_addr = ipaddr;
-    pseos_nw->vtable = &nw_api_if;
-    pseos_nw->in_use = 1;             // Required for multi threading
-
-    pnw_camkes->pCamkesglue->e_initdone();  // inform app after nw stack is initialised
-
-    for (;;)
-    {
-        pnw_camkes->pCamkesglue->c_nwstacktick_wait(); // wait for either Wr, Rd or timeout=1 sec
-        pico_stack_tick();
-    }
-
-    // we never arrive here, since the tick look runs forever
-
-#endif
-
-    return SEOS_ERROR_GENERIC;
-}
-
-
-//------------------------------------------------------------------------------
-// run() when you instantiate SeosNwStack component  must call this
+// CAmkES run() must call this
 seos_err_t
 Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
 {
-    int ret;
+    if (nw_camkes_info == NULL)
+    {
+        Debug_LOG_ERROR("nw_camkes_info is NULL");
+        return SEOS_ERROR_GENERIC;
+    }
+
+    pnw_camkes = nw_camkes_info;
+
     pseos_nw  = &seos_nw;
     // for now we have only one socket per app and hence use 0.
     ppseos_nw = &pseos_nw;
 
-    Debug_LOG_TRACE("init pseos_nw value = %p", pseos_nw);
-    if (nw_camkes_info != NULL)
+    pico_stack_init();
+
+    // this may not return
+    seos_err_t ret = network_config_init(pnw_camkes, pseos_nw, &nw_api_if);
+    if (ret != SEOS_SUCCESS)
     {
-        pnw_camkes = nw_camkes_info;
-    }
-    else
-    {
-        Debug_LOG_WARNING("Wrong Instance passed. NwStackinit() failed");
+        Debug_LOG_FATAL("network_config_init() failed with %d", ret);
         return SEOS_ERROR_GENERIC;
     }
-    /* Configure stack as client or server */
 
-    ret = seos_nw_init();  // should never return as this starts pico_stack_tick().
-
-    if (ret < 0) // is possible when proxy does not run with use_tap =1 param. Just print and exit
-    {
-        Debug_LOG_WARNING("Network Stack Init() Failed...Exiting NwStack");
-    }
     return SEOS_SUCCESS;
 }
+

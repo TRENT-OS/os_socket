@@ -13,15 +13,12 @@ target_sources(${PROJECT_NAME}
     INTERFACE
         seos_nw_core/src/SeosNwStack.c
         seos_nw_common/src/SeosNwCommon.c
-        seos_nw_driver/src/Seos_pico_dev_chan_mux.c
-        seos_nw_driver/src/SeosNwChanmuxIf.c
 )
 
 target_include_directories(${PROJECT_NAME}
     INTERFACE
         seos_nw_common/src
         seos_nw_core/src/include
-        seos_nw_driver/src/include
 )
 
 

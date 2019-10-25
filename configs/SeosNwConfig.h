@@ -12,6 +12,10 @@
 #define SEOS_GATEWAY_ADDR       "192.168.82.1"
 #define SEOS_CLOUD_ADDR         "51.144.118.31"
 
+/* Temporarily include this file from driver due to driver tap create API call.
+ * Need to remove it when we move out the SeosNwConfig to SEOS-system
+ */
+#include "Seos_pico_dev_chan_mux.h"
 
 //------------------------------------------------------------------------------
 static seos_err_t

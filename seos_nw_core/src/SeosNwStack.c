@@ -4,11 +4,9 @@
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  */
 
-#include "SeosNwChanmuxIf.h"
 #include "LibDebug/Debug.h"
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
-#include "Seos_pico_dev_chan_mux.h"
 #include "seos_nw_api.h"
 
 

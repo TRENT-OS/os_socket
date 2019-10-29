@@ -17,7 +17,6 @@
 #pragma once
 
 
-#include "ChanMux_config.h"
 #include "seos_err.h"
 
 #include <stdint.h>

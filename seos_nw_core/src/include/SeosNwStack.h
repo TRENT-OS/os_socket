@@ -28,16 +28,6 @@
 
 #define SEOS_MAX_NO_NW_THREADS   1
 
-/*********************************/
-/*! Enum NW Stack configuration */
-/*********************************/
-
-enum
-{
-    SEOS_NWSTACK_AS_CLIENT,    /*!< Nw Stack as Client */
-    SEOS_NWSTACK_AS_SERVER,    /*!< Nw Stack as Server */
-    SEOS_NONE                  /*!< Nw Stack as None   */
-};
 
 /*****************************/
 /*        PICO API           */
@@ -142,13 +132,13 @@ typedef struct
 
 * @ingroup SeosNWStack
 */
-
 typedef struct
 {
     seos_nw_camkes_signal_glue*
     pCamkesglue; /**< pointer to seos_nw_camkes_signal_glue */
     seos_nw_ports_glue* pportsglu; /**< pointer to seos_nw_ports_glue */
-    uint8_t instanceID;  /** instance ID Client or Server */
+    struct pico_device* (*pfun_driver_callback)(
+        void); /**< pointer to driver Callback e.g tap create device */
 } Seos_nw_camkes_info;
 
 

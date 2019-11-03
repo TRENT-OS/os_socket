@@ -210,7 +210,8 @@ seos_socket_create(
     Debug_LOG_INFO("new socket is %p", pseos_nw->socket);
 
     int nodelay = 1; /* 1 = disable nagle algorithm , 0 = enable nagle algorithm */
-    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &nodelay);
+    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY,
+                                          &nodelay);
 
     // currently we support one application only, the handle is always 0 and
     // this code does not do really much. Revisit when we support multiple
@@ -235,18 +236,46 @@ seos_socket_create(
 }
 
 
+
+static struct pico_socket* get_pico_socket_from_handle(int handle)
+{
+    /* This function returns socket from a given handle. As of now there is only
+     * one socket handle when we are configured as Client, two socket handles when
+     * we are configured as server.
+     * In case of Client: handle = 0
+     * In case of Server: handle = 0 for server socket and handle = 1 for connected
+     * socket
+     */
+#ifdef SEOS_NWSTACK_AS_CLIENT
+
+    if (handle != 0)
+    {
+        return NULL;
+    }
+
+    return pseos_nw->socket;
+
+#elif SEOS_NWSTACK_AS_SERVER
+
+    switch (handle)
+    {
+    case 0: // for server socket
+        return pseos_nw->socket;
+    case 1: // for connected client socket
+        return pseos_nw->client_socket;
+    default:
+        return NULL;
+    }
+
+#else
+#error "Error: Configure as client or server!!"
+#endif
+}
 //------------------------------------------------------------------------------
 seos_err_t
 seos_socket_close(int handle)
 {
-    struct pico_socket* socket =
-#ifdef SEOS_NWSTACK_AS_CLIENT
-            pseos_nw->socket;
-#elif  SEOS_NWSTACK_AS_SERVER
-        (handle == 1) ? pseos_nw->client_socket : pseos_nw->socket;
-#else
-#error "Error: Configure as client or server!!"
-#endif
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
 
     int ret = pseos_nw->vtable->nw_socket_close(socket);
     if (ret < 0)
@@ -296,16 +325,10 @@ seos_socket_write(int handle,
 
     pnw_camkes->pCamkesglue->c_write_wait(); // wait for wr evnt from pico
 
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
 
-#ifdef SEOS_NWSTACK_AS_CLIENT
-    bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->socket,
+    bytes_written = pseos_nw->vtable->nw_socket_write(socket,
                                                       (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
-#elif SEOS_NWSTACK_AS_SERVER
-    bytes_written = pseos_nw->vtable->nw_socket_write(pseos_nw->client_socket,
-                                                      (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
-#else
-#error "Error:Configure as Either Client or Server !!"
-#endif
     Debug_LOG_TRACE(" actual write done =%s, %s", __FUNCTION__,
                     (char*)pnw_camkes->pportsglu->Appdataport);
 
@@ -405,14 +428,7 @@ seos_socket_read(int handle,
         return SEOS_ERROR_GENERIC;
     }
 
-    struct pico_socket* socket_handle =
-#ifdef SEOS_NWSTACK_AS_CLIENT
-            pseos_nw->socket;
-#elif  SEOS_NWSTACK_AS_SERVER
-            pseos_nw->client_socket;
-#else
-#error "Error:Configure as client or server!!"
-#endif
+    struct pico_socket* socket_handle = get_pico_socket_from_handle(handle);
 
     while (tot_len < len)
     {

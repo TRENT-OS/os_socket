@@ -78,15 +78,11 @@ seos_nw_socket_event(uint16_t ev,
         char peer[30] = {0};
         uint32_t ka_val = 0;
         uint16_t port = 0;
-
+        int nodelay = 1; /* 1 = disable nagle algorithm , 0 = enable nagle algorithm */
         pseos_nw->client_socket = NULL;
 
-        struct pico_ip4 orig =
-        {
-            0
-        };
+        struct pico_ip4 orig = {0};
 
-        int yes = 1;
         pseos_nw->client_socket = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket,
                                   &orig, &port);
         if (pseos_nw->client_socket != NULL )
@@ -94,15 +90,20 @@ seos_nw_socket_event(uint16_t ev,
             pico_ipv4_to_string(peer, orig.addr);
             Debug_LOG_INFO("Connection established with client %s:%d:%d", peer,
                            short_be(port), port);
-            pico_socket_setoption(pseos_nw->client_socket, PICO_TCP_NODELAY, &yes);
+
+            /* The rational behind choosing below values for TCP keep alive comes from
+               the TCP unit tests of picotcp. Same values are chosen as done in Picotcp unit tests.
+               Please see tests/examples/tcpecho.c of Picotcp
+            */
+            pico_socket_setoption(pseos_nw->client_socket, PICO_TCP_NODELAY, &nodelay);
             /* Set keepalive options */
-            ka_val = 5;
+            ka_val = 5; /* set no of probes for TCP keepalive */
             pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPCNT,
                                   &ka_val);
-            ka_val = 30000;
+            ka_val = 30000; /* set timeout for TCP keepalive probes (in ms) */
             pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPIDLE,
                                   &ka_val);
-            ka_val = 5000;
+            ka_val = 5000; /* set interval between TCP keep alive retries in case of no reply (in ms) */
             pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPINTVL,
                                   &ka_val);
             pseos_nw->event = 0; //Clear the event finally
@@ -208,8 +209,8 @@ seos_socket_create(
 
     Debug_LOG_INFO("new socket is %p", pseos_nw->socket);
 
-    int yes = 1;
-    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &yes);
+    int nodelay = 1; /* 1 = disable nagle algorithm , 0 = enable nagle algorithm */
+    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY, &nodelay);
 
     // currently we support one application only, the handle is always 0 and
     // this code does not do really much. Revisit when we support multiple

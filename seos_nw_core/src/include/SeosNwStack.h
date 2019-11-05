@@ -137,10 +137,23 @@ typedef struct
     seos_nw_camkes_signal_glue*
     pCamkesglue; /**< pointer to seos_nw_camkes_signal_glue */
     seos_nw_ports_glue* pportsglu; /**< pointer to seos_nw_ports_glue */
-    struct pico_device* (*pfun_driver_callback)(
-        void); /**< pointer to driver Callback e.g tap create device */
 } Seos_nw_camkes_info;
 
+
+/**
+* @brief   seos_nw_config contains network config info
+           Seos system must configure the network stack after driver init
+
+* @ingroup SeosNWStack
+*/
+typedef struct
+{
+    char* dev_addr; /**< pointer to device address e.g. tap0, tap1 */
+    char* gateway_addr; /**< pointer to gateway addr */
+    char* subnet_mask; /**< pointer to subnet mask */
+    struct pico_device* (*driver_create_device)(void); /**< pointer to driver
+                                                Callback e.g tap create device */
+} seos_nw_config;
 
 /**
 * @details %Seos_NwStack_init, instanciates a Network Stack. This is called before any app starts using
@@ -158,4 +171,4 @@ typedef struct
 */
 
 extern int
-Seos_NwStack_init(Seos_nw_camkes_info* p);
+Seos_NwStack_init(Seos_nw_camkes_info* p, seos_nw_config* nwConfig);

@@ -11,22 +11,6 @@
 
 
 //------------------------------------------------------------------------------
-// SEOS system configuration
-
-#if defined(NETWORK_CONFIG_H_FILE)
-
-#define NETWORK_STR(s)     #s
-#define NETWORK_XSTR(s)    NETWORK_STR(s)
-
-#include NETWORK_XSTR(NETWORK_CONFIG_H_FILE)
-
-#else
-
-// for legacy compatibility, we have to provide this default config file
-// until every SEOS system has been extended to provide one.
-#include "../../configs/SeosNwConfig.h"
-
-#endif
 
 //------------------------------------------------------------------------------
 static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
@@ -276,17 +260,19 @@ seos_err_t
 seos_socket_close(int handle)
 {
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
-
-    int ret = pseos_nw->vtable->nw_socket_close(socket);
-    if (ret < 0)
+    if (socket != NULL)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
-                        ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        int ret = pseos_nw->vtable->nw_socket_close(socket);
+        if (ret < 0)
+        {
+            pico_err_t cur_pico_err = pico_err;
+            Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
+                            ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
+            return SEOS_ERROR_GENERIC;
+        }
+        return SEOS_SUCCESS;
     }
-
-    return SEOS_SUCCESS;
+    return SEOS_ERROR_INVALID_HANDLE;
 }
 
 
@@ -326,24 +312,27 @@ seos_socket_write(int handle,
     pnw_camkes->pCamkesglue->c_write_wait(); // wait for wr evnt from pico
 
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
-
-    bytes_written = pseos_nw->vtable->nw_socket_write(socket,
-                                                      (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
-    Debug_LOG_TRACE(" actual write done =%s, %s", __FUNCTION__,
-                    (char*)pnw_camkes->pportsglu->Appdataport);
-
-    pseos_nw->event = 0;
-
-    if (bytes_written < 0)
+    if (socket != NULL)
     {
-        Debug_LOG_WARNING("%s: error writing to pico socket :%s", __FUNCTION__,
-                          seos_nw_strerror(pico_err));
-        return SEOS_ERROR_GENERIC;
+        bytes_written = pseos_nw->vtable->nw_socket_write(socket,
+                                                          (unsigned char*)pnw_camkes->pportsglu->Appdataport, *pLen);
+        Debug_LOG_TRACE(" actual write done =%s, %s", __FUNCTION__,
+                        (char*)pnw_camkes->pportsglu->Appdataport);
+
+        pseos_nw->event = 0;
+
+        if (bytes_written < 0)
+        {
+            Debug_LOG_WARNING("%s: error writing to pico socket :%s", __FUNCTION__,
+                              seos_nw_strerror(pico_err));
+            return SEOS_ERROR_GENERIC;
+        }
+
+        *pLen = bytes_written;   // copy actual bytes written to app
+
+        return SEOS_SUCCESS;
     }
-
-    *pLen = bytes_written;   // copy actual bytes written to app
-
-    return SEOS_SUCCESS;
+    return SEOS_ERROR_INVALID_HANDLE;
 }
 
 
@@ -429,86 +418,88 @@ seos_socket_read(int handle,
     }
 
     struct pico_socket* socket_handle = get_pico_socket_from_handle(handle);
-
-    while (tot_len < len)
+    if (socket_handle != NULL)
     {
-
-        retval = pseos_nw->vtable->nw_socket_read(socket_handle,
-                                                  buf + tot_len, len - tot_len);
-        /* nw_socket_read() failed */
-        if (retval < 0)
+        while (tot_len < len)
         {
-            /* data was received */
-            if (tot_len > 0)
+
+            retval = pseos_nw->vtable->nw_socket_read(socket_handle,
+                                                      buf + tot_len, len - tot_len);
+            /* nw_socket_read() failed */
+            if (retval < 0)
             {
-                Debug_LOG_WARNING("Read returning with error %d: %s",
-                                  tot_len, seos_nw_strerror(pico_err));
-                *pLen = tot_len;
+                /* data was received */
+                if (tot_len > 0)
+                {
+                    Debug_LOG_WARNING("Read returning with error %d: %s",
+                                      tot_len, seos_nw_strerror(pico_err));
+                    *pLen = tot_len;
+                }
+                /*  no data was received yet
+                    If no messages are available to be received and the peer has
+                    performed an orderly shutdown, read shall return Success. */
+                if (pico_err == PICO_ERR_ESHUTDOWN)
+                {
+                    *pLen = 0;
+                    return SEOS_SUCCESS;
+                }
+                /* Otherwise, the function shall return SEOS_ERROR_GENERIC */
+                return SEOS_ERROR_GENERIC;
             }
-            /* no data was received yet
-               If no messages are available to be received and the peer has
-               performed an orderly shutdown, read shall return Success. */
-            if (pico_err == PICO_ERR_ESHUTDOWN)
+            /* If received 0 bytes, return  amount of bytes received */
+            if (retval == 0)
             {
-                *pLen = 0;
-                return SEOS_SUCCESS;
-            }
-            /* Otherwise, the function shall return SEOS_ERROR_GENERIC */
-            return SEOS_ERROR_GENERIC;
-        }
-        /* If received 0 bytes, return  amount of bytes received */
-        if (retval == 0)
-        {
-            pseos_nw->event = 0;
-            if (tot_len > 0)
-            {
-                Debug_LOG_INFO("Read returning %d", tot_len);
-                *pLen = tot_len;
-                return SEOS_SUCCESS;
-            }
-        }
-
-        if (retval > 0)
-        {
-            /* continue until retval = 0, socket buffer empty */
-            tot_len += retval;
-            continue;
-        }
-
-        /* We have a blocking socket. We need to wait until data becomes
-           available to be able to return from this function.
-
-           If recv bytes (retval) < len-tot_len: socket empty, we need to wait
-           for a new RD event */
-        if (retval < (len - tot_len))
-        {
-            /* wait for a new RD event -- also wait possibly for a CLOSE event */
-            pnw_camkes->pCamkesglue->c_read_wait();
-            if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
-            {
-                /* closing of socket must be done by the app after return */
                 pseos_nw->event = 0;
-                Debug_LOG_INFO("Socket close received");
-                *pLen = 0;
-                return SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+                if (tot_len > 0)
+                {
+                    Debug_LOG_INFO("Read returning %d", tot_len);
+                    *pLen = tot_len;
+                    return SEOS_SUCCESS;
+                }
             }
+
+            if (retval > 0)
+            {
+                /* continue until retval = 0, socket buffer empty */
+                tot_len += retval;
+                continue;
+            }
+
+            /*  We have a blocking socket. We need to wait until data becomes
+                available to be able to return from this function.
+
+                If recv bytes (retval) < len-tot_len: socket empty, we need to wait
+                for a new RD event */
+            if (retval < (len - tot_len))
+            {
+                /* wait for a new RD event -- also wait possibly for a CLOSE event */
+                pnw_camkes->pCamkesglue->c_read_wait();
+                if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
+                {
+                    /* closing of socket must be done by the app after return */
+                    pseos_nw->event = 0;
+                    Debug_LOG_INFO("Socket close received");
+                    *pLen = 0;
+                    return SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+                }
+            }
+
+            tot_len += retval;
+
+        } // end of while()
+
+        Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
+                        tot_len);
+        for (int i = 0; i <= tot_len; i++)
+        {
+            Debug_LOG_TRACE("%02x\t", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
         }
 
-        tot_len += retval;
-
-    } // end of while()
-
-    Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
-                    tot_len);
-    for (int i = 0; i <= tot_len; i++)
-    {
-        Debug_LOG_TRACE("%02x\t", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
+        Debug_LOG_TRACE("Read returning %d (full block)", tot_len);
+        *pLen = tot_len;
+        return SEOS_SUCCESS;
     }
-
-    Debug_LOG_TRACE("Read returning %d (full block)", tot_len);
-    *pLen = tot_len;
-    return SEOS_SUCCESS;
-
+    return SEOS_ERROR_INVALID_HANDLE;
 }
 
 
@@ -524,19 +515,18 @@ static seos_err_t
 network_config_init(
     Seos_nw_camkes_info*        nw_camkes,
     SeosNwstack*                seos_nw,
-    const seos_nw_api_vtable*   nw_api_if)
+    const seos_nw_api_vtable*   nw_api_if,
+    seos_nw_config*             nw_stack_config)
 {
 
     struct pico_ip4 ipaddr;
     struct pico_device* dev;
 
-    /* as of now we have only tap interface, hence can call the function for both client
-     * and server without using any conditional compilation. May require change when
-     * we introduce ethernet driver
-     */
-    dev = nw_camkes->pfun_driver_callback(); // create tap0 or tap1 interface
+    /* Call the driver Create device callback for device creation */
 
-    pico_string_to_ipv4(SEOS_NW_TAP_ADDR, &ipaddr.addr);
+    dev = nw_stack_config->driver_create_device();
+
+    pico_string_to_ipv4(nw_stack_config->dev_addr, &ipaddr.addr);
 
     if (!dev)
     {
@@ -546,14 +536,14 @@ network_config_init(
 
     // create IPv4 interface wih address and netmask
     struct pico_ip4 netmask;
-    pico_string_to_ipv4(SEOS_NW_SUBNET_MASK, &netmask.addr);
+    pico_string_to_ipv4(nw_stack_config->subnet_mask, &netmask.addr);
     pico_ipv4_link_add(dev, ipaddr, netmask);
 
     const struct pico_ip4 ZERO_IP4 = { 0 };
 
     // add default route via gateway
     struct pico_ip4 gateway;
-    pico_string_to_ipv4(SEOS_NW_GATEWAY_ADDR, &gateway.addr);
+    pico_string_to_ipv4(nw_stack_config->gateway_addr, &gateway.addr);
     (void)pico_ipv4_route_add(ZERO_IP4, ZERO_IP4, gateway, 1, NULL);
 
     // setup network stack
@@ -580,7 +570,9 @@ network_config_init(
 //------------------------------------------------------------------------------
 // CAmkES run() must call this
 seos_err_t
-Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
+Seos_NwStack_init(
+    Seos_nw_camkes_info*        nw_camkes_info,
+    seos_nw_config*             nw_stack_config)
 {
     if (nw_camkes_info == NULL)
     {
@@ -597,7 +589,8 @@ Seos_NwStack_init(Seos_nw_camkes_info* nw_camkes_info)
     pico_stack_init();
 
     // this may not return
-    seos_err_t ret = network_config_init(pnw_camkes, pseos_nw, &nw_api_if);
+    seos_err_t ret = network_config_init(pnw_camkes, pseos_nw, &nw_api_if,
+                                         nw_stack_config);
     if (ret != SEOS_SUCCESS)
     {
         Debug_LOG_FATAL("network_config_init() failed with %d", ret);

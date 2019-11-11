@@ -8,6 +8,7 @@
 #include "SeosNwStack.h"
 #include "SeosNwCommon.h"
 #include "seos_nw_api.h"
+#include "pico_device.h"
 
 
 //------------------------------------------------------------------------------
@@ -15,7 +16,7 @@
 //------------------------------------------------------------------------------
 static void seos_nw_socket_event(uint16_t ev, struct pico_socket* s);
 
-
+extern int pico_tap_chanmux_WFI(struct pico_device *dev, int timeout_ms);
 
 /* Abstraction of pico API */
 const seos_nw_api_vtable nw_api_if =
@@ -115,7 +116,7 @@ seos_nw_socket_event(uint16_t ev,
     {
         pnw_camkes->pCamkesglue->e_write_emit();   // emit to unblock app which is waiting to write
         Debug_LOG_TRACE("Write event Rx. for socket =%p", s);
-        pnw_camkes->pCamkesglue->e_write_nwstacktick(); // Perform nw stack tick now as we received write event from stack
+        //pnw_camkes->pCamkesglue->e_write_nwstacktick(); // Perform nw stack tick now as we received write event from stack
     }
 
     if (ev & PICO_SOCK_EV_CLOSE)
@@ -510,6 +511,16 @@ void seos_network_init()
 }
 
 
+static int nw_chan_mux_tap_send(struct pico_device* dev, void* buf, int len)
+{
+    
+ // before calling driver send, copy it in shared buffer
+  memcpy(driverDataPort,buf,len);
+
+  seos_driver_send_data_tap(len);
+
+}
+
 
 static seos_err_t
 network_config_init(
@@ -521,10 +532,37 @@ network_config_init(
 
     struct pico_ip4 ipaddr;
     struct pico_device* dev;
+    long long interval = 0;
+    const char* drv_name = "tapdriver";
+    uint8_t mac[6] = {0};
 
     /* Call the driver Create device callback for device creation */
 
-    dev = nw_stack_config->driver_create_device();
+    nw_stack_config->driver_create_device(dev,sizeof(struct pico_device),&mac[0]);
+    if(!dev)
+    {
+        
+        Debug_LOG_ERROR("%s():NW device Alloc failed", __FUNCTION__);
+        return SEOS_ERROR_GENERIC;
+    }
+    
+    if (0 != pico_device_init((struct pico_device*)dev, drv_name,
+                              mac))
+    {
+        Debug_LOG_ERROR("%s():NW device init failed", __FUNCTION__);
+        PICO_FREE((struct pico_device*)dev);
+        return SEOS_ERROR_GENERIC;
+    }
+    
+    dev->dev.send      = nw_chan_mux_tap_send;
+    dev->dev.poll      = nw_chan_mux_tap_poll;
+
+    #ifdef PICO_SUPPORT_TICKLESS
+    dev->dev.wfi = nw_tap_chanmux_WFI;
+    #endif
+    dev->dev.destroy   = nw_chan_mux_tap_destroy;
+    
+    Debug_LOG_INFO("Device %s created", drv_name);
 
     pico_string_to_ipv4(nw_stack_config->dev_addr, &ipaddr.addr);
 
@@ -557,10 +595,14 @@ network_config_init(
     // enter endles loop processing events
     for (;;)
     {
-        // wait for event (write, read or 1 sec timeout)
-        nw_camkes->pCamkesglue->c_nwstacktick_wait();
-        // let PicoTCP process the event
-        pico_stack_tick();
+        interval = pico_stack_go();
+        // wait for event only read
+        if(interval != 0)
+        {
+            nw_camkes->pCamkesglue->c_nwstacktick_wait();
+            pico_tap_chanmux_WFI(dev, interval);
+        }
+
     }
 
     Debug_LOG_FATAL("tick loop terminated");

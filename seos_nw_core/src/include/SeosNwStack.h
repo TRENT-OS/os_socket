@@ -151,7 +151,7 @@ typedef struct
     char* dev_addr; /**< pointer to device address e.g. tap0, tap1 */
     char* gateway_addr; /**< pointer to gateway addr */
     char* subnet_mask; /**< pointer to subnet mask */
-    struct pico_device* (*driver_create_device)(void); /**< pointer to driver
+    struct pico_device* (*driver_create_device)(uint8_t* u); /**< pointer to driver
                                                 Callback e.g tap create device */
 } seos_nw_config;
 

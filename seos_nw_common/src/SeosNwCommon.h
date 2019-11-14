@@ -17,7 +17,7 @@
 #pragma once
 
 
-#include "seos_err.h"
+#include "SeosError.h"
 
 #include <stdint.h>
 #include <stddef.h>

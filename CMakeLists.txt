@@ -35,8 +35,8 @@ add_subdirectory(3rdParty/picotcp)
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         picotcp
-        seos_libs
         seos_core_api
+        seos_libs
 )
 
 # if invoked from the SEOS sandbox, provide a documentation build target

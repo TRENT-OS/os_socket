@@ -119,8 +119,7 @@ typedef struct
 */
 typedef struct
 {
-    void* ChanMuxDataPort;   /**< ChanMux Data port uses Data channel */
-    void* ChanMuxCtrlPort;   /**< ChanMux Ctrl port uses Ctrl channel */
+    void* nwdriverDataPort;   /**< ChanMux Data port uses Data channel */
     void* Appdataport;       /**< App data port */
 } seos_nw_ports_glue;
 
@@ -151,7 +150,7 @@ typedef struct
     char* dev_addr; /**< pointer to device address e.g. tap0, tap1 */
     char* gateway_addr; /**< pointer to gateway addr */
     char* subnet_mask; /**< pointer to subnet mask */
-    struct pico_device* (*driver_create_device)(uint8_t* u); /**< pointer to driver
+    void (*driver_create_device)(void* dev, size_t size_of_dev, uint8_t* _mac); /**< pointer to driver
                                                 Callback e.g tap create device */
 } seos_nw_config;
 

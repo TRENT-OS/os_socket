@@ -511,16 +511,76 @@ void seos_network_init()
 }
 
 
-static int nw_chan_mux_tap_send(struct pico_device* dev, void* buf, int len)
+static int seos_network_send_data(struct pico_device* dev, void* buf, int len)
 {
     
  // before calling driver send, copy it in shared buffer
   memcpy(driverDataPort,buf,len);
 
-  seos_driver_send_data_tap(len);
+  seos_driver_send_data(len);
 
 }
 
+#if 0
+#ifdef PICO_SUPPORT_TICKLESS
+#include "pico_jobs.h"
+
+void pico_tap_chanmux_dsr(void *arg)
+{
+   int len;
+   struct pico_device *chan_mux_tap = (struct pico_device *)arg;
+   printf("DSR gets called \n");
+   
+   unsigned char buf[TUN_MTU];
+   len = SeosNwChanmux_read_data(buf, TUN_MTU);
+   if (len > 0) {
+       pico_stack_recv(&chan_mux_tap->dev, buf, (uint32_t)len);
+   }
+}
+
+void seos_network_WFI(struct pico_device *dev, int timeout_ms)
+{
+
+   struct pico_device *chan_mux_tap = (struct pico_device *) dev;
+  
+       /* Wait for an event from chanmux for read 
+        * As sonn as read arrives, trigger the job 
+        */
+    pico_schedule_job(pico_tap_chanmux_dsr, chan_mux_tap);
+   
+}
+#endif
+#endif
+/*
+ *  Poll called by Picotcp stack during reading of Data as part of tick
+ *
+ */
+static int seos_network_poll_data(struct pico_device* dev, int loop_score)
+{
+    uint32_t *len      = pnw_camkes->pportsglu->nwdriverDataPort->rdlen;
+    void* nwdataport   = pnw_camkes->pportsglu->nwdriverDataPort->rxdata;
+    /* loop_score:indicates max number of frames processed during the invocation
+     * of this poll. It must be decreased by 1 for each frame processed during
+     * invocation. This value comes from Picotcp and as soon as loop_score reaches
+     * zero we must immediately return with 0
+     */
+    while (loop_score > 0)
+    {
+        if (*len <= 0)
+        {
+            return loop_score;
+        }
+        loop_score--;
+        pico_stack_recv(dev, nwdataport, *len);
+    }
+    return 0;
+}
+
+void seos_network_device_destroy(struct pico_device* dev)
+{
+    // Call free to destroy the device
+    PICO_FREE(dev);
+}
 
 static seos_err_t
 network_config_init(
@@ -539,6 +599,7 @@ network_config_init(
     /* Call the driver Create device callback for device creation */
 
     nw_stack_config->driver_create_device(dev,sizeof(struct pico_device),&mac[0]);
+
     if(!dev)
     {
         
@@ -554,13 +615,13 @@ network_config_init(
         return SEOS_ERROR_GENERIC;
     }
     
-    dev->dev.send      = nw_chan_mux_tap_send;
-    dev->dev.poll      = nw_chan_mux_tap_poll;
+    dev->dev.send      = seos_network_send_data;
+    dev->dev.poll      = seos_network_poll_data;
 
     #ifdef PICO_SUPPORT_TICKLESS
-    dev->dev.wfi = nw_tap_chanmux_WFI;
+          dev->dev.wfi = seos_network_WFI;
     #endif
-    dev->dev.destroy   = nw_chan_mux_tap_destroy;
+    dev->dev.destroy   = seos_network_device_destroy;
     
     Debug_LOG_INFO("Device %s created", drv_name);
 
@@ -589,7 +650,7 @@ network_config_init(
     seos_nw->vtable = nw_api_if;
     seos_nw->in_use = 1; // Required for multi threading
 
-    // notify app after that network stack is initialized
+    // notify app after the network stack is initialized
     nw_camkes->pCamkesglue->e_initdone();
 
     // enter endles loop processing events

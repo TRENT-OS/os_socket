@@ -25,6 +25,7 @@
 #include "pico_ipv4.h"
 #include "pico_icmp4.h"
 #include "pico_socket.h"
+#include "seos_err.h"
 
 #define SEOS_MAX_NO_NW_THREADS   1
 
@@ -105,8 +106,8 @@ typedef struct
     void (*c_read_wait)();  /**< block on read  */
     void (*e_conn_emit)();  /**< emit and unblock connect */
     void (*c_conn_wait)();  /**< block on connect */
-    void (*e_write_nwstacktick)(); /**< emit and unblock pico tick */
-    void (*c_nwstacktick_wait)();  /**< block for pico tick */
+    void (*e_write_nwstack_tick)(); /**< emit and unblock pico tick */
+    void (*c_nwstack_tick_wait)();  /**< block for pico tick */
     void (*e_initdone)();         /**< unblock nw stack init  */
     void (*c_initdone)();         /**< block nw stack init */
 } seos_nw_camkes_signal_glue;
@@ -119,10 +120,27 @@ typedef struct
 */
 typedef struct
 {
-    void* nwdriverDataPort;   /**< ChanMux Data port uses Data channel */
+    void* nwdriver_ReadPort;   /**< Driver Read port uses Data channel for read */
+    void* nwdriver_WritePort;   /**< Driver Write port uses Data channel for write */
     void* Appdataport;       /**< App data port */
 } seos_nw_ports_glue;
 
+
+/**
+ * @brief   seos_nw_driver_api contains api of the driver to be called by NW stack
+            during runtime to create, destroy, write, read.
+            This struct gets filled during NW stack initialisation by driver using 
+            RPC
+ * @ingroup SeosNWStack
+*/
+typedef struct
+{
+   seos_err_t (*dev_create)(void* dev, size_t size, uint8_t* mac);
+   seos_err_t (*dev_destroy)(void* dev);
+   seos_err_t (*dev_write)(size_t* len);
+   seos_err_t (*dev_read)(size_t* len);
+
+}seos_nw_driver_rpc_api;
 
 
 /**
@@ -133,9 +151,12 @@ typedef struct
 */
 typedef struct
 {
-    seos_nw_camkes_signal_glue*
-    pCamkesglue; /**< pointer to seos_nw_camkes_signal_glue */
-    seos_nw_ports_glue* pportsglu; /**< pointer to seos_nw_ports_glue */
+    /**< pointer to seos_nw_camkes_signal_glue */
+    seos_nw_camkes_signal_glue* pCamkesglue;
+     /**< pointer to seos_nw_ports_glue */
+    seos_nw_ports_glue* pportsglu;
+
+    seos_nw_driver_rpc_api* pdriver_api;
 } Seos_nw_camkes_info;
 
 

@@ -128,6 +128,7 @@ seos_nw_socket_event(uint16_t ev,
     if (ev & PICO_SOCK_EV_FIN)
     {
         Debug_LOG_INFO("Socket closed. Exit normally");
+        pnw_camkes->pCamkesglue->e_read_emit();
         exit(1);
     }
 
@@ -135,6 +136,7 @@ seos_nw_socket_event(uint16_t ev,
     {
         Debug_LOG_INFO("Socket error received: %s. Bailing out",
                        seos_nw_strerror(pico_err));
+        pnw_camkes->pCamkesglue->e_read_emit();
         exit(1);
     }
 }

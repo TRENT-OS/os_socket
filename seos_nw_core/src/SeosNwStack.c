@@ -113,31 +113,28 @@ seos_nw_socket_event(uint16_t ev,
 
     if (ev & PICO_SOCK_EV_WR)
     {
-        pnw_camkes->pCamkesglue->e_write_emit();   // emit to unblock app which is waiting to write
         Debug_LOG_TRACE("Write event Rx. for socket =%p", s);
+        pnw_camkes->pCamkesglue->e_write_emit();   // emit to unblock app which is waiting to write
         pnw_camkes->pCamkesglue->e_write_nwstacktick(); // Perform nw stack tick now as we received write event from stack
     }
 
     if (ev & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_INFO("Socket received close from peer");
+        Debug_LOG_DEBUG("Socket received close from peer");
         pnw_camkes->pCamkesglue->e_read_emit();
-        return;
     }
 
     if (ev & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_INFO("Socket closed. Exit normally");
+        Debug_LOG_DEBUG("Socket closed");
         pnw_camkes->pCamkesglue->e_read_emit();
-        exit(1);
     }
 
     if (ev & PICO_SOCK_EV_ERR)
     {
-        Debug_LOG_INFO("Socket error received: %s. Bailing out",
-                       seos_nw_strerror(pico_err));
+        Debug_LOG_ERROR("Socket error received: %s. Bailing out",
+                        seos_nw_strerror(pico_err));
         pnw_camkes->pCamkesglue->e_read_emit();
-        exit(1);
     }
 }
 

@@ -461,7 +461,7 @@ seos_socket_read(int handle,
             }
         } // end of while()
     }
-#if defined(Debug_LOG_TRACE)
+#if (Debug_Config_LOG_LEVEL >=  Debug_LOG_LEVEL_TRACE)
     Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
                     tot_len);
     for (int i = 0; i <= tot_len; i++)

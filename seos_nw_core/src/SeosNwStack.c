@@ -411,39 +411,34 @@ seos_socket_read(int handle,
     size_t len = *pLen; /* App requested length */
     void* buf = pnw_camkes->pportsglu->Appdataport; /* App data port */
 
-    if (len <= 0) /* nothing can be done and is an error*/
+    struct pico_socket* socket_handle = get_pico_socket_from_handle(handle);
+    if (NULL == socket_handle)
     {
-        Debug_LOG_WARNING("%s() Invalid param length %d", __FUNCTION__, *pLen);
-        retval = SEOS_ERROR_INVALID_PARAMETER;
+        retval = SEOS_ERROR_INVALID_HANDLE;
     }
     else
     {
-        struct pico_socket* socket_handle = get_pico_socket_from_handle(handle);
-        if (NULL == socket_handle)
+        while (SEOS_SUCCESS == retval && 0 == tot_len)
         {
-            retval = SEOS_ERROR_INVALID_HANDLE;
-        }
-        else
-        {
-            while (SEOS_SUCCESS == retval && !tot_len)
+            picoReadBytes = pseos_nw->vtable->nw_socket_read(socket_handle,
+                                                             buf + tot_len,
+                                                             len - tot_len);
+            if (picoReadBytes < 0)
             {
-                picoReadBytes = pseos_nw->vtable->nw_socket_read(socket_handle,
-                                                                 buf + tot_len,
-                                                                 len - tot_len);
-                if (picoReadBytes < 0)
+                Debug_LOG_ERROR("Read returning with error %d: %s",
+                                pico_err, seos_nw_strerror(pico_err));
+                if (pico_err == PICO_ERR_ESHUTDOWN)
                 {
-                    Debug_LOG_ERROR("Read returning with error %d: %s",
-                                    pico_err, seos_nw_strerror(pico_err));
-                    if (pico_err == PICO_ERR_ESHUTDOWN)
-                    {
-                        retval = SEOS_ERROR_CONNECTION_CLOSED;
-                    }
-                    else
-                    {
-                        retval =  SEOS_ERROR_GENERIC;
-                    }
+                    retval = SEOS_ERROR_CONNECTION_CLOSED;
                 }
-                else if (!picoReadBytes)
+                else
+                {
+                    retval =  SEOS_ERROR_GENERIC;
+                }
+            }
+            else if (0 == picoReadBytes)
+            {
+                if (len > 0)
                 {
                     /* wait for a new RD event -- also wait possibly for a CLOSE event */
                     pnw_camkes->pCamkesglue->c_read_wait();
@@ -455,12 +450,12 @@ seos_socket_read(int handle,
                         retval = SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
                     }
                 }
-                else
-                {
-                    tot_len += picoReadBytes;
-                }
-            } // end of while()
-        }
+            }
+            else
+            {
+                tot_len += picoReadBytes;
+            }
+        } // end of while()
     }
     Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
                     tot_len);

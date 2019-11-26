@@ -429,10 +429,14 @@ seos_socket_read(int handle,
                                 pico_err, seos_nw_strerror(pico_err));
                 if (pico_err == PICO_ERR_ESHUTDOWN)
                 {
+                    Debug_LOG_INFO("%s: connection closed by peer for socket (handle) %d", __func__,
+                                   handle);
                     retval = SEOS_ERROR_CONNECTION_CLOSED;
                 }
                 else
                 {
+                    Debug_LOG_ERROR("%s: error %d reading from socket (handle) %d", __func__,
+                                    pico_err, handle);
                     retval =  SEOS_ERROR_GENERIC;
                 }
             }
@@ -457,13 +461,19 @@ seos_socket_read(int handle,
             }
         } // end of while()
     }
+#if defined(Debug_LOG_TRACE)
     Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
                     tot_len);
     for (int i = 0; i <= tot_len; i++)
     {
-        Debug_LOG_TRACE("%02x\t", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
+        Debug_PRINTF("%02x ", ((uint8_t*)pnw_camkes->pportsglu->Appdataport)[i]);
+        if (i % 16 == 0)
+        {
+            Debug_PRINTF("\n");
+        }
     }
-    Debug_LOG_TRACE("Read returning %d (full block)", tot_len);
+    Debug_PRINTF("\n");
+#endif
     *pLen = tot_len;
     return retval;
 }
@@ -565,4 +575,3 @@ Seos_NwStack_init(
 
     return SEOS_SUCCESS;
 }
-

@@ -22,14 +22,6 @@ target_include_directories(${PROJECT_NAME}
 )
 
 
-if (NETWORK_CONFIG_H_FILE)
-    target_compile_definitions(${PROJECT_NAME}
-        INTERFACE
-            NETWORK_CONFIG_H_FILE="${NETWORK_CONFIG_H_FILE}"
-    )
-endif()
-
-
 add_subdirectory(3rdParty/picotcp)
 
 target_link_libraries(${PROJECT_NAME}

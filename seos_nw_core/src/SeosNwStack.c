@@ -38,7 +38,6 @@ const seos_nw_api_vtable nw_api_if =
 
 static SeosNwstack seos_nw;
 static SeosNwstack* pseos_nw = NULL;
-static SeosNwstack** ppseos_nw = NULL ;
 Seos_nw_camkes_info* pnw_camkes;
 
 
@@ -192,94 +191,76 @@ seos_socket_create(
 
     Debug_LOG_INFO("new socket is %p", pseos_nw->socket);
 
-    int nodelay = 1; /* 1 = disable nagle algorithm , 0 = enable nagle algorithm */
-    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket, PICO_TCP_NODELAY,
+    int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
+    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket,
+                                          PICO_TCP_NODELAY,
                                           &nodelay);
 
-    // currently we support one application only, the handle is always 0 and
-    // this code does not do really much. Revisit when we support multiple
-    // thread and more sockets
-    for (int i = 0; i < SEOS_MAX_NO_NW_THREADS; i++)
-    {
-        if (ppseos_nw[i] == NULL)
-        {
-            // each slot must have space allocated
-            return SEOS_ERROR_GENERIC;
-        }
+    pseos_nw->in_use = 1;
+    pseos_nw->socket_fd = 0;
+    *pHandle = pseos_nw->socket_fd;
 
-        // populate the slot. There are no check here, because we support just
-        // one socke for now
-        pseos_nw->in_use = 1;
-        pseos_nw->socket_fd = i;
-        *pHandle = pseos_nw->socket_fd;
-        break;
+    return SEOS_SUCCESS;
+}
+
+
+//------------------------------------------------------------------------------
+// get socket from a given handle
+static struct pico_socket*
+get_pico_socket_from_handle(
+    int handle)
+{
+#ifdef SEOS_NWSTACK_AS_CLIENT
+
+    // we support only one handle
+    return (0 == handle) ? pseos_nw->socket : NULL;
+
+#elif SEOS_NWSTACK_AS_SERVER
+
+    // handle = 0: server socket
+    // handle = 1: client connection
+
+
+    return (0 == handle) ? pseos_nw->socket
+           : (1 == handle) ? pseos_nw->client_socket
+           : NULL;
+
+#else
+#error "Error: Configure as client or server!!"
+#endif
+}
+
+
+//------------------------------------------------------------------------------
+seos_err_t
+seos_socket_close(
+    int handle)
+{
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    int ret = pseos_nw->vtable->nw_socket_close(socket);
+    if (ret < 0)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
+                        ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
+        return SEOS_ERROR_GENERIC;
     }
 
     return SEOS_SUCCESS;
 }
 
 
-
-static struct pico_socket* get_pico_socket_from_handle(int handle)
-{
-    /* This function returns socket from a given handle. As of now there is only
-     * one socket handle when we are configured as Client, two socket handles when
-     * we are configured as server.
-     * In case of Client: handle = 0
-     * In case of Server: handle = 0 for server socket and handle = 1 for connected
-     * socket
-     */
-#ifdef SEOS_NWSTACK_AS_CLIENT
-
-    if (handle != 0)
-    {
-        return NULL;
-    }
-
-    return pseos_nw->socket;
-
-#elif SEOS_NWSTACK_AS_SERVER
-
-    switch (handle)
-    {
-    case 0: // for server socket
-        return pseos_nw->socket;
-    case 1: // for connected client socket
-        return pseos_nw->client_socket;
-    default:
-        return NULL;
-    }
-
-#else
-#error "Error: Configure as client or server!!"
-#endif
-}
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_close(int handle)
-{
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket != NULL)
-    {
-        int ret = pseos_nw->vtable->nw_socket_close(socket);
-        if (ret < 0)
-        {
-            pico_err_t cur_pico_err = pico_err;
-            Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
-                            ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
-            return SEOS_ERROR_GENERIC;
-        }
-        return SEOS_SUCCESS;
-    }
-    return SEOS_ERROR_INVALID_HANDLE;
-}
-
-
-//------------------------------------------------------------------------------
-seos_err_t
-seos_socket_connect(int handle,
-                    const char* name,
-                    int port)
+seos_socket_connect(
+    int          handle,
+    const char*  name,
+    int          port)
 {
     struct pico_ip4 dst;
     uint16_t send_port = short_be(port);
@@ -297,6 +278,7 @@ seos_socket_connect(int handle,
                           short_be(send_port), seos_nw_strerror(pico_err));
         return SEOS_ERROR_GENERIC;
     }
+
     return SEOS_SUCCESS;
 }
 
@@ -486,7 +468,7 @@ void seos_network_init()
 }
 
 
-
+//------------------------------------------------------------------------------
 static seos_err_t
 network_config_init(
     Seos_nw_camkes_info*        nw_camkes,
@@ -559,8 +541,6 @@ Seos_NwStack_init(
     pnw_camkes = nw_camkes_info;
 
     pseos_nw  = &seos_nw;
-    // for now we have only one socket per app and hence use 0.
-    ppseos_nw = &pseos_nw;
 
     pico_stack_init();
 

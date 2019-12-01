@@ -26,8 +26,6 @@
 #include "pico_icmp4.h"
 #include "pico_socket.h"
 
-#define SEOS_MAX_NO_NW_THREADS   1
-
 
 /*****************************/
 /*        PICO API           */

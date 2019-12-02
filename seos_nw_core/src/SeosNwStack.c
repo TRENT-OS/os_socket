@@ -140,7 +140,7 @@ seos_nw_socket_event(uint16_t ev,
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_create(
+network_stack_rpc_socket_create(
     int   domain,
     int   type,
     int*  pHandle)
@@ -233,7 +233,7 @@ get_pico_socket_from_handle(
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_close(
+network_stack_rpc_socket_close(
     int handle)
 {
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
@@ -257,7 +257,7 @@ seos_socket_close(
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_connect(
+network_stack_rpc_socket_connect(
     int          handle,
     const char*  name,
     int          port)
@@ -285,8 +285,9 @@ seos_socket_connect(
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_write(int handle,
-                  size_t* pLen)
+network_stack_rpc_socket_write(
+    int handle,
+    size_t* pLen)
 {
     int bytes_written = 0;
 
@@ -319,8 +320,9 @@ seos_socket_write(int handle,
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_bind(int handle,
-                 uint16_t port)
+network_stack_rpc_socket_bind(
+    int handle,
+    uint16_t port)
 {
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
@@ -343,8 +345,9 @@ seos_socket_bind(int handle,
 
 //------------------------------------------------------------------------------
 seos_err_t
-seos_socket_listen(int handle,
-                   int backlog)
+network_stack_rpc_socket_listen(
+    int handle,
+    int backlog)
 {
     int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket, backlog);
 
@@ -362,10 +365,10 @@ seos_socket_listen(int handle,
 // For server wait on accept until client connects. Not much useful for client
 // as we cannot accept incoming connections
 seos_err_t
-seos_socket_accept(int handle,
-                   int* pClient_handle,
-                   uint16_t port)
-
+network_stack_rpc_socket_accept(
+    int handle,
+    int* pClient_handle,
+    uint16_t port)
 {
     pnw_camkes->pCamkesglue->c_conn_wait(); //for server wait for pico event
     if (pseos_nw->client_socket == NULL )
@@ -384,8 +387,9 @@ seos_socket_accept(int handle,
 //------------------------------------------------------------------------------
 // Is a blocking call. Wait until we get a read event from Stack
 seos_err_t
-seos_socket_read(int handle,
-                 size_t* pLen)
+network_stack_rpc_socket_read(
+    int handle,
+    size_t* pLen)
 {
     seos_err_t retval = SEOS_SUCCESS;
     int picoReadBytes = 0;
@@ -462,7 +466,7 @@ seos_socket_read(int handle,
 
 
 //------------------------------------------------------------------------------
-void seos_network_init()
+void network_stack_rpc_init()
 {
     pnw_camkes->pCamkesglue->c_initdone();   // wait for nw stack to initialise
 }

@@ -17,8 +17,8 @@ target_sources(${PROJECT_NAME}
 
 target_include_directories(${PROJECT_NAME}
     INTERFACE
+        include
         seos_nw_common/src
-        seos_nw_core/src/include
 )
 
 

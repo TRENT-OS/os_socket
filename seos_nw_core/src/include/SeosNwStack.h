@@ -117,9 +117,10 @@ typedef struct
 */
 typedef struct
 {
-    void* ChanMuxDataPort;   /**< ChanMux Data port uses Data channel */
-    void* ChanMuxCtrlPort;   /**< ChanMux Ctrl port uses Ctrl channel */
-    void* Appdataport;       /**< App data port */
+    void* ChanMuxDataPortRead;  /**< ChanMux Data port uses Data channel, Read */
+    void* ChanMuxDataPortWrite; /**< ChanMux Data port uses Data channel, Write */
+    void* ChanMuxCtrlPort;      /**< ChanMux Ctrl port uses Ctrl channel */
+    void* Appdataport;          /**< App data port */
 } seos_nw_ports_glue;
 
 

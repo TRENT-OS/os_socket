@@ -510,11 +510,10 @@ network_stack_rpc_socket_write(
 {
     int bytes_written = 0;
 
-    internal_wait_write();
-
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket != NULL)
     {
+        internal_wait_write();
         const seos_shared_buffer_t* app_port = get_app_port();
 
         bytes_written = pseos_nw->vtable->nw_socket_write(socket,

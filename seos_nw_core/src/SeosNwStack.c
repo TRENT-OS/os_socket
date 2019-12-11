@@ -218,16 +218,6 @@ nic_rpc_get_mac(void)
 
 
 //------------------------------------------------------------------------------
-seos_err_t
-nic_dev_write(
-    size_t* pLen)
-{
-    Debug_LOG_INFO("%s", __func__);
-    return pseos_nw->camkes_cfg->drv_nic.rpc.dev_write(pLen);
-}
-
-
-//------------------------------------------------------------------------------
 void
 notify_app_init_done(void)
 {

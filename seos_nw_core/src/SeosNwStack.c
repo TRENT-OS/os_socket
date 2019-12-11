@@ -212,7 +212,6 @@ nic_rpc_dev_write(
 seos_err_t
 nic_rpc_get_mac(void)
 {
-    Debug_LOG_INFO("%s", __func__);
     return pseos_nw->camkes_cfg->drv_nic.rpc.get_mac();
 }
 
@@ -256,70 +255,76 @@ seos_nw_socket_event(uint16_t ev,
                      struct pico_socket* s)
 {
     pseos_nw->event = ev;
-    /* begin of client if */
+
+    if (ev & PICO_SOCK_EV_CONN)
+    {
+
 #ifdef SEOS_NWSTACK_AS_CLIENT
-    if (ev & PICO_SOCK_EV_CONN)
-    {
-        Debug_LOG_INFO("Connection established with server. for socket =%p", s);
-    }
+
+        Debug_LOG_INFO("[socket %p] incomming connection established", s);
+
 #elif SEOS_NWSTACK_AS_SERVER
-    if (ev & PICO_SOCK_EV_CONN)
-    {
-        char peer[30] = {0};
-        uint32_t ka_val = 0;
+
+        pseos_nw->client_socket = NULL; // clear any value here
+
         uint16_t port = 0;
-        int nodelay = 1; /* 1 = disable nagle algorithm , 0 = enable nagle algorithm */
-        pseos_nw->client_socket = NULL;
-
         struct pico_ip4 orig = {0};
-
-        pseos_nw->client_socket = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket,
-                                  &orig, &port);
-        if (pseos_nw->client_socket != NULL )
+        struct pico_socket* s_in = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket,
+                                   &orig,
+                                   &port);
+        if (NULL == s_in)
         {
-            pico_ipv4_to_string(peer, orig.addr);
-            Debug_LOG_INFO("Connection established with client %s:%d:%d", peer,
-                           short_be(port), port);
-
-            /* The rational behind choosing below values for TCP keep alive comes from
-               the TCP unit tests of picotcp. Same values are chosen as done in Picotcp unit tests.
-               Please see tests/examples/tcpecho.c of Picotcp
-            */
-            pico_socket_setoption(pseos_nw->client_socket, PICO_TCP_NODELAY, &nodelay);
-            /* Set keepalive options */
-            ka_val = 5; /* set no of probes for TCP keepalive */
-            pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPCNT,
-                                  &ka_val);
-            ka_val = 30000; /* set timeout for TCP keepalive probes (in ms) */
-            pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPIDLE,
-                                  &ka_val);
-            ka_val = 5000; /* set interval between TCP keep alive retries in case of no reply (in ms) */
-            pico_socket_setoption(pseos_nw->client_socket, PICO_SOCKET_OPT_KEEPINTVL,
-                                  &ka_val);
-            pseos_nw->event = 0; //Clear the event finally
+            pico_err_t cur_pico_err = pico_err;
+            Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d, %s",
+                            s, cur_pico_err, seos_nw_strerror(cur_pico_err));
         }
         else
         {
-            Debug_LOG_WARNING("%s: error accept-2 of pico socket : %s", __FUNCTION__,
-                              seos_nw_strerror(pico_err));
+            char peer[30] = {0};
+            pico_ipv4_to_string(peer, orig.addr);
+            // ToDo: port might be in big endina here, in this case we should
+            //       better use short_be(port)
+            Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
+                           s, peer, port, s_in);
+
+            // The defaul values below are taken from the TCP unit tests of
+            // PicoTCP, see tests/examples/tcpecho.c
+            uint32_t val;
+
+            val = 1; // disable nagle algorithm (0 = enbale, 1 = disable)
+            pico_socket_setoption(s_in, PICO_TCP_NODELAY, &val);
+
+            val = 5; // number of probes for TCP keepalive
+            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPCNT, &val);
+
+            val = 30000; // timeout in ms for TCP keepalive probes
+            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPIDLE, &val);
+
+            val = 5000; // timeout in ms for TCP keep alive retries
+            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
+
+            pseos_nw->event = 0; // Clear the event finally
+            pseos_nw->client_socket = s_in;
         }
+
         internal_notify_connection();
-    }
 
 #else
 #error "Error: Configure as client or server!!"
-
 #endif
+
+    }
+
 
     if (ev & PICO_SOCK_EV_RD)
     {
-        Debug_LOG_TRACE("Read event Rx. for socket =%p", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", s);
         internal_notify_read();
     }
 
     if (ev & PICO_SOCK_EV_WR)
     {
-        Debug_LOG_TRACE("Write event Rx. for socket =%p", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", s);
         // notify app, which is waiting to write
         internal_notify_write();
         // notify network stack loop about an event
@@ -328,20 +333,21 @@ seos_nw_socket_event(uint16_t ev,
 
     if (ev & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_DEBUG("Socket received close from peer");
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", s);
         internal_notify_read();
     }
 
     if (ev & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_DEBUG("Socket closed");
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", s);
         internal_notify_read();
     }
 
     if (ev & PICO_SOCK_EV_ERR)
     {
-        Debug_LOG_ERROR("Socket error received: %s. Bailing out",
-                        seos_nw_strerror(pico_err));
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d, %s",
+                        s, cur_pico_err, seos_nw_strerror(cur_pico_err));
         internal_notify_read();
     }
 }
@@ -380,14 +386,14 @@ network_stack_rpc_socket_create(
         break;
 
     default:
-        Debug_LOG_WARNING("unsupported type %d", domain);
+        Debug_LOG_WARNING("unsupported type %d", type);
         return SEOS_ERROR_GENERIC;
     }
 
-    pseos_nw->socket = pseos_nw->vtable->nw_socket_open(domain,
-                                                        type,
-                                                        &seos_nw_socket_event);
-    if (pseos_nw->socket == NULL)
+    struct pico_socket* socket = pseos_nw->vtable->nw_socket_open(domain,
+                                 type,
+                                 &seos_nw_socket_event);
+    if (NULL == socket)
     {
         // try to detailed error from PicoTCP. Actually, nw_socket_open()
         // should return a proper error code and populate a handle passed as
@@ -398,17 +404,20 @@ network_stack_rpc_socket_create(
         return SEOS_ERROR_GENERIC;
     }
 
-    Debug_LOG_INFO("new socket is %p", pseos_nw->socket);
+    int handle = 0; // we support just one socket at the moment
+
+    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
+
+    pseos_nw->in_use = 1;
+    pseos_nw->socket_fd = handle;
+    pseos_nw->socket = socket;
 
     int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
-    pseos_nw->vtable->nw_socket_setoption(pseos_nw->socket,
+    pseos_nw->vtable->nw_socket_setoption(socket,
                                           PICO_TCP_NODELAY,
                                           &nodelay);
 
-    pseos_nw->in_use = 1;
-    pseos_nw->socket_fd = 0;
     *pHandle = pseos_nw->socket_fd;
-
     return SEOS_SUCCESS;
 }
 
@@ -448,6 +457,7 @@ network_stack_rpc_socket_close(
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
+        Debug_LOG_ERROR("[socket %d] close() with invalid handle", handle);
         return SEOS_ERROR_INVALID_HANDLE;
     }
 
@@ -455,8 +465,9 @@ network_stack_rpc_socket_close(
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("socket closing failed with error %d, pico_err %d (%s)",
-                        ret, cur_pico_err, seos_nw_strerror(cur_pico_err));
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -471,22 +482,28 @@ network_stack_rpc_socket_connect(
     const char*  name,
     int          port)
 {
+    // ToDo: call get_pico_socket_from_handle()
+    Debug_LOG_WARNING("[socket %d] connect() currently ignores socket handle",
+                      handle);
+    struct pico_socket* socket = pseos_nw->socket;
+
+    Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
+                    handle, socket, name, port);
+
     struct pico_ip4 dst;
-    uint16_t send_port = short_be(port);
     pico_string_to_ipv4(name, &dst.addr);
-
-    Debug_LOG_INFO("Connecting socket to %p, addr: %s,send_port %x",
-                   pseos_nw->socket, name, send_port);
-
-    int connect = pseos_nw->vtable->nw_socket_connect(pseos_nw->socket, &dst,
-                                                      send_port);
-
-    if (connect < 0)
+    int ret = pseos_nw->vtable->nw_socket_connect(socket, &dst, short_be(port));
+    if (ret < 0)
     {
-        Debug_LOG_WARNING("%s: error connecting to %s: %u : %s", __FUNCTION__, name,
-                          short_be(send_port), seos_nw_strerror(pico_err));
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
+
+    Debug_LOG_INFO("[socket %d/%p] connection esablished to %s:%d",
+                   handle, socket, name, port);
 
     return SEOS_SUCCESS;
 }
@@ -498,32 +515,33 @@ network_stack_rpc_socket_write(
     int handle,
     size_t* pLen)
 {
-    int bytes_written = 0;
-
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket != NULL)
+    if (NULL == socket)
     {
-        internal_wait_write();
-        const seos_shared_buffer_t* app_port = get_app_port();
-
-        bytes_written = pseos_nw->vtable->nw_socket_write(socket,
-                                                          app_port->buffer,
-                                                          *pLen);
-
-        pseos_nw->event = 0;
-
-        if (bytes_written < 0)
-        {
-            Debug_LOG_WARNING("%s: error writing to pico socket :%s", __FUNCTION__,
-                              seos_nw_strerror(pico_err));
-            return SEOS_ERROR_GENERIC;
-        }
-
-        *pLen = bytes_written;   // copy actual bytes written to app
-
-        return SEOS_SUCCESS;
+        Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
+        *pLen = 0;
+        return SEOS_ERROR_INVALID_HANDLE;
     }
-    return SEOS_ERROR_INVALID_HANDLE;
+
+    internal_wait_write();
+
+    const seos_shared_buffer_t* app_port = get_app_port();
+
+    int ret = pseos_nw->vtable->nw_socket_write(socket, app_port->buffer, *pLen);
+    pseos_nw->event = 0;
+
+    if (ret < 0)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+        *pLen = 0;
+        return SEOS_ERROR_GENERIC;
+    }
+
+    *pLen = ret;
+    return SEOS_SUCCESS;
 }
 
 
@@ -533,21 +551,28 @@ network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
 {
+    // ToDo: call get_pico_socket_from_handle()
+    Debug_LOG_WARNING("[socket %d] bind() currently ignores socket handle", handle);
+    struct pico_socket* socket = pseos_nw->socket;
+
+    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
+
     struct pico_ip4 ZERO_IP4 = { 0 };
     pseos_nw->bind_ip_addr = ZERO_IP4;
 
-    Debug_LOG_TRACE("%s:binding port addr : %d,%d", __FUNCTION__, port,
-                    short_be(port));
-    port = short_be(port);
-
-    int bind = pseos_nw->vtable->nw_socket_bind(pseos_nw->socket,
-                                                &pseos_nw->bind_ip_addr, &port);
-    if (bind < 0)
+    uint16_t be_port = short_be(port);
+    int ret = pseos_nw->vtable->nw_socket_bind(socket,
+                                               &pseos_nw->bind_ip_addr,
+                                               &be_port);
+    if (ret < 0)
     {
-        Debug_LOG_WARNING("%s: error binding-2 to pico socket: %s", __FUNCTION__,
-                          seos_nw_strerror(pico_err));
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
+
     return SEOS_SUCCESS;
 }
 
@@ -558,14 +583,21 @@ network_stack_rpc_socket_listen(
     int handle,
     int backlog)
 {
-    int listen = pseos_nw->vtable->nw_socket_listen(pseos_nw->socket, backlog);
+    // ToDo: call get_pico_socket_from_handle()
+    Debug_LOG_WARNING("[socket %d] listen() currently ignores socket handle",
+                      handle);
+    struct pico_socket* socket = pseos_nw->socket;
 
-    if (listen < 0)
+    int ret = pseos_nw->vtable->nw_socket_listen(socket, backlog);
+    if (ret < 0)
     {
-        Debug_LOG_WARNING("%s: error listen to pico socket: %s", __FUNCTION__,
-                          seos_nw_strerror(pico_err));
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
+
     return SEOS_SUCCESS;
 }
 
@@ -579,17 +611,27 @@ network_stack_rpc_socket_accept(
     int* pClient_handle,
     uint16_t port)
 {
+    Debug_LOG_WARNING("[socket %d] accept() currently ignores socket handle",
+                      handle);
+
+    Debug_LOG_DEBUG("[socket %d] accept waiting ...", handle);
     internal_wait_connection();
-    if (pseos_nw->client_socket == NULL )
+
+    struct pico_socket* client_socket = pseos_nw->client_socket;
+    if (client_socket == NULL )
     {
-        Debug_LOG_WARNING("%s: socket is NULL", __FUNCTION__);
+        Debug_LOG_ERROR("[socket %d] no client to accept", handle);
         return SEOS_ERROR_GENERIC;
     }
 
-    // Requires change when Multi threading is added.
-    // As of now Incoming socket handle set to 1
-    *pClient_handle = 1;
-    return SEOS_SUCCESS; // as we have only one incoming connection
+    // currently we support just one client, so everything is hard coded
+    int client_handle = 1;
+
+    Debug_LOG_DEBUG("[socket %d] new client socket %d/%p",
+                    handle, client_handle, client_socket);
+
+    *pClient_handle = client_handle;
+    return SEOS_SUCCESS;
 }
 
 
@@ -600,71 +642,71 @@ network_stack_rpc_socket_read(
     int handle,
     size_t* pLen)
 {
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (NULL == socket)
+    {
+        Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
+        *pLen = 0;
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
     seos_err_t retval = SEOS_SUCCESS;
-    int picoReadBytes = 0;
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
     const seos_shared_buffer_t* app_port = get_app_port();
     uint8_t* buf = app_port->buffer;
 
-    struct pico_socket* socket_handle = get_pico_socket_from_handle(handle);
-    if (NULL == socket_handle)
+    do
     {
-        retval = SEOS_ERROR_INVALID_HANDLE;
-    }
-    else
-    {
-        while (SEOS_SUCCESS == retval && 0 == tot_len)
+        int ret = pseos_nw->vtable->nw_socket_read(socket,
+                                                   buf + tot_len,
+                                                   len - tot_len);
+        if (ret < 0)
         {
-            picoReadBytes = pseos_nw->vtable->nw_socket_read(socket_handle,
-                                                             buf + tot_len,
-                                                             len - tot_len);
-            if (picoReadBytes < 0)
+            pico_err_t cur_pico_err = pico_err;
+            if (cur_pico_err == PICO_ERR_ESHUTDOWN)
             {
-                Debug_LOG_ERROR("Read returning with error %d: %s",
-                                pico_err, seos_nw_strerror(pico_err));
-                if (pico_err == PICO_ERR_ESHUTDOWN)
-                {
-                    Debug_LOG_INFO("%s: connection closed by peer for socket (handle) %d", __func__,
-                                   handle);
-                    retval = SEOS_ERROR_CONNECTION_CLOSED;
-                }
-                else
-                {
-                    Debug_LOG_ERROR("%s: error %d reading from socket (handle) %d", __func__,
-                                    pico_err, handle);
-                    retval =  SEOS_ERROR_GENERIC;
-                }
+                Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
+                               handle, socket);
+                retval = SEOS_ERROR_CONNECTION_CLOSED;
+                break;
             }
-            else if (0 == picoReadBytes)
+
+            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, pico_err %d (%s)",
+                            handle, socket, ret,
+                            cur_pico_err, seos_nw_strerror(cur_pico_err));
+
+            retval =  SEOS_ERROR_GENERIC;
+            break;
+        }
+
+        if ((0 == ret) && (len > 0))
+        {
+            /* wait for a new RD event -- also wait possibly for a CLOSE event */
+            internal_wait_read();
+            if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
             {
-                if (len > 0)
-                {
-                    /* wait for a new RD event -- also wait possibly for a CLOSE event */
-                    internal_wait_read();
-                    if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
-                    {
-                        /* closing of socket must be done by the app after return */
-                        pseos_nw->event = 0;
-                        Debug_LOG_DEBUG("Socket close received");
-                        retval = SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
-                    }
-                }
+                /* closing of socket must be done by the app after return */
+                pseos_nw->event = 0;
+                Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
+                               handle, socket);
+                retval = SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+                break;
             }
-            else
-            {
-                tot_len += picoReadBytes;
-            }
-        } // end of while()
+        }
+
+        tot_len += (unsigned)ret;
+
     }
+    while (0 == tot_len);
 
-#if (Debug_Config_LOG_LEVEL >=  Debug_LOG_LEVEL_TRACE)
+#if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
 
-    Debug_LOG_TRACE("%s(), Read data length=%d, and Data:", __FUNCTION__,
-                    tot_len);
+    Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
+                    handle, socket, tot_len);
 
-    for (int i = 0; i <= tot_len; i++)
+    for (unsigned int i = 0; i <= tot_len; i++)
     {
         Debug_PRINTF("%02x ", ((uint8_t*)app_port->buffer)[i]);
         if (i % 16 == 0)
@@ -729,7 +771,7 @@ nic_poll_data(
         size_t len = nw_rx->len;
         if (len > 0)
         {
-            Debug_LOG_INFO("incomming data len %zu", len);
+            Debug_LOG_DEBUG("incomming data len %zu", len);
             loop_score--;
             pico_stack_recv(dev, nw_rx->data, (uint32_t)len);
 

@@ -1,5 +1,5 @@
 /*
- *  SEOS Network Stack
+ *  SEOS Network Stack PicoTCP Glue Layer
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  */
@@ -11,25 +11,10 @@
 #include "pico_icmp4.h"
 #include "pico_socket.h"
 #include "pico_device.h"
-#include "SeosError.h"
-#include "seos_api_network_stack.h"
 #include <stdlib.h>
 #include <stdint.h>
 
 
-
-
-
-
-/*****************************/
-/*        PICO API           */
-/*****************************/
-
-/**
- * @brief   seos_nw_api_vtable contains function pointers to picotcp api
- * @ingroup SeosNWStack
-
-*/
 typedef struct
 {
     struct pico_socket* (*nw_socket_open)(uint16_t net,
@@ -56,7 +41,16 @@ typedef struct
 } seos_nw_api_vtable;
 
 
-
-
-struct pico_device*
-seos_network_device_create(void);
+/* Abstraction of pico API */
+static const seos_nw_api_vtable picotcp_funcs =
+{
+    .nw_socket_open       =  pico_socket_open,
+    .nw_socket_read       =  pico_socket_read,
+    .nw_socket_write      =  pico_socket_write,
+    .nw_socket_connect    =  pico_socket_connect,
+    .nw_socket_bind       =  pico_socket_bind,
+    .nw_socket_listen     =  pico_socket_listen,
+    .nw_socket_accept     =  pico_socket_accept,
+    .nw_socket_close      =  pico_socket_close,
+    .nw_socket_setoption  =  pico_socket_setoption
+};

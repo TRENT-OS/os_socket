@@ -1,0 +1,39 @@
+/*
+ *  SEOS Network Stack Config Wrapper
+ *
+ *  Copyright (C) 2019, Hensoldt Cyber GmbH
+ */
+
+#pragma once
+
+#include "seos_types.h"
+#include "seos_api_network_stack.h"
+#include <stddef.h>
+
+
+const seos_camkes_network_stack_config_t* config_get_handlers(void);
+
+
+//------------------------------------------------------------------------------
+// System interface
+//------------------------------------------------------------------------------
+
+void wait_network_event(void);
+
+void internal_notify_main_loop(void);
+void internal_notify_read(void);
+void internal_wait_read(void);
+void internal_notify_write(void);
+void internal_wait_write(void);
+void internal_notify_connection(void);
+void internal_wait_connection(void);
+
+void wait_nic_init_done(void);
+const seos_shared_buffer_t* get_nic_port_from(void);
+const seos_shared_buffer_t* get_nic_port_to(void);
+
+seos_err_t nic_rpc_dev_write(size_t* pLen);
+seos_err_t nic_rpc_get_mac(void);
+
+void notify_app_init_done(void);
+const seos_shared_buffer_t* get_app_port(void);

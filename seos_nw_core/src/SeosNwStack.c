@@ -8,253 +8,63 @@
 #include "seos_nw_api.h"
 #include "seos_network_stack.h"
 #include "seos_api_network_stack.h"
+#include "nw_picotcp.h"
 #include "SeosNwCommon.h"
-#include "SeosNwStack.h"
+#include "nw_config.h"
 
-/* Abstraction of pico API */
-static const seos_nw_api_vtable picotcp_funcs =
+
+typedef struct
 {
-    .nw_socket_open       =  pico_socket_open,
-    .nw_socket_read       =  pico_socket_read,
-    .nw_socket_write      =  pico_socket_write,
-    .nw_socket_connect    =  pico_socket_connect,
-    .nw_socket_bind       =  pico_socket_bind,
-    .nw_socket_listen     =  pico_socket_listen,
-    .nw_socket_accept     =  pico_socket_accept,
-    .nw_socket_close      =  pico_socket_close,
-    .nw_socket_setoption  =  pico_socket_setoption
-};
+    const seos_camkes_network_stack_config_t*   camkes_cfg;
+    const seos_network_stack_config_t*          cfg;
+
+    const seos_nw_api_vtable*   vtable; /**< PicoTCP functions */
+
+    struct pico_device          seos_dev;
+    struct pico_ip4             ip_addr;
+
+    // As of now there is only one app per network stack and there is also only
+    // one socket. Hence one global variable can be used which represents the
+    // network stack
+    struct pico_socket*
+        socket; /**< represents an opened socket in the stack */
+    struct pico_ip4             bind_ip_addr; /**<  bind ip addr */
+    struct pico_socket*
+        client_socket; /**< represents a connected socket when the Nw Stack is configured as server*/
+
+    int
+    listen_port; /**< listen port for server to listen */
+    int
+    event; /**< Pico Internal event representing current state of connected socket */
+    int                         read; /**< Has read len */
+    int                         in_use;
+    int                         socket_fd; /**< socket handle */
+} network_stack_t;
 
 
 // network stack state
-static network_stack_t  instance_seos_nw = {0};
-static network_stack_t* pseos_nw = NULL;
+static network_stack_t  instance = {0};
+
 
 //------------------------------------------------------------------------------
-// Configuration
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-void
-wait_network_event(void)
+const seos_camkes_network_stack_config_t*
+config_get_handlers(void)
 {
-    event_wait_func_t do_wait = pseos_nw->camkes_cfg->wait_loop_event;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("wait_loop_event not set");
-        return;
-    }
+    const seos_camkes_network_stack_config_t* handlers = instance.camkes_cfg;
 
-    do_wait();
+    Debug_ASSERT( NULL != handlers );
+
+    return handlers;
 }
 
 
 //------------------------------------------------------------------------------
-void
-internal_notify_main_loop(void)
-{
-    event_notify_func_t do_notify = pseos_nw->camkes_cfg->internal.notify_loop;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("internal.notify_main_loop not set");
-        return;
-    }
-
-    do_notify();
-}
-
-
-//------------------------------------------------------------------------------
-void
-internal_notify_read(void)
-{
-    event_notify_func_t do_notify = pseos_nw->camkes_cfg->internal.notify_read;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("notify_read not set");
-        return;
-    }
-
-    do_notify();
-}
-
-//------------------------------------------------------------------------------
-void
-internal_wait_read(void)
-{
-    event_wait_func_t do_wait = pseos_nw->camkes_cfg->internal.wait_read;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("internal.wait_read not set");
-        return;
-    }
-
-    do_wait();
-}
-
-
-//------------------------------------------------------------------------------
-void
-internal_notify_write(void)
-{
-    event_notify_func_t do_notify = pseos_nw->camkes_cfg->internal.notify_write;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("notify_write not set");
-        return;
-    }
-
-    do_notify();
-}
-
-
-//------------------------------------------------------------------------------
-void
-internal_wait_write(void)
-{
-    event_wait_func_t do_wait = pseos_nw->camkes_cfg->internal.wait_write;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("internal.wait_write not set");
-        return;
-    }
-
-    do_wait();
-}
-
-
-//------------------------------------------------------------------------------
-void
-internal_notify_connection(void)
-{
-    event_notify_func_t do_notify =
-        pseos_nw->camkes_cfg->internal.notify_connection;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("internal.notify_connection not set");
-        return;
-    }
-
-    do_notify();
-}
-
-
-//------------------------------------------------------------------------------
-void
-internal_wait_connection(void)
-{
-    event_wait_func_t do_wait = pseos_nw->camkes_cfg->internal.wait_connection;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("internal.wait_connection not set");
-        return;
-    }
-
-    do_wait();
-}
-
-
-//------------------------------------------------------------------------------
-void
-wait_nic_init_done(void)
-{
-    event_wait_func_t do_wait = pseos_nw->camkes_cfg->drv_nic.wait_init_done;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("drv_nic.wait_init_done not set");
-        return;
-    }
-
-    do_wait();
-}
-
-
-//------------------------------------------------------------------------------
-const seos_shared_buffer_t*
-get_nic_port_from(void)
-{
-    // network stack -> driver (aka output)
-    const seos_shared_buffer_t* port = &(pseos_nw->camkes_cfg->drv_nic.from);
-
-    Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
-
-    return port;
-}
-
-
-//------------------------------------------------------------------------------
-const seos_shared_buffer_t*
-get_nic_port_to(void)
-{
-    // driver -> network stack (aka input)
-    const seos_shared_buffer_t* port = &(pseos_nw->camkes_cfg->drv_nic.to);
-
-    Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
-
-    return port;
-}
-
-
-//------------------------------------------------------------------------------
-seos_err_t
-nic_rpc_dev_write(
-    size_t* pLen)
-{
-    return pseos_nw->camkes_cfg->drv_nic.rpc.dev_write(pLen);
-}
-
-
-//------------------------------------------------------------------------------
-seos_err_t
-nic_rpc_get_mac(void)
-{
-    return pseos_nw->camkes_cfg->drv_nic.rpc.get_mac();
-}
-
-
-//------------------------------------------------------------------------------
-void
-notify_app_init_done(void)
-{
-    event_notify_func_t do_notify = pseos_nw->camkes_cfg->app.notify_init_done;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("app.notify_init_done not set");
-        return;
-    }
-
-    Debug_LOG_INFO("%s", __func__);
-    do_notify();
-}
-
-
-//------------------------------------------------------------------------------
-const seos_shared_buffer_t*
-get_app_port(void)
-{
-    // network stack -> driver (aka output)
-    const seos_shared_buffer_t* port = &(pseos_nw->camkes_cfg->app.port);
-
-    Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
-
-    return port;
-}
-
-
-/*******************************************************************************
- *  This is called as part of pico_tick every x ms.
- */
+// This is called by PicoTCP every x ms.
 static void
 seos_nw_socket_event(uint16_t ev,
                      struct pico_socket* s)
 {
-    pseos_nw->event = ev;
+    instance.event = ev;
 
     if (ev & PICO_SOCK_EV_CONN)
     {
@@ -265,11 +75,11 @@ seos_nw_socket_event(uint16_t ev,
 
 #elif SEOS_NWSTACK_AS_SERVER
 
-        pseos_nw->client_socket = NULL; // clear any value here
+        instance.client_socket = NULL; // clear any value here
 
         uint16_t port = 0;
         struct pico_ip4 orig = {0};
-        struct pico_socket* s_in = pseos_nw->vtable->nw_socket_accept(pseos_nw->socket,
+        struct pico_socket* s_in = instance.vtable->nw_socket_accept(instance.socket,
                                    &orig,
                                    &port);
         if (NULL == s_in)
@@ -303,8 +113,8 @@ seos_nw_socket_event(uint16_t ev,
             val = 5000; // timeout in ms for TCP keep alive retries
             pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
 
-            pseos_nw->event = 0; // Clear the event finally
-            pseos_nw->client_socket = s_in;
+            instance.event = 0; // Clear the event finally
+            instance.client_socket = s_in;
         }
 
         internal_notify_connection();
@@ -390,7 +200,7 @@ network_stack_rpc_socket_create(
         return SEOS_ERROR_GENERIC;
     }
 
-    struct pico_socket* socket = pseos_nw->vtable->nw_socket_open(domain,
+    struct pico_socket* socket = instance.vtable->nw_socket_open(domain,
                                  type,
                                  &seos_nw_socket_event);
     if (NULL == socket)
@@ -408,16 +218,16 @@ network_stack_rpc_socket_create(
 
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
 
-    pseos_nw->in_use = 1;
-    pseos_nw->socket_fd = handle;
-    pseos_nw->socket = socket;
+    instance.in_use = 1;
+    instance.socket_fd = handle;
+    instance.socket = socket;
 
     int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
-    pseos_nw->vtable->nw_socket_setoption(socket,
-                                          PICO_TCP_NODELAY,
-                                          &nodelay);
+    instance.vtable->nw_socket_setoption(socket,
+                                         PICO_TCP_NODELAY,
+                                         &nodelay);
 
-    *pHandle = pseos_nw->socket_fd;
+    *pHandle = instance.socket_fd;
     return SEOS_SUCCESS;
 }
 
@@ -431,7 +241,7 @@ get_pico_socket_from_handle(
 #ifdef SEOS_NWSTACK_AS_CLIENT
 
     // we support only one handle
-    return (0 == handle) ? pseos_nw->socket : NULL;
+    return (0 == handle) ? instance.socket : NULL;
 
 #elif SEOS_NWSTACK_AS_SERVER
 
@@ -439,8 +249,8 @@ get_pico_socket_from_handle(
     // handle = 1: client connection
 
 
-    return (0 == handle) ? pseos_nw->socket
-           : (1 == handle) ? pseos_nw->client_socket
+    return (0 == handle) ? instance.socket
+           : (1 == handle) ? instance.client_socket
            : NULL;
 
 #else
@@ -461,7 +271,7 @@ network_stack_rpc_socket_close(
         return SEOS_ERROR_INVALID_HANDLE;
     }
 
-    int ret = pseos_nw->vtable->nw_socket_close(socket);
+    int ret = instance.vtable->nw_socket_close(socket);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -485,14 +295,14 @@ network_stack_rpc_socket_connect(
     // ToDo: call get_pico_socket_from_handle()
     Debug_LOG_WARNING("[socket %d] connect() currently ignores socket handle",
                       handle);
-    struct pico_socket* socket = pseos_nw->socket;
+    struct pico_socket* socket = instance.socket;
 
     Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
                     handle, socket, name, port);
 
     struct pico_ip4 dst;
     pico_string_to_ipv4(name, &dst.addr);
-    int ret = pseos_nw->vtable->nw_socket_connect(socket, &dst, short_be(port));
+    int ret = instance.vtable->nw_socket_connect(socket, &dst, short_be(port));
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -527,8 +337,8 @@ network_stack_rpc_socket_write(
 
     const seos_shared_buffer_t* app_port = get_app_port();
 
-    int ret = pseos_nw->vtable->nw_socket_write(socket, app_port->buffer, *pLen);
-    pseos_nw->event = 0;
+    int ret = instance.vtable->nw_socket_write(socket, app_port->buffer, *pLen);
+    instance.event = 0;
 
     if (ret < 0)
     {
@@ -553,17 +363,17 @@ network_stack_rpc_socket_bind(
 {
     // ToDo: call get_pico_socket_from_handle()
     Debug_LOG_WARNING("[socket %d] bind() currently ignores socket handle", handle);
-    struct pico_socket* socket = pseos_nw->socket;
+    struct pico_socket* socket = instance.socket;
 
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
 
     struct pico_ip4 ZERO_IP4 = { 0 };
-    pseos_nw->bind_ip_addr = ZERO_IP4;
+    instance.bind_ip_addr = ZERO_IP4;
 
     uint16_t be_port = short_be(port);
-    int ret = pseos_nw->vtable->nw_socket_bind(socket,
-                                               &pseos_nw->bind_ip_addr,
-                                               &be_port);
+    int ret = instance.vtable->nw_socket_bind(socket,
+                                              &instance.bind_ip_addr,
+                                              &be_port);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -586,9 +396,9 @@ network_stack_rpc_socket_listen(
     // ToDo: call get_pico_socket_from_handle()
     Debug_LOG_WARNING("[socket %d] listen() currently ignores socket handle",
                       handle);
-    struct pico_socket* socket = pseos_nw->socket;
+    struct pico_socket* socket = instance.socket;
 
-    int ret = pseos_nw->vtable->nw_socket_listen(socket, backlog);
+    int ret = instance.vtable->nw_socket_listen(socket, backlog);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -617,7 +427,7 @@ network_stack_rpc_socket_accept(
     Debug_LOG_DEBUG("[socket %d] accept waiting ...", handle);
     internal_wait_connection();
 
-    struct pico_socket* client_socket = pseos_nw->client_socket;
+    struct pico_socket* client_socket = instance.client_socket;
     if (client_socket == NULL )
     {
         Debug_LOG_ERROR("[socket %d] no client to accept", handle);
@@ -659,9 +469,9 @@ network_stack_rpc_socket_read(
 
     do
     {
-        int ret = pseos_nw->vtable->nw_socket_read(socket,
-                                                   buf + tot_len,
-                                                   len - tot_len);
+        int ret = instance.vtable->nw_socket_read(socket,
+                                                  buf + tot_len,
+                                                  len - tot_len);
         if (ret < 0)
         {
             pico_err_t cur_pico_err = pico_err;
@@ -685,10 +495,10 @@ network_stack_rpc_socket_read(
         {
             /* wait for a new RD event -- also wait possibly for a CLOSE event */
             internal_wait_read();
-            if (pseos_nw->event & PICO_SOCK_EV_CLOSE)
+            if (instance.event & PICO_SOCK_EV_CLOSE)
             {
                 /* closing of socket must be done by the app after return */
-                pseos_nw->event = 0;
+                instance.event = 0;
                 Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
                                handle, socket);
                 retval = SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
@@ -789,9 +599,9 @@ nic_destroy(
     struct pico_device* dev)
 {
     // currently we only have one static device
-    if (&pseos_nw->seos_dev != dev)
+    if (&instance.seos_dev != dev)
     {
-        Debug_LOG_ERROR("dev (%p) is not seos_dev (%p)", dev, &pseos_nw->seos_dev);
+        Debug_LOG_ERROR("dev (%p) is not seos_dev (%p)", dev, &instance.seos_dev);
     }
 
     memset(dev, 0, sizeof(*dev));
@@ -802,7 +612,7 @@ nic_destroy(
 struct pico_device*
 seos_network_device_create(void)
 {
-    struct pico_device* dev = &pseos_nw->seos_dev;
+    struct pico_device* dev = &instance.seos_dev;
 
     memset(dev, 0, sizeof(*dev));
 
@@ -854,21 +664,21 @@ network_stack_init(void)
     pico_stack_init();
 
     struct pico_ip4 ipaddr;
-    pico_string_to_ipv4(pseos_nw->cfg->dev_addr, &ipaddr.addr);
-    pseos_nw->ip_addr = ipaddr;
+    pico_string_to_ipv4(instance.cfg->dev_addr, &ipaddr.addr);
+    instance.ip_addr = ipaddr;
 
     struct pico_ip4 netmask;
-    pico_string_to_ipv4(pseos_nw->cfg->subnet_mask, &netmask.addr);
+    pico_string_to_ipv4(instance.cfg->subnet_mask, &netmask.addr);
 
     struct pico_ip4 gateway;
-    pico_string_to_ipv4(pseos_nw->cfg->gateway_addr, &gateway.addr);
+    pico_string_to_ipv4(instance.cfg->gateway_addr, &gateway.addr);
 
     // wait for NIC init
     Debug_LOG_INFO("waiting for NIC init");
     wait_nic_init_done();
 
     // set PicoTCP functions
-    pseos_nw->vtable = &picotcp_funcs;
+    instance.vtable = &picotcp_funcs;
 
     struct pico_device* dev = seos_network_device_create();
     if (!dev)
@@ -920,12 +730,12 @@ seos_network_stack_run(
 {
     seos_err_t err;
 
-    // we have only one instance
-    pseos_nw = &instance_seos_nw;
-
     // remember config
-    pseos_nw->camkes_cfg  = camkes_config;
-    pseos_nw->cfg         = config;
+    Debug_ASSERT( NULL != camkes_config );
+    instance.camkes_cfg  = camkes_config;
+
+    Debug_ASSERT( NULL != config );
+    instance.cfg         = config;
 
     err = network_stack_init();
     if (err != SEOS_SUCCESS)

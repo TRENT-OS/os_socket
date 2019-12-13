@@ -581,7 +581,7 @@ nic_poll_data(
         size_t len = nw_rx->len;
         if (len > 0)
         {
-            Debug_LOG_DEBUG("incomming data len %zu", len);
+            Debug_LOG_DEBUG("incomming frame len %zu", len);
             loop_score--;
             pico_stack_recv(dev, nw_rx->data, (uint32_t)len);
 

@@ -59,19 +59,21 @@ config_get_handlers(void)
 
 
 //------------------------------------------------------------------------------
-// This is called by PicoTCP every x ms.
+// This is called from the PicoTCP main tick loop to report socket events
 static void
-seos_nw_socket_event(uint16_t ev,
-                     struct pico_socket* s)
+handle_pico_socket_event(
+    uint16_t             event_mask,
+    struct pico_socket*  socket)
 {
-    instance.event = ev;
+    // remember the last event
+    instance.event = event_mask;
 
-    if (ev & PICO_SOCK_EV_CONN)
+    if (event_mask & PICO_SOCK_EV_CONN)
     {
 
 #if defined(SEOS_NWSTACK_AS_CLIENT)
 
-        Debug_LOG_INFO("[socket %p] incoming connection established", s);
+        Debug_LOG_INFO("[socket %p] incoming connection established", socket);
 
 #elif defined(SEOS_NWSTACK_AS_SERVER)
 
@@ -86,7 +88,7 @@ seos_nw_socket_event(uint16_t ev,
         {
             pico_err_t cur_pico_err = pico_err;
             Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d, %s",
-                            s, cur_pico_err, seos_nw_strerror(cur_pico_err));
+                            socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
         }
         else
         {
@@ -95,7 +97,7 @@ seos_nw_socket_event(uint16_t ev,
             // ToDo: port might be in big endian here, in this case we should
             //       better use short_be(port)
             Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
-                           s, peer, port, s_in);
+                           socket, peer, port, s_in);
 
             // The default values below are taken from the TCP unit tests of
             // PicoTCP, see tests/examples/tcpecho.c
@@ -113,7 +115,7 @@ seos_nw_socket_event(uint16_t ev,
             val = 5000; // timeout in ms for TCP keep alive retries
             pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
 
-            instance.event = 0; // Clear the event finally
+            instance.event = 0; // no event is pending
             instance.client_socket = s_in;
         }
 
@@ -126,38 +128,38 @@ seos_nw_socket_event(uint16_t ev,
     }
 
 
-    if (ev & PICO_SOCK_EV_RD)
+    if (event_mask & PICO_SOCK_EV_RD)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", socket);
         internal_notify_read();
     }
 
-    if (ev & PICO_SOCK_EV_WR)
+    if (event_mask & PICO_SOCK_EV_WR)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", socket);
         // notify app, which is waiting to write
         internal_notify_write();
         // notify network stack loop about an event
         internal_notify_main_loop();
     }
 
-    if (ev & PICO_SOCK_EV_CLOSE)
+    if (event_mask & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", socket);
         internal_notify_read();
     }
 
-    if (ev & PICO_SOCK_EV_FIN)
+    if (event_mask & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", s);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", socket);
         internal_notify_read();
     }
 
-    if (ev & PICO_SOCK_EV_ERR)
+    if (event_mask & PICO_SOCK_EV_ERR)
     {
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d, %s",
-                        s, cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
         internal_notify_read();
     }
 }
@@ -202,7 +204,7 @@ network_stack_rpc_socket_create(
 
     struct pico_socket* socket = instance.vtable->nw_socket_open(domain,
                                  type,
-                                 &seos_nw_socket_event);
+                                 &handle_pico_socket_event);
     if (NULL == socket)
     {
         // try to detailed error from PicoTCP. Actually, nw_socket_open()

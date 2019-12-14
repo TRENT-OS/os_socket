@@ -69,11 +69,11 @@ seos_nw_socket_event(uint16_t ev,
     if (ev & PICO_SOCK_EV_CONN)
     {
 
-#ifdef SEOS_NWSTACK_AS_CLIENT
+#if defined(SEOS_NWSTACK_AS_CLIENT)
 
         Debug_LOG_INFO("[socket %p] incoming connection established", s);
 
-#elif SEOS_NWSTACK_AS_SERVER
+#elif defined(SEOS_NWSTACK_AS_SERVER)
 
         instance.client_socket = NULL; // clear any value here
 
@@ -238,12 +238,12 @@ static struct pico_socket*
 get_pico_socket_from_handle(
     int handle)
 {
-#ifdef SEOS_NWSTACK_AS_CLIENT
+#if defined(SEOS_NWSTACK_AS_CLIENT)
 
     // we support only one handle
     return (0 == handle) ? instance.socket : NULL;
 
-#elif SEOS_NWSTACK_AS_SERVER
+#elif defined(SEOS_NWSTACK_AS_SERVER)
 
     // handle = 0: server socket
     // handle = 1: client connection

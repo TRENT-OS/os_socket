@@ -55,8 +55,3 @@ typedef struct
                                void* value);     /**< is pico_socket_setoption() */
 } seos_nw_api_vtable;
 
-
-
-
-struct pico_device*
-seos_network_device_create(void);

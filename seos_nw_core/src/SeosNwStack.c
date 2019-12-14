@@ -611,7 +611,7 @@ nic_destroy(
 
 
 //------------------------------------------------------------------------------
-struct pico_device*
+static struct pico_device*
 seos_network_device_create(void)
 {
     struct pico_device* dev = &instance.seos_dev;

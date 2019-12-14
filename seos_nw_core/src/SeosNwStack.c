@@ -71,7 +71,7 @@ seos_nw_socket_event(uint16_t ev,
 
 #ifdef SEOS_NWSTACK_AS_CLIENT
 
-        Debug_LOG_INFO("[socket %p] incomming connection established", s);
+        Debug_LOG_INFO("[socket %p] incoming connection established", s);
 
 #elif SEOS_NWSTACK_AS_SERVER
 
@@ -92,16 +92,16 @@ seos_nw_socket_event(uint16_t ev,
         {
             char peer[30] = {0};
             pico_ipv4_to_string(peer, orig.addr);
-            // ToDo: port might be in big endina here, in this case we should
+            // ToDo: port might be in big endian here, in this case we should
             //       better use short_be(port)
             Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
                            s, peer, port, s_in);
 
-            // The defaul values below are taken from the TCP unit tests of
+            // The default values below are taken from the TCP unit tests of
             // PicoTCP, see tests/examples/tcpecho.c
             uint32_t val;
 
-            val = 1; // disable nagle algorithm (0 = enbale, 1 = disable)
+            val = 1; // disable nagle algorithm (0 = enable, 1 = disable)
             pico_socket_setoption(s_in, PICO_TCP_NODELAY, &val);
 
             val = 5; // number of probes for TCP keepalive

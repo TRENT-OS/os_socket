@@ -21,7 +21,6 @@ typedef struct
     const picotcp_api_vtable_t*                 vtable;
 
     struct pico_device          seos_dev;
-    struct pico_ip4             ip_addr;
 
     // As of now there is only one app per network stack and there is also only
     // one socket. Hence one global variable can be used which represents the
@@ -668,7 +667,6 @@ network_stack_init(void)
 
     struct pico_ip4 ipaddr;
     pico_string_to_ipv4(instance.cfg->dev_addr, &ipaddr.addr);
-    instance.ip_addr = ipaddr;
 
     struct pico_ip4 netmask;
     pico_string_to_ipv4(instance.cfg->subnet_mask, &netmask.addr);

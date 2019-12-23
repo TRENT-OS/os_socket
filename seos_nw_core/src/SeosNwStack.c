@@ -18,7 +18,7 @@ typedef struct
     const seos_camkes_network_stack_config_t*   camkes_cfg;
     const seos_network_stack_config_t*          cfg;
 
-    const seos_nw_api_vtable*   vtable; /**< PicoTCP functions */
+    const picotcp_api_vtable_t*                 vtable;
 
     struct pico_device          seos_dev;
     struct pico_ip4             ip_addr;
@@ -81,9 +81,9 @@ handle_pico_socket_event(
 
         uint16_t port = 0;
         struct pico_ip4 orig = {0};
-        struct pico_socket* s_in = instance.vtable->nw_socket_accept(instance.socket,
-                                   &orig,
-                                   &port);
+        struct pico_socket* s_in = instance.vtable->socket_accept(instance.socket,
+                                                                  &orig,
+                                                                  &port);
         if (NULL == s_in)
         {
             pico_err_t cur_pico_err = pico_err;
@@ -202,9 +202,9 @@ network_stack_rpc_socket_create(
         return SEOS_ERROR_GENERIC;
     }
 
-    struct pico_socket* socket = instance.vtable->nw_socket_open(domain,
-                                 type,
-                                 &handle_pico_socket_event);
+    struct pico_socket* socket = instance.vtable->socket_open(domain,
+                                                              type,
+                                                              &handle_pico_socket_event);
     if (NULL == socket)
     {
         // try to detailed error from PicoTCP. Actually, nw_socket_open()
@@ -225,9 +225,9 @@ network_stack_rpc_socket_create(
     instance.socket = socket;
 
     int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
-    instance.vtable->nw_socket_setoption(socket,
-                                         PICO_TCP_NODELAY,
-                                         &nodelay);
+    instance.vtable->socket_setoption(socket,
+                                      PICO_TCP_NODELAY,
+                                      &nodelay);
 
     *pHandle = instance.socket_fd;
     return SEOS_SUCCESS;
@@ -273,7 +273,7 @@ network_stack_rpc_socket_close(
         return SEOS_ERROR_INVALID_HANDLE;
     }
 
-    int ret = instance.vtable->nw_socket_close(socket);
+    int ret = instance.vtable->socket_close(socket);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -304,7 +304,7 @@ network_stack_rpc_socket_connect(
 
     struct pico_ip4 dst;
     pico_string_to_ipv4(name, &dst.addr);
-    int ret = instance.vtable->nw_socket_connect(socket, &dst, short_be(port));
+    int ret = instance.vtable->socket_connect(socket, &dst, short_be(port));
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -339,7 +339,7 @@ network_stack_rpc_socket_write(
 
     const seos_shared_buffer_t* app_port = get_app_port();
 
-    int ret = instance.vtable->nw_socket_write(socket, app_port->buffer, *pLen);
+    int ret = instance.vtable->socket_write(socket, app_port->buffer, *pLen);
     instance.event = 0;
 
     if (ret < 0)
@@ -373,9 +373,9 @@ network_stack_rpc_socket_bind(
     instance.bind_ip_addr = ZERO_IP4;
 
     uint16_t be_port = short_be(port);
-    int ret = instance.vtable->nw_socket_bind(socket,
-                                              &instance.bind_ip_addr,
-                                              &be_port);
+    int ret = instance.vtable->socket_bind(socket,
+                                           &instance.bind_ip_addr,
+                                           &be_port);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -400,7 +400,7 @@ network_stack_rpc_socket_listen(
                       handle);
     struct pico_socket* socket = instance.socket;
 
-    int ret = instance.vtable->nw_socket_listen(socket, backlog);
+    int ret = instance.vtable->socket_listen(socket, backlog);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
@@ -471,9 +471,9 @@ network_stack_rpc_socket_read(
 
     do
     {
-        int ret = instance.vtable->nw_socket_read(socket,
-                                                  buf + tot_len,
-                                                  len - tot_len);
+        int ret = instance.vtable->socket_read(socket,
+                                               buf + tot_len,
+                                               len - tot_len);
         if (ret < 0)
         {
             pico_err_t cur_pico_err = pico_err;

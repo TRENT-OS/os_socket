@@ -662,8 +662,9 @@ seos_network_device_create(void)
 static seos_err_t
 network_stack_init(void)
 {
-    // initialize PicoTCP
+    // initialize PicoTCP and set API functions
     pico_stack_init();
+    instance.vtable = &picotcp_funcs;
 
     struct pico_ip4 ipaddr;
     pico_string_to_ipv4(instance.cfg->dev_addr, &ipaddr.addr);
@@ -679,8 +680,6 @@ network_stack_init(void)
     Debug_LOG_INFO("waiting for NIC init");
     wait_nic_init_done();
 
-    // set PicoTCP functions
-    instance.vtable = &picotcp_funcs;
 
     struct pico_device* dev = seos_network_device_create();
     if (!dev)

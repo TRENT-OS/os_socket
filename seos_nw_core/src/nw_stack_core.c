@@ -546,6 +546,9 @@ nic_send_frame(
     void*                buf,
     int                  len)
 {
+    // currently we support only one NIC
+    Debug_ASSERT( &(instance.seos_nic) == dev );
+
     const seos_shared_buffer_t* nic_in = get_nic_port_to();
     void* wrbuf = nic_in->buffer;
 
@@ -560,6 +563,8 @@ nic_send_frame(
         return -1;
     }
 
+    Debug_ASSERT( wr_len == len );
+
     return len;
 }
 
@@ -571,6 +576,9 @@ nic_poll_data(
     struct pico_device*  dev,
     int                  loop_score)
 {
+    // currently we support only one NIC
+    Debug_ASSERT( &(instance.seos_nic) == dev );
+
     // loop_score indicates max number of frames that can be processed during
     // the invocation of this poll. Since we still lack the concept of frames
     // in the shared memory, we can't do much here. Pretend there is one
@@ -600,11 +608,8 @@ static void
 nic_destroy(
     struct pico_device* dev)
 {
-    // currently we only have one static device
-    if (&instance.seos_nic != dev)
-    {
-        Debug_LOG_ERROR("dev (%p) is not seos_dev (%p)", dev, &instance.seos_nic);
-    }
+    // currently we support only one NIC
+    Debug_ASSERT( &(instance.seos_nic) == dev );
 
     memset(dev, 0, sizeof(*dev));
 }
@@ -614,7 +619,7 @@ nic_destroy(
 static seos_err_t
 initialize_nic(void)
 {
-    // currently, there is only one instance
+    // currently we support only one NIC
     struct pico_device* dev = &instance.seos_nic;
 
     memset(dev, 0, sizeof(*dev));

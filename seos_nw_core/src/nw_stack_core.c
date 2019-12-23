@@ -20,7 +20,7 @@ typedef struct
 
     const picotcp_api_vtable_t*                 vtable;
 
-    struct pico_device          seos_dev;
+    struct pico_device          seos_nic;
 
     // As of now there is only one app per network stack and there is also only
     // one socket. Hence one global variable can be used which represents the
@@ -600,9 +600,9 @@ nic_destroy(
     struct pico_device* dev)
 {
     // currently we only have one static device
-    if (&instance.seos_dev != dev)
+    if (&instance.seos_nic != dev)
     {
-        Debug_LOG_ERROR("dev (%p) is not seos_dev (%p)", dev, &instance.seos_dev);
+        Debug_LOG_ERROR("dev (%p) is not seos_dev (%p)", dev, &instance.seos_nic);
     }
 
     memset(dev, 0, sizeof(*dev));
@@ -610,10 +610,11 @@ nic_destroy(
 
 
 //------------------------------------------------------------------------------
-static struct pico_device*
-seos_network_device_create(void)
+static seos_err_t
+initialize_nic(void)
 {
-    struct pico_device* dev = &instance.seos_dev;
+    // currently, there is only one instance
+    struct pico_device* dev = &instance.seos_nic;
 
     memset(dev, 0, sizeof(*dev));
 
@@ -621,13 +622,18 @@ seos_network_device_create(void)
     dev->poll    = nic_poll_data;
     dev->destroy = nic_destroy;
 
+    // wait for NIC init
+    Debug_LOG_INFO("waiting for NIC init");
+    wait_nic_init_done();
+
+    //---------------------------------------------------------------
     // get MAC from NIC driver
     seos_err_t err = nic_rpc_get_mac();
     if (err != SEOS_SUCCESS)
     {
         Debug_LOG_ERROR("nic_rpc_get_mac() failed, error %d", err);
         nic_destroy(dev);
-        return NULL;
+        return SEOS_ERROR_GENERIC;
     }
 
     const seos_shared_buffer_t* nw_in = get_nic_port_from();
@@ -643,27 +649,13 @@ seos_network_device_create(void)
     {
         Debug_LOG_ERROR("pico_device_init() failed, error %d", ret);
         nic_destroy(dev);
-        return NULL;
+        return SEOS_ERROR_GENERIC;
     }
 
-    Debug_LOG_INFO("Device created: %s", drv_name);
+    Debug_LOG_INFO("PicoTCP Device created: %s", drv_name);
 
-    return dev;
-}
-
-
-//------------------------------------------------------------------------------
-// initialization
-//------------------------------------------------------------------------------
-
-
-//------------------------------------------------------------------------------
-static seos_err_t
-network_stack_init(void)
-{
-    // initialize PicoTCP and set API functions
-    pico_stack_init();
-    instance.vtable = &picotcp_funcs;
+    //---------------------------------------------------------------
+    // assign IPv4 configuration
 
     struct pico_ip4 ipaddr;
     pico_string_to_ipv4(instance.cfg->dev_addr, &ipaddr.addr);
@@ -671,52 +663,18 @@ network_stack_init(void)
     struct pico_ip4 netmask;
     pico_string_to_ipv4(instance.cfg->subnet_mask, &netmask.addr);
 
-    struct pico_ip4 gateway;
-    pico_string_to_ipv4(instance.cfg->gateway_addr, &gateway.addr);
-
-    // wait for NIC init
-    Debug_LOG_INFO("waiting for NIC init");
-    wait_nic_init_done();
-
-
-    struct pico_device* dev = seos_network_device_create();
-    if (!dev)
-    {
-        Debug_LOG_ERROR("seos_network_device_create() failed");
-        return SEOS_ERROR_GENERIC;
-    }
-
     // assign IP address and netmask
     pico_ipv4_link_add(dev, ipaddr, netmask);
+
+
+    struct pico_ip4 gateway;
+    pico_string_to_ipv4(instance.cfg->gateway_addr, &gateway.addr);
 
     // add default route via gateway
     const struct pico_ip4 ZERO_IP4 = { 0 };
     (void)pico_ipv4_route_add(ZERO_IP4, ZERO_IP4, gateway, 1, NULL);
 
-    // notify app after that network stack is initialized
-    Debug_LOG_INFO("signal network stack init done");
-    notify_app_init_done();
-
     return SEOS_SUCCESS;
-}
-
-
-//------------------------------------------------------------------------------
-static seos_err_t
-network_stack_event_loop(void)
-{
-    // enter endless loop processing events
-    for (;;)
-    {
-        // wait for event ( 1 sec tick, write, read)
-        wait_network_event();
-
-        // let PicoTCP process the event
-        pico_stack_tick();
-    }
-
-    Debug_LOG_FATAL("network stack loop terminated");
-    return SEOS_ERROR_GENERIC;
 }
 
 
@@ -736,18 +694,30 @@ seos_network_stack_run(
     Debug_ASSERT( NULL != config );
     instance.cfg         = config;
 
-    err = network_stack_init();
+    // initialize PicoTCP and set API functions
+    pico_stack_init();
+    instance.vtable = &picotcp_funcs;
+
+    // initialize NIC
+    err = initialize_nic();
     if (err != SEOS_SUCCESS)
     {
-        Debug_LOG_ERROR("network_stack_init() failed, error %d", err);
+        Debug_LOG_ERROR("initialize_nic() failed, error %d", err);
         return SEOS_ERROR_GENERIC;
     }
 
-    err = network_stack_event_loop();
-    if (err != SEOS_SUCCESS)
+    // notify app after that network stack is initialized
+    Debug_LOG_INFO("signal network stack init done");
+    notify_app_init_done();
+
+    // enter endless loop processing events
+    for (;;)
     {
-        Debug_LOG_ERROR("network_stack_event_loop() failed, error %d", err);
-        return SEOS_ERROR_GENERIC;
+        // wait for event ( 1 sec tick, write, read)
+        wait_network_event();
+
+        // let PicoTCP process the event
+        pico_stack_tick();
     }
 
     Debug_LOG_WARNING("network_stack_event_loop() terminated gracefully");

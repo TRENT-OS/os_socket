@@ -571,8 +571,8 @@ nic_poll_data(
     int                  loop_score)
 {
     // loop_score indicates max number of frames that can be processed during
-    // the invocation of this poll. Since we still lack the convept of frames
-    // in the shared memory, we can't do much here. Predend there is one
+    // the invocation of this poll. Since we still lack the concept of frames
+    // in the shared memory, we can't do much here. Pretend there is one
     // frame in the buffer and give it to PicoTCP
     if (loop_score > 0)
     {

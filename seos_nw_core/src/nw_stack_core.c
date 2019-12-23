@@ -59,6 +59,33 @@ config_get_handlers(void)
 
 
 //------------------------------------------------------------------------------
+// get socket from a given handle
+static struct pico_socket*
+get_pico_socket_from_handle(
+    int handle)
+{
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+    // we support only one handle
+    return (0 == handle) ? instance.socket : NULL;
+
+#elif defined(SEOS_NWSTACK_AS_SERVER)
+
+    // handle = 0: server socket
+    // handle = 1: client connection
+
+
+    return (0 == handle) ? instance.socket
+           : (1 == handle) ? instance.client_socket
+           : NULL;
+
+#else
+#error "Error: Configure as client or server!!"
+#endif
+}
+
+
+//------------------------------------------------------------------------------
 // This is called from the PicoTCP main tick loop to report socket events
 static void
 handle_pico_socket_event(
@@ -231,33 +258,6 @@ network_stack_rpc_socket_create(
 
     *pHandle = instance.socket_fd;
     return SEOS_SUCCESS;
-}
-
-
-//------------------------------------------------------------------------------
-// get socket from a given handle
-static struct pico_socket*
-get_pico_socket_from_handle(
-    int handle)
-{
-#if defined(SEOS_NWSTACK_AS_CLIENT)
-
-    // we support only one handle
-    return (0 == handle) ? instance.socket : NULL;
-
-#elif defined(SEOS_NWSTACK_AS_SERVER)
-
-    // handle = 0: server socket
-    // handle = 1: client connection
-
-
-    return (0 == handle) ? instance.socket
-           : (1 == handle) ? instance.client_socket
-           : NULL;
-
-#else
-#error "Error: Configure as client or server!!"
-#endif
 }
 
 

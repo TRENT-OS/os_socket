@@ -539,8 +539,9 @@ network_stack_rpc_socket_read(
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
+// Called by PicoTCP to send one frame
 static int
-nic_send_data(
+nic_send_frame(
     struct pico_device*  dev,
     void*                buf,
     int                  len)
@@ -618,7 +619,7 @@ initialize_nic(void)
 
     memset(dev, 0, sizeof(*dev));
 
-    dev->send    = nic_send_data;
+    dev->send    = nic_send_frame;
     dev->poll    = nic_poll_data;
     dev->destroy = nic_destroy;
 

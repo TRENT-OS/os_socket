@@ -11,7 +11,7 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        seos_nw_core/src/SeosNwStack.c
+        seos_nw_core/src/nw_stack_core.c
         seos_nw_core/src/nw_config.c
         seos_nw_common/src/SeosNwCommon.c
 )

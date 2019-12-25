@@ -40,7 +40,6 @@ typedef struct
     int
     event; /**< Pico Internal event representing current state of connected socket */
     int                         read; /**< Has read len */
-    int                         socket_fd; /**< socket handle */
 } network_stack_t;
 
 
@@ -245,19 +244,17 @@ network_stack_rpc_socket_create(
         return SEOS_ERROR_GENERIC;
     }
 
-    int handle = 0; // we support just one socket at the moment
-
-    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
-
-    instance.socket_fd = handle;
-    instance.socket = socket;
-
     int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
     pico_socket_setoption(socket,
                           PICO_TCP_NODELAY,
                           &nodelay);
 
-    *pHandle = instance.socket_fd;
+    int handle = 0; // we support just one socket at the moment
+    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
+
+    instance.socket = socket;
+    *pHandle = handle;
+
     return SEOS_SUCCESS;
 }
 

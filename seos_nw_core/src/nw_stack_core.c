@@ -31,7 +31,6 @@ typedef struct
     // network stack
     struct pico_socket*
         socket; /**< represents an opened socket in the stack */
-    struct pico_ip4             bind_ip_addr; /**<  bind ip addr */
     struct pico_socket*
         client_socket; /**< represents a connected socket when the Nw Stack is configured as server*/
 
@@ -330,10 +329,8 @@ network_stack_rpc_socket_bind(
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
 
     struct pico_ip4 ZERO_IP4 = { 0 };
-    instance.bind_ip_addr = ZERO_IP4;
-
     uint16_t be_port = short_be(port);
-    int ret = pico_socket_bind(socket, &instance.bind_ip_addr, &be_port);
+    int ret = pico_socket_bind(socket, &ZERO_IP4, &be_port);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;

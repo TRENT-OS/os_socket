@@ -36,8 +36,6 @@ typedef struct
         client_socket; /**< represents a connected socket when the Nw Stack is configured as server*/
 
     int
-    listen_port; /**< listen port for server to listen */
-    int
     event; /**< Pico Internal event representing current state of connected socket */
     int                         read; /**< Has read len */
 } network_stack_t;

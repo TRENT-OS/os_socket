@@ -321,42 +321,6 @@ network_stack_rpc_socket_connect(
 
 //------------------------------------------------------------------------------
 seos_err_t
-network_stack_rpc_socket_write(
-    int handle,
-    size_t* pLen)
-{
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
-        *pLen = 0;
-        return SEOS_ERROR_INVALID_HANDLE;
-    }
-
-    internal_wait_write();
-
-    const seos_shared_buffer_t* app_port = get_app_port();
-
-    int ret = pico_socket_write(socket, app_port->buffer, *pLen);
-    instance.event = 0;
-
-    if (ret < 0)
-    {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
-        *pLen = 0;
-        return SEOS_ERROR_GENERIC;
-    }
-
-    *pLen = ret;
-    return SEOS_SUCCESS;
-}
-
-
-//------------------------------------------------------------------------------
-seos_err_t
 network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
@@ -439,6 +403,42 @@ network_stack_rpc_socket_accept(
                     handle, client_handle, client_socket);
 
     *pClient_handle = client_handle;
+    return SEOS_SUCCESS;
+}
+
+
+//------------------------------------------------------------------------------
+seos_err_t
+network_stack_rpc_socket_write(
+    int handle,
+    size_t* pLen)
+{
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (NULL == socket)
+    {
+        Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
+        *pLen = 0;
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    internal_wait_write();
+
+    const seos_shared_buffer_t* app_port = get_app_port();
+
+    int ret = pico_socket_write(socket, app_port->buffer, *pLen);
+    instance.event = 0;
+
+    if (ret < 0)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+        *pLen = 0;
+        return SEOS_ERROR_GENERIC;
+    }
+
+    *pLen = ret;
     return SEOS_SUCCESS;
 }
 

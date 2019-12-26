@@ -89,6 +89,64 @@ get_pico_socket_from_handle(
 
 
 //------------------------------------------------------------------------------
+#if defined(SEOS_NWSTACK_AS_SERVER)
+static void
+handle_incoming_connection(
+    struct pico_socket*  socket)
+{
+    // Currently, we only support exactly one incoming connection, thus
+    // everything is hard-coded here. Also, there is a quick hack here to
+    // forget the existing connection of a new one comes in - this is good
+    // enough for now, but need to be implemented properly eventually.
+    const int handle_socket_server = 0;
+    const int handle_socket_client = 1;
+
+    Debug_ASSERT( socket == instance.socket[handle_socket_server] );
+
+    instance.socket[handle_socket_client] = NULL;
+
+    uint16_t port = 0;
+    struct pico_ip4 orig = {0};
+    struct pico_socket* s_in = pico_socket_accept(socket, &orig, &port);
+    if (NULL == s_in)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d, %s",
+                        socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
+        return;
+    }
+
+    char peer[30] = {0};
+    pico_ipv4_to_string(peer, orig.addr);
+
+    // ToDo: port might be in big endian here, in this case we should
+    //       better use short_be(port)
+
+    Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
+                   socket, peer, port, s_in);
+
+    // The default values below are taken from the TCP unit tests of
+    // PicoTCP, see tests/examples/tcpecho.c
+    uint32_t val;
+
+    val = 1; // disable nagle algorithm (0 = enable, 1 = disable)
+    pico_socket_setoption(s_in, PICO_TCP_NODELAY, &val);
+
+    val = 5; // number of probes for TCP keepalive
+    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPCNT, &val);
+
+    val = 30000; // timeout in ms for TCP keepalive probes
+    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPIDLE, &val);
+
+    val = 5000; // timeout in ms for TCP keep alive retries
+    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
+
+    instance.socket[handle_socket_client] = s_in;
+}
+#endif // defined(SEOS_NWSTACK_AS_SERVER)
+
+
+//------------------------------------------------------------------------------
 // This is called from the PicoTCP main tick loop to report socket events
 static void
 handle_pico_socket_event(
@@ -101,62 +159,18 @@ handle_pico_socket_event(
     if (event_mask & PICO_SOCK_EV_CONN)
     {
 
+        // actually, we should check if socket is a server socket. If so, this
+        // is an incoming connection. Otherwise, this just seems to be a note
+        // that an outgoing connection has been established successfully.
+
 #if defined(SEOS_NWSTACK_AS_CLIENT)
 
         Debug_LOG_INFO("[socket %p] incoming connection established", socket);
 
 #elif defined(SEOS_NWSTACK_AS_SERVER)
 
-        // Currently, we only support exactly one incoming connection, thus
-        // everything is hard-coded here. Also, there is a quick hack here to
-        // forget the existing connection of a new one comes in - this is good
-        // enough for now, but need to be implemented properly eventually.
-        const int handle_socket_server = 0;
-        const int handle_socket_client = 1;
-
-        Debug_ASSERT( socket == instance.socket[handle_socket_server] );
-        instance.socket[handle_socket_client] = NULL;
-
-        uint16_t port = 0;
-        struct pico_ip4 orig = {0};
-
-
-        struct pico_socket* s_in = pico_socket_accept(socket, &orig, &port);
-        if (NULL == s_in)
-        {
-            pico_err_t cur_pico_err = pico_err;
-            Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d, %s",
-                            socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
-        }
-        else
-        {
-            char peer[30] = {0};
-            pico_ipv4_to_string(peer, orig.addr);
-            // ToDo: port might be in big endian here, in this case we should
-            //       better use short_be(port)
-            Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
-                           socket, peer, port, s_in);
-
-            // The default values below are taken from the TCP unit tests of
-            // PicoTCP, see tests/examples/tcpecho.c
-            uint32_t val;
-
-            val = 1; // disable nagle algorithm (0 = enable, 1 = disable)
-            pico_socket_setoption(s_in, PICO_TCP_NODELAY, &val);
-
-            val = 5; // number of probes for TCP keepalive
-            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPCNT, &val);
-
-            val = 30000; // timeout in ms for TCP keepalive probes
-            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPIDLE, &val);
-
-            val = 5000; // timeout in ms for TCP keep alive retries
-            pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
-
-            instance.event = 0; // no event is pending
-            instance.socket[handle_socket_client] = s_in;
-        }
-
+        handle_incoming_connection(socket);
+        instance.event = 0; // no event is pending
         internal_notify_connection();
 
 #else
@@ -164,7 +178,6 @@ handle_pico_socket_event(
 #endif
 
     }
-
 
     if (event_mask & PICO_SOCK_EV_RD)
     {

@@ -113,14 +113,15 @@ handle_pico_socket_event(
         // enough for now, but need to be implemented properly eventually.
         const int handle_socket_server = 0;
         const int handle_socket_client = 1;
+
+        Debug_ASSERT( socket == instance.socket[handle_socket_server] );
         instance.socket[handle_socket_client] = NULL;
 
         uint16_t port = 0;
         struct pico_ip4 orig = {0};
-        struct pico_socket* s_in = pico_socket_accept(
-                                       instance.socket[handle_socket_server],
-                                       &orig,
-                                       &port);
+
+
+        struct pico_socket* s_in = pico_socket_accept(socket, &orig, &port);
         if (NULL == s_in)
         {
             pico_err_t cur_pico_err = pico_err;

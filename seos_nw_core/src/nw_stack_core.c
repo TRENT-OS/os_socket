@@ -29,10 +29,17 @@ typedef struct
     // As of now there is only one app per network stack and there is also only
     // one socket. Hence one global variable can be used which represents the
     // network stack
-    struct pico_socket*
-        socket; /**< represents an opened socket in the stack */
-    struct pico_socket*
-        client_socket; /**< represents a connected socket when the Nw Stack is configured as server*/
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+    struct pico_socket* socket[1];
+
+#elif defined(SEOS_NWSTACK_AS_SERVER)
+
+    struct pico_socket* socket[2];
+
+#else
+#error "Error: Configure as client or server!!"
+#endif
 
     int
     event; /**< Pico Internal event representing current state of connected socket */
@@ -65,16 +72,14 @@ get_pico_socket_from_handle(
 #if defined(SEOS_NWSTACK_AS_CLIENT)
 
     // we support only one handle
-    return (0 == handle) ? instance.socket : NULL;
+    return (0 == handle) ? instance.socket[0] : NULL;
 
 #elif defined(SEOS_NWSTACK_AS_SERVER)
 
     // handle = 0: server socket
     // handle = 1: client connection
-
-
-    return (0 == handle) ? instance.socket
-           : (1 == handle) ? instance.client_socket
+    return (0 == handle) ? instance.socket[0]
+           : (1 == handle) ? instance.socket[1]
            : NULL;
 
 #else
@@ -102,13 +107,20 @@ handle_pico_socket_event(
 
 #elif defined(SEOS_NWSTACK_AS_SERVER)
 
-        instance.client_socket = NULL; // clear any value here
+        // Currently, we only support exactly one incoming connection, thus
+        // everything is hard-coded here. Also, there is a quick hack here to
+        // forget the existing connection of a new one comes in - this is good
+        // enough for now, but need to be implemented properly eventually.
+        const int handle_socket_server = 0;
+        const int handle_socket_client = 1;
+        instance.socket[handle_socket_client] = NULL;
 
         uint16_t port = 0;
         struct pico_ip4 orig = {0};
-        struct pico_socket* s_in = pico_socket_accept(instance.socket,
-                                                      &orig,
-                                                      &port);
+        struct pico_socket* s_in = pico_socket_accept(
+                                       instance.socket[handle_socket_server],
+                                       &orig,
+                                       &port);
         if (NULL == s_in)
         {
             pico_err_t cur_pico_err = pico_err;
@@ -141,7 +153,7 @@ handle_pico_socket_event(
             pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
 
             instance.event = 0; // no event is pending
-            instance.client_socket = s_in;
+            instance.socket[handle_socket_client] = s_in;
         }
 
         internal_notify_connection();
@@ -249,7 +261,7 @@ network_stack_rpc_socket_create(
     int handle = 0; // we support just one socket at the moment
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
 
-    instance.socket = socket;
+    instance.socket[handle] = socket;
     *pHandle = handle;
 
     return SEOS_SUCCESS;
@@ -289,10 +301,12 @@ network_stack_rpc_socket_connect(
     const char*  name,
     int          port)
 {
-    // ToDo: call get_pico_socket_from_handle()
-    Debug_LOG_WARNING("[socket %d] connect() currently ignores socket handle",
-                      handle);
-    struct pico_socket* socket = instance.socket;
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        Debug_LOG_ERROR("[socket %d] connect() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
 
     Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
                     handle, socket, name, port);
@@ -322,9 +336,22 @@ network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
 {
-    // ToDo: call get_pico_socket_from_handle()
-    Debug_LOG_WARNING("[socket %d] bind() currently ignores socket handle", handle);
-    struct pico_socket* socket = instance.socket;
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        Debug_LOG_ERROR("[socket %d] bind() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    // currently we support just one incoming connection, so everything is hard
+    // coded
+    int handle_socket_server = 0;
+    if (handle_socket_server != handle)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
+                        handle, socket, handle_socket_server);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
 
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
 
@@ -350,10 +377,22 @@ network_stack_rpc_socket_listen(
     int handle,
     int backlog)
 {
-    // ToDo: call get_pico_socket_from_handle()
-    Debug_LOG_WARNING("[socket %d] listen() currently ignores socket handle",
-                      handle);
-    struct pico_socket* socket = instance.socket;
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        Debug_LOG_ERROR("[socket %d] listen() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    // currently we support just one incoming connection, so everything is hard
+    // coded
+    int handle_socket_server = 0;
+    if (handle_socket_server != handle)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
+                        handle, socket, handle_socket_server);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
 
     int ret = pico_socket_listen(socket, backlog);
     if (ret < 0)
@@ -378,26 +417,39 @@ network_stack_rpc_socket_accept(
     int* pClient_handle,
     uint16_t port)
 {
-    Debug_LOG_WARNING("[socket %d] accept() currently ignores socket handle",
-                      handle);
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        Debug_LOG_ERROR("[socket %d] accept() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
 
-    Debug_LOG_DEBUG("[socket %d] accept waiting ...", handle);
+    // currently we support just one incoming connection, so everything is hard
+    // coded
+    int handle_socket_server = 0;
+    int handle_socket_client = 1;
+
+    if (handle_socket_server != handle)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
+                        handle, socket, handle_socket_server);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, socket);
     internal_wait_connection();
 
-    struct pico_socket* client_socket = instance.client_socket;
+    struct pico_socket* client_socket = instance.socket[handle_socket_client];
     if (client_socket == NULL )
     {
-        Debug_LOG_ERROR("[socket %d] no client to accept", handle);
+        Debug_LOG_ERROR("[socket %d/%p] no client to accept", handle, socket);
         return SEOS_ERROR_GENERIC;
     }
 
-    // currently we support just one client, so everything is hard coded
-    int client_handle = 1;
+    Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
+                    handle, socket, handle_socket_client, client_socket);
 
-    Debug_LOG_DEBUG("[socket %d] new client socket %d/%p",
-                    handle, client_handle, client_socket);
-
-    *pClient_handle = client_handle;
+    *pClient_handle = handle_socket_client;
     return SEOS_SUCCESS;
 }
 

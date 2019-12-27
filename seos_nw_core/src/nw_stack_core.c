@@ -315,6 +315,15 @@ network_stack_rpc_socket_connect(
     const char*  name,
     int          port)
 {
+
+#if defined(SEOS_NWSTACK_AS_SERVER)
+
+    Debug_LOG_ERROR("[socket %d] connect() not supported in server-only mode",
+                    handle);
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#else // not SEOS_NWSTACK_AS_SERVER
+
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
@@ -341,6 +350,9 @@ network_stack_rpc_socket_connect(
                    handle, socket, name, port);
 
     return SEOS_SUCCESS;
+
+#endif // [not] SEOS_NWSTACK_AS_SERVER
+
 }
 
 

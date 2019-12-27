@@ -350,6 +350,15 @@ network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
 {
+
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+    Debug_LOG_ERROR("[socket %d] bind() not supported in client-only mode",
+                    handle);
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#else // not SEOS_NWSTACK_AS_CLIENT
+
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
@@ -382,6 +391,9 @@ network_stack_rpc_socket_bind(
     }
 
     return SEOS_SUCCESS;
+
+#endif // [not] SEOS_NWSTACK_AS_CLIENT
+
 }
 
 
@@ -391,6 +403,14 @@ network_stack_rpc_socket_listen(
     int handle,
     int backlog)
 {
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+    Debug_LOG_ERROR("[socket %d] listen() not supported in client-only mode",
+                    handle);
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#else // not SEOS_NWSTACK_AS_CLIENT
+
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
@@ -419,6 +439,9 @@ network_stack_rpc_socket_listen(
     }
 
     return SEOS_SUCCESS;
+
+#endif // [not] SEOS_NWSTACK_AS_CLIENT
+
 }
 
 
@@ -431,6 +454,17 @@ network_stack_rpc_socket_accept(
     int* pClient_handle,
     uint16_t port)
 {
+    // set default
+    *pClient_handle = 0;
+
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+    Debug_LOG_ERROR("[socket %d] accept() not supported in client-only mode",
+                    handle);
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#else // not SEOS_NWSTACK_AS_CLIENT
+
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
@@ -453,6 +487,8 @@ network_stack_rpc_socket_accept(
     Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, socket);
     internal_wait_connection();
 
+    // ToDO: the static code analyser raises a warning here if we build the
+    //       network stack with
     struct pico_socket* client_socket = instance.socket[handle_socket_client];
     if (client_socket == NULL )
     {
@@ -465,6 +501,9 @@ network_stack_rpc_socket_accept(
 
     *pClient_handle = handle_socket_client;
     return SEOS_SUCCESS;
+
+#endif // [not] SEOS_NWSTACK_AS_CLIENT
+
 }
 
 

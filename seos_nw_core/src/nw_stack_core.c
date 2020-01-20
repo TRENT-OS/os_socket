@@ -48,6 +48,23 @@ typedef struct
 } network_stack_t;
 
 
+#define INVALID_IDX     ((unsigned int)(-1))
+
+#if defined(SEOS_NWSTACK_AS_CLIENT)
+
+#define FIXED_CLIENT_SOCKET_HANDLE  100
+
+#elif defined(SEOS_NWSTACK_AS_SERVER)
+
+#define FIXED_CLIENT_SOCKET_HANDLE  200
+#define FIXED_SERVER_SOCKET_HANDLE  201
+
+#else
+#error "Error: Configure as client or server!!"
+#endif
+
+
+
 // network stack state
 static network_stack_t  instance = {0};
 
@@ -111,65 +128,99 @@ config_get_handlers(void)
 
 
 //------------------------------------------------------------------------------
-// get socket from a given handle
-static struct pico_socket*
-get_pico_socket_from_handle(
-    int handle)
+unsigned int
+get_socket_idx_from_handle(
+    unsigned int handle)
 {
 #if defined(OS_NWSTACK_AS_CLIENT)
 
     // we support only one handle
-    return (0 == handle) ? instance.socket[0] : NULL;
+    return (FIXED_CLIENT_SOCKET_HANDLE == handle) ? 0 : INVALID_IDX;
 
 #elif defined(OS_NWSTACK_AS_SERVER)
 
     // handle = 0: server socket
     // handle = 1: client connection
-    return (0 == handle) ? instance.socket[0]
-           : (1 == handle) ? instance.socket[1]
-           : NULL;
+    return (FIXED_SERVER_SOCKET_HANDLE == handle) ? 1
+           : (FIXED_CLIENT_SOCKET_HANDLE == handle) ? 0
+           : INVALID_IDX;
 
 #else
 #error "Error: Configure as client or server!!"
 #endif
 }
 
+//------------------------------------------------------------------------------
+// get socket from a given handle
+static struct pico_socket*
+get_pico_socket_from_handle(
+    unsigned int handle)
+{
+    unsigned int idx = get_socket_idx_from_handle(handle);
+    if (INVALID_IDX == idx)
+    {
+        Debug_LOG_ERROR("invalid handle %u", handle);
+        return NULL;
+    }
+
+    return instance.socket[idx];
+}
+
+//------------------------------------------------------------------------------
+static void
+set_pico_socket_from_handle(
+    unsigned int         handle,
+    struct pico_socket*  s)
+{
+    unsigned int idx = get_socket_idx_from_handle(handle);
+    if (INVALID_IDX == idx)
+    {
+        Debug_LOG_ERROR("invalid handle %u", handle);
+    }
+
+    instance.socket[idx] = s;
+}
+
 
 //------------------------------------------------------------------------------
 static int
-translate_socket_domain(
-    unsigned int domain)
+extract_socket_domain(
+    unsigned int mode)
 {
-    switch (domain)
+    unsigned int protocol = OS_GET_SOCKET_PROTOCOL_FROM_MODE(mode);
+
+    switch (protocol)
     {
     //----------------------------------------
-    case OS_AF_INET:
+    case OS_SOCKET_IPV4:
         return PICO_PROTO_IPV4;
     //----------------------------------------
-    // case OS_AF_INET6:
+    // case OS_SOCKET_IPV6:
     //    return PICO_PROTO_IPV6;
     //----------------------------------------
     default:
         break;
     }
 
-    Debug_LOG_ERROR("unsupported socket domain %u", domain);
+    Debug_LOG_ERROR("unsupported socket protocol %u", protocol);
     return INVALID_SOCKET_TYPE_OR_DOMAIN;
 }
 
 
 //------------------------------------------------------------------------------
 static int
-translate_socket_type(
-    unsigned int type)
+extract_socket_type(
+    unsigned int mode)
 {
+    unsigned int type = OS_GET_SOCKET_TYPE_FROM_MODE(mode);
+
     switch (type)
     {
     //----------------------------------------
-    case OS_SOCK_STREAM:
+    case OS_SOCKET_STREAM:
         return PICO_PROTO_TCP;
     //----------------------------------------
-    // case OS_SOCK_DGRAM:
+    // case OS_SOCKET_DGRAM:
     //    return PICO_PROTO_UDP;
     //----------------------------------------
     default:
@@ -202,12 +253,9 @@ handle_incoming_connection(
     // everything is hard-coded here. Also, there is a quick hack here to
     // forget the existing connection of a new one comes in - this is good
     // enough for now, but need to be implemented properly eventually.
-    const int handle_socket_server = 0;
-    const int handle_socket_client = 1;
-
-    Debug_ASSERT( socket == instance.socket[handle_socket_server] );
-
-    instance.socket[handle_socket_client] = NULL;
+    Debug_ASSERT( socket == get_pico_socket_from_handle(
+                      FIXED_SERVER_SOCKET_HANDLE) );
+    set_pico_socket_from_handle(FIXED_CLIENT_SOCKET_HANDLE, NULL);
 
     uint16_t port = 0;
     struct pico_ip4 orig = {0};
@@ -244,7 +292,7 @@ handle_incoming_connection(
     // timeout in ms for TCP keep alive retries
     helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
 
-    instance.socket[handle_socket_client] = s_in;
+    set_pico_socket_from_handle(FIXED_CLIENT_SOCKET_HANDLE, s_in);
 }
 #endif // defined(OS_NWSTACK_AS_SERVER)
 
@@ -319,24 +367,24 @@ handle_pico_socket_event(
 
 
 //------------------------------------------------------------------------------
-OS_Error_t
-network_stack_rpc_socket_create(
-    int   domain,
-    int   type,
-    int*  pHandle)
+static
+seos_err_t
+helper_socket_create(
+    unsigned int          mode,
+    struct pico_socket**  pSocket)
 {
-    int pico_domain = translate_socket_domain(domain);
+    int pico_domain = extract_socket_domain(mode);
     if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_domain)
     {
-        Debug_LOG_ERROR("unsupported domain %d", domain);
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("unsupported domain in mode %u", mode);
+        return SEOS_ERROR_GENERIC;
     }
 
-    int pico_type = translate_socket_type(type);
+    int pico_type = extract_socket_type(mode);
     if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_type)
     {
-        Debug_LOG_ERROR("unsupported type %d", type);
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("unsupported type in mode %u", mode);
+        return SEOS_ERROR_GENERIC;
     }
 
     struct pico_socket* socket = pico_socket_open(pico_domain,
@@ -344,46 +392,32 @@ network_stack_rpc_socket_create(
                                                   &handle_pico_socket_event);
     if (NULL == socket)
     {
-        // try to detailed error from PicoTCP. Actually, nw_socket_open()
-        // should return a proper error code and populate a handle passed as
-        // pointer parameter, so we don't need to access pico_err here.
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("socket opening failed, pico_err = %d (%s)",
+        Debug_LOG_ERROR("socket opening failed, pico_err = %d, %s",
                         cur_pico_err, pico_err2str(cur_pico_err));
         return OS_ERROR_GENERIC;
     }
 
-    // disable nagle algorithm (1=disable, 0=enable)
-    helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
+    *pSocket = socket;
 
-    int handle = 0; // we support just one socket at the moment
-    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
-
-    instance.socket[handle] = socket;
-    *pHandle = handle;
-
-    return OS_SUCCESS;
+    return SEOS_SUCCESS;
 }
 
 
 //------------------------------------------------------------------------------
-OS_Error_t
-network_stack_rpc_socket_close(
-    int handle)
+static
+seos_err_t
+helper_socket_cleanup(
+    struct pico_socket*  socket)
 {
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket == NULL)
-    {
-        Debug_LOG_ERROR("[socket %d] close() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    Debug_ASSERT( NULL != socket );
 
     int ret = pico_socket_close(socket);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
+        Debug_LOG_ERROR("[socket %p] nw_socket_close() failed with error %d, pico_err %d (%s)",
+                        socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
         return OS_ERROR_GENERIC;
     }
@@ -392,154 +426,145 @@ network_stack_rpc_socket_close(
 }
 
 
+//==============================================================================
+// Socket RPC API
+//==============================================================================
+
+
 //------------------------------------------------------------------------------
-OS_Error_t
-network_stack_rpc_socket_connect(
-    int          handle,
-    const char*  name,
-    int          port)
+seos_err_t
+network_stack_rpc_server_socket_create(
+    OS_server_socket_params_t*  params,
+    unsigned int*               pHandle)
 {
 
 #if defined(OS_NWSTACK_AS_SERVER)
 
-    Debug_LOG_ERROR("[socket %d] connect() not supported in server-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_SERVER
-
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket == NULL)
+    int ret;
+    struct pico_socket* socket = NULL;
+    seos_err_t err = helper_socket_create(params->mode, &socket);
+    if (SEOS_SUCCESS != err)
     {
-        Debug_LOG_ERROR("[socket %d] connect() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
+        Debug_LOG_ERROR("helper_socket_create() failed, error %d", err);
+        return SEOS_ERROR_GENERIC;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
-                    handle, socket, name, port);
+    Debug_ASSERT( NULL != socket );
 
-    struct pico_ip4 dst;
-    pico_string_to_ipv4(name, &dst.addr);
-    int ret = pico_socket_connect(socket, &dst, short_be(port));
-    if (ret < 0)
-    {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
-    }
+    // we support just one socket at the moment
+    unsigned int handle = FIXED_SERVER_SOCKET_HANDLE;
 
-    Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
-    internal_wait_connection();
-
-    Debug_LOG_INFO("[socket %d/%p] connection esablished to %s:%d",
-                   handle, socket, name, port);
-
-    return OS_SUCCESS;
-
-#endif // [not] OS_NWSTACK_AS_SERVER
-
-}
-
-
-//------------------------------------------------------------------------------
-OS_Error_t
-network_stack_rpc_socket_bind(
-    int handle,
-    uint16_t port)
-{
-
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-    Debug_LOG_ERROR("[socket %d] bind() not supported in client-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_CLIENT
-
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket == NULL)
-    {
-        Debug_LOG_ERROR("[socket %d] bind() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
-
-    // currently we support just one incoming connection, so everything is hard
-    // coded
-    int handle_socket_server = 0;
-    if (handle_socket_server != handle)
-    {
-        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, socket, handle_socket_server);
-        return OS_ERROR_INVALID_HANDLE;
-    }
-
-    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
+    Debug_LOG_INFO("[socket %u/%p] binding new server socket to port %d",
+                   handle, socket, params->port);
 
     struct pico_ip4 ZERO_IP4 = { 0 };
-    uint16_t be_port = short_be(port);
-    int ret = pico_socket_bind(socket, &ZERO_IP4, &be_port);
+    uint16_t be_port = short_be(params->port);
+    ret = pico_socket_bind(socket, &ZERO_IP4, &be_port);
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, pico_err %d (%s)",
+        Debug_LOG_ERROR("[socket %u/%p] pico_socket_bind() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
+
+        // ignore errors from closing, just log them
+        (void)helper_socket_cleanup(socket);
+
+        return SEOS_ERROR_GENERIC;
     }
 
-    return OS_SUCCESS;
+    Debug_LOG_INFO("[socket %u/%p] activating listener", handle, socket);
 
-#endif // [not] OS_NWSTACK_AS_CLIENT
+    ret = pico_socket_listen(socket, params->backlog);
+    if (ret < 0)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR("[socket %u/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
+                        handle, socket, ret,
+                        cur_pico_err, pico_err2str(cur_pico_err));
+        return SEOS_ERROR_GENERIC;
+
+    }
+
+    set_pico_socket_from_handle(handle, socket);
+    *pHandle = handle;
+
+    return SEOS_SUCCESS;
+
+#else // not SEOS_NWSTACK_AS_SERVER
+
+    Debug_LOG_ERROR("server_socket_create() not supported, server-mode disabled");
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#endif // [not] SEOS_NWSTACK_AS_SERVER
 
 }
 
 
 //------------------------------------------------------------------------------
-OS_Error_t
-network_stack_rpc_socket_listen(
-    int handle,
-    int backlog)
+seos_err_t
+network_stack_rpc_client_socket_create(
+    OS_client_socket_params_t*  params,
+    unsigned int*               pHandle)
 {
-#if defined(OS_NWSTACK_AS_CLIENT)
 
-    Debug_LOG_ERROR("[socket %d] listen() not supported in client-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
+#if defined(SEOS_NWSTACK_AS_CLIENT)
 
-#else // not OS_NWSTACK_AS_CLIENT
-
-    struct pico_socket* socket = get_pico_socket_from_handle(handle);
-    if (socket == NULL)
+    struct pico_socket* socket = NULL;
+    seos_err_t err = helper_socket_create(params->mode, &socket);
+    if (SEOS_SUCCESS != err)
     {
-        Debug_LOG_ERROR("[socket %d] listen() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
+        Debug_LOG_ERROR("helper_socket_create() failed, error %d", err);
+        return SEOS_ERROR_INVALID_HANDLE;
     }
+
+    Debug_ASSERT( NULL != socket );
 
     // currently we support just one incoming connection, so everything is hard
     // coded
-    int handle_socket_server = 0;
-    if (handle_socket_server != handle)
-    {
-        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, socket, handle_socket_server);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    unsigned int handle = FIXED_CLIENT_SOCKET_HANDLE;
+    Debug_LOG_INFO("[socket %u/%p] created new client socket", handle, socket);
 
-    int ret = pico_socket_listen(socket, backlog);
+    // disable nagle algorithm (1=disable, 0=enable)
+    helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
+
+    Debug_LOG_DEBUG("[socket %u/%p] opening connection to %s:%d ...",
+                    handle, socket, params->name, params->port);
+
+    // sanity check name passed by the caller, there must be a terminating null
+    // char in there, ie the length is from 0 up to  sizeof(params->name)-1.
+    if (sizeof(params->name) == strnlen(params->name, sizeof(params->name)))
+    {
+        Debug_LOG_ERROR("invalid name");
+        return SEOS_ERROR_GENERIC;
+    }
+    struct pico_ip4 dst;
+    pico_string_to_ipv4(params->name, &dst.addr);
+
+    int ret = pico_socket_connect(socket, &dst, short_be(params->port));
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
+        Debug_LOG_ERROR("[socket %u/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
         return OS_ERROR_GENERIC;
     }
 
-    return OS_SUCCESS;
+    Debug_LOG_INFO("[socket %u/%p] connection esablished to %s:%d",
+                   handle, socket, params->name, params->port);
 
-#endif // [not] OS_NWSTACK_AS_CLIENT
+    set_pico_socket_from_handle(handle, socket);
+    *pHandle = handle;
+
+    return SEOS_SUCCESS;
+
+#else // not SEOS_NWSTACK_AS_CLIENT
+
+    Debug_LOG_ERROR("client_socket_create() not supported, client-mode disabled");
+    return SEOS_ERROR_NOT_SUPPORTED;
+
+#endif // [not] SEOS_NWSTACK_AS_CLIENT
 
 }
 
@@ -549,16 +574,15 @@ network_stack_rpc_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 network_stack_rpc_socket_accept(
-    int handle,
-    int* pClient_handle,
-    uint16_t port)
+    unsigned int   handle,
+    unsigned int*  pClient_handle)
 {
     // set default
     *pClient_handle = 0;
 
 #if defined(OS_NWSTACK_AS_CLIENT)
 
-    Debug_LOG_ERROR("[socket %d] accept() not supported in client-only mode",
+    Debug_LOG_ERROR("[socket %u] accept() not supported in client-only mode",
                     handle);
     return OS_ERROR_NOT_SUPPORTED;
 
@@ -567,39 +591,36 @@ network_stack_rpc_socket_accept(
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
-        Debug_LOG_ERROR("[socket %d] accept() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
+        Debug_LOG_ERROR("[socket %u] accept() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
     }
 
     // currently we support just one incoming connection, so everything is hard
     // coded
-    int handle_socket_server = 0;
-    int handle_socket_client = 1;
 
-    if (handle_socket_server != handle)
+    if (FIXED_SERVER_SOCKET_HANDLE != handle)
     {
-        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, socket, handle_socket_server);
-        return OS_ERROR_INVALID_HANDLE;
+        Debug_LOG_ERROR("[socket %u/%p] only socket handle %d is currently allowed",
+                        handle, socket, FIXED_SERVER_SOCKET_HANDLE);
+        return SEOS_ERROR_INVALID_HANDLE;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, socket);
+    Debug_LOG_DEBUG("[socket %u/%p] waiting for connection...", handle, socket);
     internal_wait_connection();
 
-    // ToDO: the static code analyser raises a warning here if we build the
-    //       network stack with
-    struct pico_socket* client_socket = instance.socket[handle_socket_client];
+    unsigned int client_handle = FIXED_CLIENT_SOCKET_HANDLE;
+    struct pico_socket* client_socket = get_pico_socket_from_handle(client_handle);
     if (client_socket == NULL )
     {
-        Debug_LOG_ERROR("[socket %d/%p] no client to accept", handle, socket);
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %u/%p] no client to accept", handle, socket);
+        return SEOS_ERROR_GENERIC;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
-                    handle, socket, handle_socket_client, client_socket);
+    Debug_LOG_DEBUG("[socket %u/%p] incoming connection socket %u/%p",
+                    handle, socket, client_handle, client_socket);
 
-    *pClient_handle = handle_socket_client;
-    return OS_SUCCESS;
+    *pClient_handle = client_handle;
+    return SEOS_SUCCESS;
 
 #endif // [not] OS_NWSTACK_AS_CLIENT
 
@@ -607,15 +628,42 @@ network_stack_rpc_socket_accept(
 
 
 //------------------------------------------------------------------------------
-OS_Error_t
+seos_err_t
+network_stack_rpc_socket_close(
+    unsigned int handle)
+{
+    Debug_LOG_DEBUG("[socket %u] closing socket", handle);
+
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (socket == NULL)
+    {
+        Debug_LOG_ERROR("[socket %u] close() with invalid handle", handle);
+        return SEOS_ERROR_INVALID_HANDLE;
+    }
+
+    // we do not return an error to the caller, even if closing the socket
+    // internally fails. Rational is, that in general there is not much point
+    // in returning an error when closing a resource - unless the resource
+    // pointer is invalid. Closing should always be as graceful as possible,
+    // clean up everything an never fail. However, cleanup only addresses
+    // lower protocol layers. The upper stack man remain in an undefined state,
+    // but this not out problem to solve.
+    (void)helper_socket_cleanup(socket);
+
+    return SEOS_SUCCESS;
+}
+
+
+//------------------------------------------------------------------------------
+seos_err_t
 network_stack_rpc_socket_write(
-    int handle,
-    size_t* pLen)
+    unsigned int  handle,
+    size_t*       pLen)
 {
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
+        Debug_LOG_ERROR("[socket %u] write() with invalid handle", handle);
         *pLen = 0;
         return OS_ERROR_INVALID_HANDLE;
     }
@@ -630,7 +678,7 @@ network_stack_rpc_socket_write(
     if (ret < 0)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
+        Debug_LOG_ERROR("[socket %u/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
         *pLen = 0;
@@ -646,13 +694,13 @@ network_stack_rpc_socket_write(
 // Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_rpc_socket_read(
-    int handle,
-    size_t* pLen)
+    unsigned int  handle,
+    size_t*       pLen)
 {
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
+        Debug_LOG_ERROR("[socket %u] read() with invalid handle", handle);
         *pLen = 0;
         return OS_ERROR_INVALID_HANDLE;
     }
@@ -672,13 +720,13 @@ network_stack_rpc_socket_read(
             pico_err_t cur_pico_err = pico_err;
             if (cur_pico_err == PICO_ERR_ESHUTDOWN)
             {
-                Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
+                Debug_LOG_INFO("[socket %u/%p] read() found connection closed",
                                handle, socket);
                 retval = OS_ERROR_CONNECTION_CLOSED;
                 break;
             }
 
-            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, pico_err %d (%s)",
+            Debug_LOG_ERROR("[socket %u/%p] nw_socket_read() failed with error %d, pico_err %d (%s)",
                             handle, socket, ret,
                             cur_pico_err, pico_err2str(cur_pico_err));
 
@@ -694,7 +742,7 @@ network_stack_rpc_socket_read(
             {
                 /* closing of socket must be done by the app after return */
                 instance.event = 0;
-                Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
+                Debug_LOG_INFO("[socket %u/%p] read() unblocked due to connection closed",
                                handle, socket);
                 retval = OS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
                 break;
@@ -773,10 +821,15 @@ nic_poll_data(
         const OS_SharedBuffer_t* nw_in = get_nic_port_from();
         Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
 
+        // check if there is a frame in the buffer.
         size_t len = nw_rx->len;
         if (len > 0)
         {
-            Debug_LOG_DEBUG("incoming frame len %zu", len);
+            Debug_LOG_TRACE("incoming frame len %zu", len);
+            if (len > ETHERNET_FRAME_MAX_SIZE)
+            {
+                Debug_LOG_WARNING("incoming frame of huge size %zu", len);
+            }
             loop_score--;
             pico_stack_recv(dev, nw_rx->data, (uint32_t)len);
 

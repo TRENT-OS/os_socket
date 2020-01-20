@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+// all PICO_PROTO_xxx are positive values, so we can use this as marker
+#define INVALID_SOCKET_TYPE_OR_DOMAIN   (-1)
 
 typedef struct
 {
@@ -89,6 +91,63 @@ get_pico_socket_from_handle(
 
 
 //------------------------------------------------------------------------------
+static int
+translate_socket_domain(
+    unsigned int domain)
+{
+    switch (domain)
+    {
+    //----------------------------------------
+    case SEOS_AF_INET:
+        return PICO_PROTO_IPV4;
+    //----------------------------------------
+    case SEOS_AF_INET6:  
+        return PICO_PROTO_IPV6;
+    //----------------------------------------
+    default:
+        break;
+    }
+
+    Debug_LOG_ERROR("unsupported socket domain %u", domain);
+    return INVALID_SOCKET_TYPE_OR_DOMAIN;
+}
+
+
+//------------------------------------------------------------------------------
+static int
+translate_socket_type(
+    unsigned int type)
+{
+    switch (type)
+    {
+    //----------------------------------------
+    case SEOS_SOCK_STREAM:
+        return PICO_PROTO_TCP;
+    //----------------------------------------
+    case SEOS_SOCK_DGRAM:   
+        return PICO_PROTO_UDP;
+    //----------------------------------------
+    default:
+        break;
+    }
+
+    Debug_LOG_ERROR("unsupported socket type %u", type);
+    return INVALID_SOCKET_TYPE_OR_DOMAIN;
+}
+
+
+//------------------------------------------------------------------------------
+int
+helper_socket_set_option_int(
+    struct pico_socket*  s,
+    int                  option,
+    int                  value)
+{
+    return pico_socket_setoption(s, option, &value);
+}
+
+
+//------------------------------------------------------------------------------
 #if defined(SEOS_NWSTACK_AS_SERVER)
 static void
 handle_incoming_connection(
@@ -127,19 +186,18 @@ handle_incoming_connection(
 
     // The default values below are taken from the TCP unit tests of
     // PicoTCP, see tests/examples/tcpecho.c
-    uint32_t val;
 
-    val = 1; // disable nagle algorithm (0 = enable, 1 = disable)
-    pico_socket_setoption(s_in, PICO_TCP_NODELAY, &val);
+    // disable nagle algorithm (1=disable, 0=enable)
+    helper_socket_set_option_int(s_in, PICO_TCP_NODELAY, 1);
 
-    val = 5; // number of probes for TCP keepalive
-    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPCNT, &val);
+    // number of probes for TCP keepalive
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPCNT, 5);
 
-    val = 30000; // timeout in ms for TCP keepalive probes
-    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPIDLE, &val);
+    // timeout in ms for TCP keepalive probes
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPIDLE, 30000);
 
-    val = 5000; // timeout in ms for TCP keep alive retries
-    pico_socket_setoption(s_in, PICO_SOCKET_OPT_KEEPINTVL, &val);
+    // timeout in ms for TCP keep alive retries
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
 
     instance.socket[handle_socket_client] = s_in;
 }
@@ -223,38 +281,22 @@ network_stack_rpc_socket_create(
     int   type,
     int*  pHandle)
 {
-    switch (domain)
+    int pico_domain = translate_socket_domain(domain);
+    if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_domain)
     {
-    case SEOS_AF_INET:
-        domain = PICO_PROTO_IPV4;
-        break;
-
-    case SEOS_AF_INET6:
-        domain = PICO_PROTO_IPV6;
-        break;
-
-    default:
-        Debug_LOG_WARNING("unsupported domain %d", domain);
+        Debug_LOG_ERROR("unsupported domain %d", domain);
         return SEOS_ERROR_GENERIC;
     }
 
-    switch (type)
+    int pico_type = translate_socket_type(type);
+    if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_type)
     {
-    case SEOS_SOCK_STREAM:
-        type = PICO_PROTO_TCP;
-        break;
-
-    case SEOS_SOCK_DGRAM:
-        type = PICO_PROTO_UDP;
-        break;
-
-    default:
-        Debug_LOG_WARNING("unsupported type %d", type);
+        Debug_LOG_ERROR("unsupported type %d", type);
         return SEOS_ERROR_GENERIC;
     }
 
-    struct pico_socket* socket = pico_socket_open(domain,
-                                                  type,
+    struct pico_socket* socket = pico_socket_open(pico_domain,
+                                                  pico_type,
                                                   &handle_pico_socket_event);
     if (NULL == socket)
     {
@@ -267,10 +309,8 @@ network_stack_rpc_socket_create(
         return SEOS_ERROR_GENERIC;
     }
 
-    int nodelay = 1; // nagle algorithm: 1=disable, 0=enable
-    pico_socket_setoption(socket,
-                          PICO_TCP_NODELAY,
-                          &nodelay);
+    // disable nagle algorithm (1=disable, 0=enable)
+    helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
 
     int handle = 0; // we support just one socket at the moment
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);

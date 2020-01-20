@@ -101,8 +101,8 @@ translate_socket_domain(
     case SEOS_AF_INET:
         return PICO_PROTO_IPV4;
     //----------------------------------------
-    case SEOS_AF_INET6:  
-        return PICO_PROTO_IPV6;
+    // case SEOS_AF_INET6:
+    //    return PICO_PROTO_IPV6;
     //----------------------------------------
     default:
         break;
@@ -124,8 +124,8 @@ translate_socket_type(
     case SEOS_SOCK_STREAM:
         return PICO_PROTO_TCP;
     //----------------------------------------
-    case SEOS_SOCK_DGRAM:   
-        return PICO_PROTO_UDP;
+    // case SEOS_SOCK_DGRAM:
+    //    return PICO_PROTO_UDP;
     //----------------------------------------
     default:
         break;

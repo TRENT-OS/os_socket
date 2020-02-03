@@ -216,25 +216,24 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_CONN)
     {
-
-        // actually, we should check if socket is a server socket. If so, this
-        // is an incoming connection. Otherwise, this just seems to be a note
-        // that an outgoing connection has been established successfully.
+        Debug_LOG_INFO("[socket %p] PICO_SOCK_EV_CONN", socket);
 
 #if defined(SEOS_NWSTACK_AS_CLIENT)
 
+        // SYN-ACK has arrived
         Debug_LOG_INFO("[socket %p] incoming connection established", socket);
 
 #elif defined(SEOS_NWSTACK_AS_SERVER)
 
+        // SYN has arrived
         handle_incoming_connection(socket);
         instance.event = 0; // no event is pending
-        internal_notify_connection();
 
 #else
 #error "Error: Configure as client or server!!"
 #endif
 
+        internal_notify_connection();
     }
 
     if (event_mask & PICO_SOCK_EV_RD)
@@ -385,6 +384,9 @@ network_stack_rpc_socket_connect(
                         cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
+
+    Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
+    internal_wait_connection();
 
     Debug_LOG_INFO("[socket %d/%p] connection esablished to %s:%d",
                    handle, socket, name, port);

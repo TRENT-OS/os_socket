@@ -666,16 +666,7 @@ network_stack_rpc_socket_read(
     Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
                     handle, socket, tot_len);
 
-    for (unsigned int i = 0; i <= tot_len; i++)
-    {
-        Debug_PRINTF("%02x ", ((uint8_t*)app_port->buffer)[i]);
-        if (i % 16 == 0)
-        {
-            Debug_PRINTF("\n");
-        }
-    }
-    Debug_PRINTF("\n");
-
+    Debug_hexDump(TRACE, app_port->buffer, tot_len);
 #endif
 
     *pLen = tot_len;

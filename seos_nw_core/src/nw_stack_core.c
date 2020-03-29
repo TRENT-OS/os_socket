@@ -5,7 +5,7 @@
  */
 
 #include "LibDebug/Debug.h"
-#include "seos_nw_api.h"
+#include "OS_Network.h"
 #include "seos_network_stack.h"
 #include "seos_api_network_stack.h"
 #include "SeosNwCommon.h"
@@ -98,10 +98,10 @@ translate_socket_domain(
     switch (domain)
     {
     //----------------------------------------
-    case SEOS_AF_INET:
+    case OS_AF_INET:
         return PICO_PROTO_IPV4;
     //----------------------------------------
-    // case SEOS_AF_INET6:
+    // case OS_AF_INET6:
     //    return PICO_PROTO_IPV6;
     //----------------------------------------
     default:
@@ -121,7 +121,7 @@ translate_socket_type(
     switch (type)
     {
     //----------------------------------------
-    case SEOS_SOCK_STREAM:
+    case OS_SOCK_STREAM:
         return PICO_PROTO_TCP;
     //----------------------------------------
     // case SEOS_SOCK_DGRAM:

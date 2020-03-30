@@ -6,7 +6,7 @@
 
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
-#include "seos_network_stack.h"
+#include "os_util/seos_network_stack.h"
 #include "seos_api_network_stack.h"
 #include "SeosNwCommon.h"
 #include "nw_config.h"

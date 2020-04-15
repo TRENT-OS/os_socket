@@ -170,7 +170,7 @@ handle_incoming_connection(
     if (NULL == s_in)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d, %s",
+        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d (%s)",
                         socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
         return;
     }
@@ -266,7 +266,7 @@ handle_pico_socket_event(
     if (event_mask & PICO_SOCK_EV_ERR)
     {
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d, %s",
+        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d (%s)",
                         socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
         internal_notify_read();
     }
@@ -303,7 +303,7 @@ network_stack_rpc_socket_create(
         // should return a proper error code and populate a handle passed as
         // pointer parameter, so we don't need to access pico_err here.
         pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("socket opening failed, pico_err = %d, %s",
+        Debug_LOG_ERROR("socket opening failed, pico_err = %d (%s)",
                         cur_pico_err, seos_nw_strerror(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }

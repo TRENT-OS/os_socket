@@ -8,7 +8,6 @@
 #include "OS_Network.h"
 #include "os_util/seos_network_stack.h"
 #include "seos_api_network_stack.h"
-#include "SeosNwCommon.h"
 #include "nw_config.h"
 #include "pico_stack.h"
 #include "pico_ipv4.h"
@@ -51,6 +50,52 @@ typedef struct
 
 // network stack state
 static network_stack_t  instance = {0};
+
+//------------------------------------------------------------------------------
+__attribute__((unused)) static const char*
+pico_err2str(
+    pico_err_t err)
+{
+#define CASE_PIC_ERR_STR(_code_)  case PICO_ERR_ ## _code_: return #_code_
+
+    switch (err)
+    {
+        CASE_PIC_ERR_STR(NOERR);
+        CASE_PIC_ERR_STR(EPERM);
+        CASE_PIC_ERR_STR(ENOENT);
+        CASE_PIC_ERR_STR(EINTR);
+        CASE_PIC_ERR_STR(EIO);
+        CASE_PIC_ERR_STR(ENXIO);
+        CASE_PIC_ERR_STR(EAGAIN);
+        CASE_PIC_ERR_STR(ENOMEM);
+        CASE_PIC_ERR_STR(EACCESS);
+        CASE_PIC_ERR_STR(EFAULT);
+        CASE_PIC_ERR_STR(EBUSY);
+        CASE_PIC_ERR_STR(EEXIST);
+        CASE_PIC_ERR_STR(EINVAL);
+        CASE_PIC_ERR_STR(ENONET);
+        CASE_PIC_ERR_STR(EPROTO);
+        CASE_PIC_ERR_STR(ENOPROTOOPT);
+        CASE_PIC_ERR_STR(EPROTONOSUPPORT);
+        CASE_PIC_ERR_STR(EOPNOTSUPP);
+        CASE_PIC_ERR_STR(EADDRINUSE);
+        CASE_PIC_ERR_STR(EADDRNOTAVAIL);
+        CASE_PIC_ERR_STR(ENETDOWN);
+        CASE_PIC_ERR_STR(ENETUNREACH);
+        CASE_PIC_ERR_STR(ECONNRESET);
+        CASE_PIC_ERR_STR(EISCONN);
+        CASE_PIC_ERR_STR(ENOTCONN);
+        CASE_PIC_ERR_STR(ESHUTDOWN);
+        CASE_PIC_ERR_STR(ETIMEDOUT);
+        CASE_PIC_ERR_STR(ECONNREFUSED);
+        CASE_PIC_ERR_STR(EHOSTDOWN);
+        CASE_PIC_ERR_STR(EHOSTUNREACH);
+        CASE_PIC_ERR_STR(EINPROGRESS);
+    default:
+        break;
+    }
+    return "PICO_ERR_???";
+}
 
 
 //------------------------------------------------------------------------------
@@ -171,7 +216,7 @@ handle_incoming_connection(
     {
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d (%s)",
-                        socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        socket, cur_pico_err, pico_err2str(cur_pico_err));
         return;
     }
 
@@ -267,7 +312,7 @@ handle_pico_socket_event(
     {
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d (%s)",
-                        socket, cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        socket, cur_pico_err, pico_err2str(cur_pico_err));
         internal_notify_read();
     }
 }
@@ -304,7 +349,7 @@ network_stack_rpc_socket_create(
         // pointer parameter, so we don't need to access pico_err here.
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("socket opening failed, pico_err = %d (%s)",
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -339,7 +384,7 @@ network_stack_rpc_socket_close(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -381,7 +426,7 @@ network_stack_rpc_socket_connect(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -440,7 +485,7 @@ network_stack_rpc_socket_bind(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -488,7 +533,7 @@ network_stack_rpc_socket_listen(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         return SEOS_ERROR_GENERIC;
     }
 
@@ -587,7 +632,7 @@ network_stack_rpc_socket_write(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
-                        cur_pico_err, seos_nw_strerror(cur_pico_err));
+                        cur_pico_err, pico_err2str(cur_pico_err));
         *pLen = 0;
         return SEOS_ERROR_GENERIC;
     }
@@ -635,7 +680,7 @@ network_stack_rpc_socket_read(
 
             Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, pico_err %d (%s)",
                             handle, socket, ret,
-                            cur_pico_err, seos_nw_strerror(cur_pico_err));
+                            cur_pico_err, pico_err2str(cur_pico_err));
 
             retval =  SEOS_ERROR_GENERIC;
             break;

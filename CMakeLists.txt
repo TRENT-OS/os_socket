@@ -13,7 +13,6 @@ target_sources(${PROJECT_NAME}
     INTERFACE
         seos_nw_core/src/nw_stack_core.c
         seos_nw_core/src/nw_config.c
-        seos_nw_common/src/SeosNwCommon.c
 )
 
 target_include_directories(${PROJECT_NAME}

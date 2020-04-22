@@ -813,10 +813,6 @@ initialize_nic(void)
     dev->poll    = nic_poll_data;
     dev->destroy = nic_destroy;
 
-    // wait for NIC init
-    Debug_LOG_INFO("waiting for NIC init");
-    wait_nic_init_done();
-
     //---------------------------------------------------------------
     // get MAC from NIC driver
     seos_err_t err = nic_rpc_get_mac();

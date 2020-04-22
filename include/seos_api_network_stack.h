@@ -32,7 +32,6 @@ typedef struct
 
     struct
     {
-        event_wait_func_t     wait_init_done;
         seos_shared_buffer_t  from;      // NIC -> stack
         seos_shared_buffer_t  to;        // stack -> NIC
         struct

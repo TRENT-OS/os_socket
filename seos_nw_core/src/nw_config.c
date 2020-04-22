@@ -149,23 +149,6 @@ internal_wait_connection(void)
 
 
 //------------------------------------------------------------------------------
-void
-wait_nic_init_done(void)
-{
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_wait_func_t do_wait = handlers->drv_nic.wait_init_done;
-    if (!do_wait)
-    {
-        Debug_LOG_WARNING("drv_nic.wait_init_done not set");
-        return;
-    }
-
-    do_wait();
-}
-
-
-//------------------------------------------------------------------------------
 const seos_shared_buffer_t*
 get_nic_port_from(void)
 {

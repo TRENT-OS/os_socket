@@ -1,5 +1,5 @@
 /*
- *  SEOS network stack configuration
+ *  OS network stack configuration
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  */

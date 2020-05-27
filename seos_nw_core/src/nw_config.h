@@ -1,5 +1,5 @@
 /*
- *  SEOS Network Stack Config Wrapper
+ *  OS Network Stack Config Wrapper
  *
  *  Copyright (C) 2019, Hensoldt Cyber GmbH
  */

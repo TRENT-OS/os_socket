@@ -329,14 +329,14 @@ network_stack_rpc_socket_create(
     if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_domain)
     {
         Debug_LOG_ERROR("unsupported domain %d", domain);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     int pico_type = translate_socket_type(type);
     if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_type)
     {
         Debug_LOG_ERROR("unsupported type %d", type);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     struct pico_socket* socket = pico_socket_open(pico_domain,
@@ -350,7 +350,7 @@ network_stack_rpc_socket_create(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("socket opening failed, pico_err = %d (%s)",
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     // disable nagle algorithm (1=disable, 0=enable)
@@ -362,7 +362,7 @@ network_stack_rpc_socket_create(
     instance.socket[handle] = socket;
     *pHandle = handle;
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 
@@ -375,7 +375,7 @@ network_stack_rpc_socket_close(
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] close() with invalid handle", handle);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     int ret = pico_socket_close(socket);
@@ -385,10 +385,10 @@ network_stack_rpc_socket_close(
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 
@@ -404,7 +404,7 @@ network_stack_rpc_socket_connect(
 
     Debug_LOG_ERROR("[socket %d] connect() not supported in server-only mode",
                     handle);
-    return SEOS_ERROR_NOT_SUPPORTED;
+    return OS_ERROR_NOT_SUPPORTED;
 
 #else // not SEOS_NWSTACK_AS_SERVER
 
@@ -412,7 +412,7 @@ network_stack_rpc_socket_connect(
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] connect() with invalid handle", handle);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
@@ -427,7 +427,7 @@ network_stack_rpc_socket_connect(
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
@@ -436,7 +436,7 @@ network_stack_rpc_socket_connect(
     Debug_LOG_INFO("[socket %d/%p] connection esablished to %s:%d",
                    handle, socket, name, port);
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 
 #endif // [not] SEOS_NWSTACK_AS_SERVER
 
@@ -454,7 +454,7 @@ network_stack_rpc_socket_bind(
 
     Debug_LOG_ERROR("[socket %d] bind() not supported in client-only mode",
                     handle);
-    return SEOS_ERROR_NOT_SUPPORTED;
+    return OS_ERROR_NOT_SUPPORTED;
 
 #else // not SEOS_NWSTACK_AS_CLIENT
 
@@ -462,7 +462,7 @@ network_stack_rpc_socket_bind(
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] bind() with invalid handle", handle);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     // currently we support just one incoming connection, so everything is hard
@@ -472,7 +472,7 @@ network_stack_rpc_socket_bind(
     {
         Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
                         handle, socket, handle_socket_server);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
@@ -486,10 +486,10 @@ network_stack_rpc_socket_bind(
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 
 #endif // [not] SEOS_NWSTACK_AS_CLIENT
 
@@ -506,7 +506,7 @@ network_stack_rpc_socket_listen(
 
     Debug_LOG_ERROR("[socket %d] listen() not supported in client-only mode",
                     handle);
-    return SEOS_ERROR_NOT_SUPPORTED;
+    return OS_ERROR_NOT_SUPPORTED;
 
 #else // not SEOS_NWSTACK_AS_CLIENT
 
@@ -514,7 +514,7 @@ network_stack_rpc_socket_listen(
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] listen() with invalid handle", handle);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     // currently we support just one incoming connection, so everything is hard
@@ -524,7 +524,7 @@ network_stack_rpc_socket_listen(
     {
         Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
                         handle, socket, handle_socket_server);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     int ret = pico_socket_listen(socket, backlog);
@@ -534,10 +534,10 @@ network_stack_rpc_socket_listen(
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 
 #endif // [not] SEOS_NWSTACK_AS_CLIENT
 
@@ -560,7 +560,7 @@ network_stack_rpc_socket_accept(
 
     Debug_LOG_ERROR("[socket %d] accept() not supported in client-only mode",
                     handle);
-    return SEOS_ERROR_NOT_SUPPORTED;
+    return OS_ERROR_NOT_SUPPORTED;
 
 #else // not SEOS_NWSTACK_AS_CLIENT
 
@@ -568,7 +568,7 @@ network_stack_rpc_socket_accept(
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] accept() with invalid handle", handle);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     // currently we support just one incoming connection, so everything is hard
@@ -580,7 +580,7 @@ network_stack_rpc_socket_accept(
     {
         Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
                         handle, socket, handle_socket_server);
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, socket);
@@ -592,14 +592,14 @@ network_stack_rpc_socket_accept(
     if (client_socket == NULL )
     {
         Debug_LOG_ERROR("[socket %d/%p] no client to accept", handle, socket);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
                     handle, socket, handle_socket_client, client_socket);
 
     *pClient_handle = handle_socket_client;
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 
 #endif // [not] SEOS_NWSTACK_AS_CLIENT
 
@@ -617,7 +617,7 @@ network_stack_rpc_socket_write(
     {
         Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
         *pLen = 0;
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
     internal_wait_write();
@@ -634,11 +634,11 @@ network_stack_rpc_socket_write(
                         handle, socket, ret,
                         cur_pico_err, pico_err2str(cur_pico_err));
         *pLen = 0;
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     *pLen = ret;
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 
@@ -654,10 +654,10 @@ network_stack_rpc_socket_read(
     {
         Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
         *pLen = 0;
-        return SEOS_ERROR_INVALID_HANDLE;
+        return OS_ERROR_INVALID_HANDLE;
     }
 
-    OS_Error_t retval = SEOS_SUCCESS;
+    OS_Error_t retval = OS_SUCCESS;
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
@@ -674,7 +674,7 @@ network_stack_rpc_socket_read(
             {
                 Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
                                handle, socket);
-                retval = SEOS_ERROR_CONNECTION_CLOSED;
+                retval = OS_ERROR_CONNECTION_CLOSED;
                 break;
             }
 
@@ -682,7 +682,7 @@ network_stack_rpc_socket_read(
                             handle, socket, ret,
                             cur_pico_err, pico_err2str(cur_pico_err));
 
-            retval =  SEOS_ERROR_GENERIC;
+            retval =  OS_ERROR_GENERIC;
             break;
         }
 
@@ -696,7 +696,7 @@ network_stack_rpc_socket_read(
                 instance.event = 0;
                 Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
                                handle, socket);
-                retval = SEOS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+                retval = OS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
                 break;
             }
         }
@@ -742,7 +742,7 @@ nic_send_frame(
     memcpy(wrbuf, buf, wr_len);
     // call driver
     OS_Error_t err = nic_rpc_dev_write(&wr_len);
-    if (err != SEOS_SUCCESS)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("nic_rpc_dev_write() failed, error %d", err);
         return -1;
@@ -816,11 +816,11 @@ initialize_nic(void)
     //---------------------------------------------------------------
     // get MAC from NIC driver
     OS_Error_t err = nic_rpc_get_mac();
-    if (err != SEOS_SUCCESS)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("nic_rpc_get_mac() failed, error %d", err);
         nic_destroy(dev);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     const OS_shared_buffer_t* nw_in = get_nic_port_from();
@@ -836,7 +836,7 @@ initialize_nic(void)
     {
         Debug_LOG_ERROR("pico_device_init() failed, error %d", ret);
         nic_destroy(dev);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     Debug_LOG_INFO("PicoTCP Device created: %s", drv_name);
@@ -861,7 +861,7 @@ initialize_nic(void)
     const struct pico_ip4 ZERO_IP4 = { 0 };
     (void)pico_ipv4_route_add(ZERO_IP4, ZERO_IP4, gateway, 1, NULL);
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }
 
 
@@ -886,10 +886,10 @@ seos_network_stack_run(
 
     // initialize NIC
     err = initialize_nic();
-    if (err != SEOS_SUCCESS)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("initialize_nic() failed, error %d", err);
-        return SEOS_ERROR_GENERIC;
+        return OS_ERROR_GENERIC;
     }
 
     // notify app after that network stack is initialized
@@ -908,5 +908,5 @@ seos_network_stack_run(
 
     Debug_LOG_WARNING("network_stack_event_loop() terminated gracefully");
 
-    return SEOS_SUCCESS;
+    return OS_SUCCESS;
 }

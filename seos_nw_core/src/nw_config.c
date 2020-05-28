@@ -5,7 +5,7 @@
  */
 
 
-#include "seos_types.h"
+#include "OS_Types.h"
 #include "LibDebug/Debug.h"
 #include "seos_api_network_stack.h"
 #include "nw_config.h"
@@ -149,13 +149,13 @@ internal_wait_connection(void)
 
 
 //------------------------------------------------------------------------------
-const seos_shared_buffer_t*
+const OS_shared_buffer_t*
 get_nic_port_from(void)
 {
     const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const seos_shared_buffer_t* port = &(handlers->drv_nic.from);
+    const OS_shared_buffer_t* port = &(handlers->drv_nic.from);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );
@@ -166,13 +166,13 @@ get_nic_port_from(void)
 
 
 //------------------------------------------------------------------------------
-const seos_shared_buffer_t*
+const OS_shared_buffer_t*
 get_nic_port_to(void)
 {
     const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // driver -> network stack (aka input)
-    const seos_shared_buffer_t* port = &(handlers->drv_nic.to);
+    const OS_shared_buffer_t* port = &(handlers->drv_nic.to);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );
@@ -183,7 +183,7 @@ get_nic_port_to(void)
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 nic_rpc_dev_write(
     size_t* pLen)
 {
@@ -196,7 +196,7 @@ nic_rpc_dev_write(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 nic_rpc_get_mac(void)
 {
     const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
@@ -226,13 +226,13 @@ notify_app_init_done(void)
 
 
 //------------------------------------------------------------------------------
-const seos_shared_buffer_t*
+const OS_shared_buffer_t*
 get_app_port(void)
 {
     const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const seos_shared_buffer_t* port = &(handlers->app.port);
+    const OS_shared_buffer_t* port = &(handlers->app.port);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );

@@ -319,7 +319,7 @@ handle_pico_socket_event(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_create(
     int   domain,
     int   type,
@@ -367,7 +367,7 @@ network_stack_rpc_socket_create(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_close(
     int handle)
 {
@@ -393,7 +393,7 @@ network_stack_rpc_socket_close(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_connect(
     int          handle,
     const char*  name,
@@ -444,7 +444,7 @@ network_stack_rpc_socket_connect(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
@@ -497,7 +497,7 @@ network_stack_rpc_socket_bind(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_listen(
     int handle,
     int backlog)
@@ -547,7 +547,7 @@ network_stack_rpc_socket_listen(
 //------------------------------------------------------------------------------
 // For server wait on accept until client connects. Not much useful for client
 // as we cannot accept incoming connections
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_accept(
     int handle,
     int* pClient_handle,
@@ -607,7 +607,7 @@ network_stack_rpc_socket_accept(
 
 
 //------------------------------------------------------------------------------
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_write(
     int handle,
     size_t* pLen)
@@ -622,7 +622,7 @@ network_stack_rpc_socket_write(
 
     internal_wait_write();
 
-    const seos_shared_buffer_t* app_port = get_app_port();
+    const OS_shared_buffer_t* app_port = get_app_port();
 
     int ret = pico_socket_write(socket, app_port->buffer, *pLen);
     instance.event = 0;
@@ -644,7 +644,7 @@ network_stack_rpc_socket_write(
 
 //------------------------------------------------------------------------------
 // Is a blocking call. Wait until we get a read event from Stack
-seos_err_t
+OS_Error_t
 network_stack_rpc_socket_read(
     int handle,
     size_t* pLen)
@@ -657,11 +657,11 @@ network_stack_rpc_socket_read(
         return SEOS_ERROR_INVALID_HANDLE;
     }
 
-    seos_err_t retval = SEOS_SUCCESS;
+    OS_Error_t retval = SEOS_SUCCESS;
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
-    const seos_shared_buffer_t* app_port = get_app_port();
+    const OS_shared_buffer_t* app_port = get_app_port();
     uint8_t* buf = app_port->buffer;
 
     do
@@ -734,14 +734,14 @@ nic_send_frame(
     // currently we support only one NIC
     Debug_ASSERT( &(instance.seos_nic) == dev );
 
-    const seos_shared_buffer_t* nic_in = get_nic_port_to();
+    const OS_shared_buffer_t* nic_in = get_nic_port_to();
     void* wrbuf = nic_in->buffer;
 
     // copy data it into shared buffer
     size_t wr_len = len;
     memcpy(wrbuf, buf, wr_len);
     // call driver
-    seos_err_t err = nic_rpc_dev_write(&wr_len);
+    OS_Error_t err = nic_rpc_dev_write(&wr_len);
     if (err != SEOS_SUCCESS)
     {
         Debug_LOG_ERROR("nic_rpc_dev_write() failed, error %d", err);
@@ -770,7 +770,7 @@ nic_poll_data(
     // frame in the buffer and give it to PicoTCP
     if (loop_score > 0)
     {
-        const seos_shared_buffer_t* nw_in = get_nic_port_from();
+        const OS_shared_buffer_t* nw_in = get_nic_port_from();
         Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
 
         size_t len = nw_rx->len;
@@ -801,7 +801,7 @@ nic_destroy(
 
 
 //------------------------------------------------------------------------------
-static seos_err_t
+static OS_Error_t
 initialize_nic(void)
 {
     // currently we support only one NIC
@@ -815,7 +815,7 @@ initialize_nic(void)
 
     //---------------------------------------------------------------
     // get MAC from NIC driver
-    seos_err_t err = nic_rpc_get_mac();
+    OS_Error_t err = nic_rpc_get_mac();
     if (err != SEOS_SUCCESS)
     {
         Debug_LOG_ERROR("nic_rpc_get_mac() failed, error %d", err);
@@ -823,7 +823,7 @@ initialize_nic(void)
         return SEOS_ERROR_GENERIC;
     }
 
-    const seos_shared_buffer_t* nw_in = get_nic_port_from();
+    const OS_shared_buffer_t* nw_in = get_nic_port_from();
     Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
     uint8_t* mac = nw_rx->data;
 
@@ -867,12 +867,12 @@ initialize_nic(void)
 
 //------------------------------------------------------------------------------
 // CAmkES run()
-seos_err_t
+OS_Error_t
 seos_network_stack_run(
     const seos_camkes_network_stack_config_t*  camkes_config,
     const seos_network_stack_config_t*         config)
 {
-    seos_err_t err;
+    OS_Error_t err;
 
     // remember config
     Debug_ASSERT( NULL != camkes_config );

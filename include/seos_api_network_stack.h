@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include "SeosError.h"
-#include "seos_types.h"
+#include "OS_Error.h"
+#include "OS_Types.h"
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -32,20 +32,20 @@ typedef struct
 
     struct
     {
-        seos_shared_buffer_t  from;      // NIC -> stack
-        seos_shared_buffer_t  to;        // stack -> NIC
+        OS_shared_buffer_t  from;      // NIC -> stack
+        OS_shared_buffer_t  to;        // stack -> NIC
         struct
         {
-            seos_err_t (*dev_write)(size_t* len);
-            seos_err_t (*get_mac)(void);
-            // API extension: seos_err_t (*get_link_state)(void);
+            OS_Error_t (*dev_write)(size_t* len);
+            OS_Error_t (*get_mac)(void);
+            // API extension: OS_Error_t (*get_link_state)(void);
         } rpc;
     } drv_nic;
 
     struct
     {
         event_notify_func_t   notify_init_done;
-        seos_shared_buffer_t  port;
+        OS_shared_buffer_t  port;
     } app;
 
 } seos_camkes_network_stack_config_t;
@@ -59,7 +59,7 @@ typedef struct
 } seos_network_stack_config_t;
 
 
-seos_err_t
+OS_Error_t
 seos_network_stack_run(
     const seos_camkes_network_stack_config_t*  camkes_config,
     const seos_network_stack_config_t*         config);

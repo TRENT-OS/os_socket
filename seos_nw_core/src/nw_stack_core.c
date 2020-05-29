@@ -6,8 +6,8 @@
 
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
-#include "os_util/seos_network_stack.h"
-#include "seos_api_network_stack.h"
+#include "os_util/OS_NetworkStack.h"
+#include "OS_NetworkStackConf.h"
 #include "nw_config.h"
 #include "pico_stack.h"
 #include "pico_ipv4.h"
@@ -22,8 +22,8 @@
 
 typedef struct
 {
-    const seos_camkes_network_stack_config_t*   camkes_cfg;
-    const seos_network_stack_config_t*          cfg;
+    const os_camkes_network_stack_config_t*   camkes_cfg;
+    const os_network_stack_config_t*          cfg;
 
     struct pico_device          seos_nic;
 
@@ -99,10 +99,10 @@ pico_err2str(
 
 
 //------------------------------------------------------------------------------
-const seos_camkes_network_stack_config_t*
+const os_camkes_network_stack_config_t*
 config_get_handlers(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = instance.camkes_cfg;
+    const os_camkes_network_stack_config_t* handlers = instance.camkes_cfg;
 
     Debug_ASSERT( NULL != handlers );
 
@@ -622,7 +622,7 @@ network_stack_rpc_socket_write(
 
     internal_wait_write();
 
-    const OS_shared_buffer_t* app_port = get_app_port();
+    const OS_SharedBuffer_t* app_port = get_app_port();
 
     int ret = pico_socket_write(socket, app_port->buffer, *pLen);
     instance.event = 0;
@@ -661,7 +661,7 @@ network_stack_rpc_socket_read(
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
-    const OS_shared_buffer_t* app_port = get_app_port();
+    const OS_SharedBuffer_t* app_port = get_app_port();
     uint8_t* buf = app_port->buffer;
 
     do
@@ -734,7 +734,7 @@ nic_send_frame(
     // currently we support only one NIC
     Debug_ASSERT( &(instance.seos_nic) == dev );
 
-    const OS_shared_buffer_t* nic_in = get_nic_port_to();
+    const OS_SharedBuffer_t* nic_in = get_nic_port_to();
     void* wrbuf = nic_in->buffer;
 
     // copy data it into shared buffer
@@ -770,7 +770,7 @@ nic_poll_data(
     // frame in the buffer and give it to PicoTCP
     if (loop_score > 0)
     {
-        const OS_shared_buffer_t* nw_in = get_nic_port_from();
+        const OS_SharedBuffer_t* nw_in = get_nic_port_from();
         Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
 
         size_t len = nw_rx->len;
@@ -823,7 +823,7 @@ initialize_nic(void)
         return OS_ERROR_GENERIC;
     }
 
-    const OS_shared_buffer_t* nw_in = get_nic_port_from();
+    const OS_SharedBuffer_t* nw_in = get_nic_port_from();
     Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
     uint8_t* mac = nw_rx->data;
 
@@ -868,9 +868,9 @@ initialize_nic(void)
 //------------------------------------------------------------------------------
 // CAmkES run()
 OS_Error_t
-seos_network_stack_run(
-    const seos_camkes_network_stack_config_t*  camkes_config,
-    const seos_network_stack_config_t*         config)
+OS_NetworkStack_run(
+    const os_camkes_network_stack_config_t*  camkes_config,
+    const os_network_stack_config_t*         config)
 {
     OS_Error_t err;
 

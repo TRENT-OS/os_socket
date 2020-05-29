@@ -32,8 +32,8 @@ typedef struct
 
     struct
     {
-        OS_shared_buffer_t  from;      // NIC -> stack
-        OS_shared_buffer_t  to;        // stack -> NIC
+        OS_SharedBuffer_t  from;      // NIC -> stack
+        OS_SharedBuffer_t  to;        // stack -> NIC
         struct
         {
             OS_Error_t (*dev_write)(size_t* len);
@@ -45,10 +45,10 @@ typedef struct
     struct
     {
         event_notify_func_t   notify_init_done;
-        OS_shared_buffer_t  port;
+        OS_SharedBuffer_t  port;
     } app;
 
-} seos_camkes_network_stack_config_t;
+} os_camkes_network_stack_config_t;
 
 
 typedef struct
@@ -56,11 +56,11 @@ typedef struct
     char*  dev_addr; /**< pointer to device address e.g. tap0, tap1 */
     char*  gateway_addr; /**< pointer to gateway addr */
     char*  subnet_mask; /**< pointer to subnet mask */
-} seos_network_stack_config_t;
+} os_network_stack_config_t;
 
 
 OS_Error_t
-seos_network_stack_run(
-    const seos_camkes_network_stack_config_t*  camkes_config,
-    const seos_network_stack_config_t*         config);
+OS_NetworkStack_run(
+    const os_camkes_network_stack_config_t*  camkes_config,
+    const os_network_stack_config_t*         config);
 

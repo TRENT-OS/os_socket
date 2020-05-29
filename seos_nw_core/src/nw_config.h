@@ -7,11 +7,11 @@
 #pragma once
 
 #include "OS_Types.h"
-#include "seos_api_network_stack.h"
+#include "OS_NetworkStackConf.h"
 #include <stddef.h>
 
 
-const seos_camkes_network_stack_config_t* config_get_handlers(void);
+const os_camkes_network_stack_config_t* config_get_handlers(void);
 
 
 //------------------------------------------------------------------------------
@@ -29,11 +29,11 @@ void internal_notify_connection(void);
 void internal_wait_connection(void);
 
 void wait_nic_init_done(void);
-const OS_shared_buffer_t* get_nic_port_from(void);
-const OS_shared_buffer_t* get_nic_port_to(void);
+const OS_SharedBuffer_t* get_nic_port_from(void);
+const OS_SharedBuffer_t* get_nic_port_to(void);
 
 OS_Error_t nic_rpc_dev_write(size_t* pLen);
 OS_Error_t nic_rpc_get_mac(void);
 
 void notify_app_init_done(void);
-const OS_shared_buffer_t* get_app_port(void);
+const OS_SharedBuffer_t* get_app_port(void);

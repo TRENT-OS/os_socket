@@ -7,7 +7,7 @@
 
 #include "OS_Types.h"
 #include "LibDebug/Debug.h"
-#include "seos_api_network_stack.h"
+#include "OS_NetworkStackConf.h"
 #include "nw_config.h"
 #include <stddef.h>
 
@@ -17,7 +17,7 @@
 void
 wait_network_event(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_wait_func_t do_wait = handlers->wait_loop_event;
     if (!do_wait)
@@ -34,7 +34,7 @@ wait_network_event(void)
 void
 internal_notify_main_loop(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->internal.notify_loop;
     if (!do_notify)
@@ -51,7 +51,7 @@ internal_notify_main_loop(void)
 void
 internal_notify_read(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->internal.notify_read;
     if (!do_notify)
@@ -67,7 +67,7 @@ internal_notify_read(void)
 void
 internal_wait_read(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_wait_func_t do_wait = handlers->internal.wait_read;
     if (!do_wait)
@@ -84,7 +84,7 @@ internal_wait_read(void)
 void
 internal_notify_write(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->internal.notify_write;
     if (!do_notify)
@@ -101,7 +101,7 @@ internal_notify_write(void)
 void
 internal_wait_write(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_wait_func_t do_wait = handlers->internal.wait_write;
     if (!do_wait)
@@ -118,7 +118,7 @@ internal_wait_write(void)
 void
 internal_notify_connection(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->internal.notify_connection;
     if (!do_notify)
@@ -135,7 +135,7 @@ internal_notify_connection(void)
 void
 internal_wait_connection(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_wait_func_t do_wait = handlers->internal.wait_connection;
     if (!do_wait)
@@ -149,13 +149,13 @@ internal_wait_connection(void)
 
 
 //------------------------------------------------------------------------------
-const OS_shared_buffer_t*
+const OS_SharedBuffer_t*
 get_nic_port_from(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const OS_shared_buffer_t* port = &(handlers->drv_nic.from);
+    const OS_SharedBuffer_t* port = &(handlers->drv_nic.from);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );
@@ -166,13 +166,13 @@ get_nic_port_from(void)
 
 
 //------------------------------------------------------------------------------
-const OS_shared_buffer_t*
+const OS_SharedBuffer_t*
 get_nic_port_to(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // driver -> network stack (aka input)
-    const OS_shared_buffer_t* port = &(handlers->drv_nic.to);
+    const OS_SharedBuffer_t* port = &(handlers->drv_nic.to);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );
@@ -187,7 +187,7 @@ OS_Error_t
 nic_rpc_dev_write(
     size_t* pLen)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     Debug_ASSERT( NULL != handlers->drv_nic.rpc.dev_write );
 
@@ -199,7 +199,7 @@ nic_rpc_dev_write(
 OS_Error_t
 nic_rpc_get_mac(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     Debug_ASSERT( NULL != handlers->drv_nic.rpc.get_mac );
 
@@ -211,7 +211,7 @@ nic_rpc_get_mac(void)
 void
 notify_app_init_done(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->app.notify_init_done;
     if (!do_notify)
@@ -226,13 +226,13 @@ notify_app_init_done(void)
 
 
 //------------------------------------------------------------------------------
-const OS_shared_buffer_t*
+const OS_SharedBuffer_t*
 get_app_port(void)
 {
-    const seos_camkes_network_stack_config_t* handlers = config_get_handlers();
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const OS_shared_buffer_t* port = &(handlers->app.port);
+    const OS_SharedBuffer_t* port = &(handlers->app.port);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->buffer );

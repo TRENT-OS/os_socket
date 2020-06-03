@@ -1,6 +1,3 @@
 [submodule "3rdParty/picotcp"]
 	path = 3rdParty/picotcp
 	url = ../../ext/picotcp.git
-[submodule "network-client-lib"]
-	path = network-client-lib
-	url = ../../seos/network-client-lib.git

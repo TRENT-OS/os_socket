@@ -38,7 +38,7 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        network-client-lib/seos_nw_api_interface.c
+        seos_nw_api_interface.c
 )
 
 target_link_libraries(${PROJECT_NAME}

@@ -8,7 +8,7 @@
 #include "OS_Network.h"
 #include "os_util/OS_NetworkStack.h"
 #include "OS_NetworkStackConf.h"
-#include "nw_config.h"
+#include "network_config.h"
 #include "pico_stack.h"
 #include "pico_ipv4.h"
 #include "pico_icmp4.h"

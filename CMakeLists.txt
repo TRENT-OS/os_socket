@@ -5,20 +5,19 @@ cmake_minimum_required(VERSION 3.13.0)
 cmake_policy(SET CMP0076 NEW)
 
 #-------------------------------------------------------------------------------
-project(seos_nw_lib C)
+project(os_network_lib C)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        seos_nw_core/src/nw_stack_core.c
-        seos_nw_core/src/nw_config.c
+        network_core/src/network_stack_core.c
+        network_core/src/network_config.c
 )
 
 target_include_directories(${PROJECT_NAME}
     INTERFACE
         include
-        seos_nw_common/src
 )
 
 
@@ -32,13 +31,13 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 #-------------------------------------------------------------------------------
-project(seos_network_api C)
+project(os_network_api C)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        seos_nw_api_interface.c
+        network_client_api_interface.c
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -52,6 +51,6 @@ target_link_libraries(${PROJECT_NAME}
 if (COMMAND os_create_doxygen_target)
 
     # there are no pre or post steps
-    os_create_doxygen_target(os_nw_lib_doc ":" ":")
+    os_create_doxygen_target(os_network_stack_doc ":" ":")
 
 endif()

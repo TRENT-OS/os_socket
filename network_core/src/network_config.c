@@ -8,7 +8,7 @@
 #include "OS_Types.h"
 #include "LibDebug/Debug.h"
 #include "OS_NetworkStackConf.h"
-#include "nw_config.h"
+#include "network_config.h"
 #include <stddef.h>
 
 

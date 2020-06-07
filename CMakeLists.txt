@@ -20,7 +20,6 @@ target_include_directories(${PROJECT_NAME}
         include
 )
 
-
 add_subdirectory(3rdParty/picotcp)
 
 target_link_libraries(${PROJECT_NAME}
@@ -29,6 +28,7 @@ target_link_libraries(${PROJECT_NAME}
         seos_core_api
         seos_libs
 )
+
 
 #-------------------------------------------------------------------------------
 project(os_network_api C)

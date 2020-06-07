@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.13.0)
 # converted into absolute paths in target_sources(INTERFACE ....)
 cmake_policy(SET CMP0076 NEW)
 
+
+# include the PicoTCP project, but do not build any targets from it unless they
+# are explicitly included, e.g via os_network_lib below.
+add_subdirectory(3rdParty/picotcp EXCLUDE_FROM_ALL)
+
+
 #-------------------------------------------------------------------------------
 project(os_network_lib C)
 
@@ -19,8 +25,6 @@ target_include_directories(${PROJECT_NAME}
     INTERFACE
         include
 )
-
-add_subdirectory(3rdParty/picotcp)
 
 target_link_libraries(${PROJECT_NAME}
     INTERFACE

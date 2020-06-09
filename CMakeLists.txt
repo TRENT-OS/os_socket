@@ -29,8 +29,8 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         picotcp
-        seos_core_api
-        seos_libs
+        os_core_api
+        os_libs
 )
 
 
@@ -46,7 +46,7 @@ target_sources(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
-        seos_core_api
+        os_core_api
 )
 
 

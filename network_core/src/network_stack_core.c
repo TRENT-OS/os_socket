@@ -771,7 +771,7 @@ nic_poll_data(
     if (loop_score > 0)
     {
         const OS_SharedBuffer_t* nw_in = get_nic_port_from();
-        Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
+        OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)nw_in->buffer;
 
         size_t len = nw_rx->len;
         if (len > 0)
@@ -824,7 +824,7 @@ initialize_nic(void)
     }
 
     const OS_SharedBuffer_t* nw_in = get_nic_port_from();
-    Rx_Buffer* nw_rx = (Rx_Buffer*)nw_in->buffer;
+    OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)nw_in->buffer;
     uint8_t* mac = nw_rx->data;
 
     Debug_LOG_INFO("MAC: %02x:%02x:%02x:%02x:%02x:%02x",

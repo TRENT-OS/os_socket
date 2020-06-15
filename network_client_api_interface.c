@@ -106,11 +106,12 @@ OS_NetworkServerSocket_accept(
 OS_Error_t
 OS_NetworkSocket_read(
     OS_NetworkSocket_Handle_t handle,
-    void* buf,
-    size_t* plen)
+    void*                     buf,
+    size_t*                   plen)
 {
-    OS_Error_t err       = network_stack_rpc_socket_read(handle, plen);
-    void*      data_port = get_data_port();
+    OS_Error_t err = network_stack_rpc_socket_read(handle, plen);
+
+    void* data_port = get_data_port();
     memcpy(buf, data_port, *plen);
     return err;
 }

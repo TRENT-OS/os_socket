@@ -69,8 +69,7 @@ OS_Error_t
 OS_NetworkSocket_close(
     OS_NetworkSocket_Handle_t handle)
 {
-    OS_Error_t err = network_stack_rpc_socket_close(handle);
-    return err;
+    return network_stack_rpc_socket_close(handle);
 }
 
 /******************************************************************************/
@@ -78,8 +77,7 @@ OS_Error_t
 OS_NetworkServerSocket_close(
     OS_NetworkServer_Handle_t srvHandle)
 {
-    OS_Error_t err = network_stack_rpc_socket_close(srvHandle);
-    return err;
+    return network_stack_rpc_socket_close(srvHandle);
 }
 
 /******************************************************************************/
@@ -91,8 +89,7 @@ OS_NetworkSocket_write(
 {
     void* data_port = get_data_port();
     memcpy(data_port, buf, *plen);
-    OS_Error_t err = network_stack_rpc_socket_write(handle, plen);
-    return err;
+    return network_stack_rpc_socket_write(handle, plen);
 }
 
 /******************************************************************************/
@@ -102,8 +99,7 @@ OS_NetworkServerSocket_accept(
     OS_NetworkSocket_Handle_t* phSocket)
 {
     uint16_t   port = 0;
-    OS_Error_t err = network_stack_rpc_socket_accept(srvHandle, phSocket, port);
-    return err;
+    return network_stack_rpc_socket_accept(srvHandle, phSocket, port);
 }
 
 /******************************************************************************/
@@ -151,7 +147,7 @@ OS_NetworkServerSocket_create(
         return err;
     }
 
-    return err;
+    return OS_SUCCESS;
 }
 
 /*******************************************************************************
@@ -183,5 +179,5 @@ OS_NetworkSocket_create(
         return err;
     }
 
-    return err;
+    return OS_SUCCESS;
 }

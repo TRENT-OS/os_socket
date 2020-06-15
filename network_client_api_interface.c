@@ -18,29 +18,29 @@
 //------------------------------------------------------------------------------
 extern OS_Error_t
 network_stack_rpc_socket_create(
-    unsigned  domain,
-    unsigned  type,
-    unsigned* pHandle);
+    unsigned int  domain,
+    unsigned int type,
+    unsigned int* pHandle);
 extern OS_Error_t
 network_stack_rpc_socket_accept(
-    unsigned  handle,
-    unsigned* pHandleClient,
+    unsigned int  handle,
+    unsigned int* pHandleClient,
     uint16_t  port);
 extern OS_Error_t
-network_stack_rpc_socket_bind(unsigned handle, uint16_t port);
+network_stack_rpc_socket_bind(unsigned int handle, uint16_t port);
 extern OS_Error_t
-network_stack_rpc_socket_listen(unsigned handle, unsigned backlog);
+network_stack_rpc_socket_listen(unsigned int handle, unsigned int backlog);
 extern OS_Error_t
 network_stack_rpc_socket_connect(
-    unsigned    handle,
+    unsigned int  handle,
     const char* name,
     uint16_t    port);
 extern OS_Error_t
-network_stack_rpc_socket_close(unsigned handle);
+network_stack_rpc_socket_close(unsigned int handle);
 extern OS_Error_t
-network_stack_rpc_socket_write(unsigned handle, size_t* pLen);
+network_stack_rpc_socket_write(unsigned int handle, size_t* pLen);
 extern OS_Error_t
-network_stack_rpc_socket_read(unsigned handle, size_t* pLen);
+network_stack_rpc_socket_read(unsigned int handle, size_t* pLen);
 
 /******************************************************************************/
 static void*

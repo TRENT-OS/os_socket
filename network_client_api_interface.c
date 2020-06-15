@@ -111,9 +111,15 @@ OS_NetworkSocket_read(
 {
     OS_Error_t err = network_stack_rpc_socket_read(handle, plen);
 
+    if (err != OS_SUCCESS)
+    {
+        return err;
+    }
+
     void* data_port = get_data_port();
     memcpy(buf, data_port, *plen);
-    return err;
+
+    return OS_SUCCESS;
 }
 
 /******************************************************************************/
@@ -127,7 +133,8 @@ OS_NetworkServerSocket_create(
                          pServerStruct->domain,
                          pServerStruct->type,
                          pSrvHandle);
-    if (err < 0)
+
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
         return err;
@@ -135,14 +142,14 @@ OS_NetworkServerSocket_create(
 
     err =
         network_stack_rpc_socket_bind(*pSrvHandle, pServerStruct->listen_port);
-    if (err < 0)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
         return err;
     }
 
     err = network_stack_rpc_socket_listen(*pSrvHandle, pServerStruct->backlog);
-    if (err < 0)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
         return err;
@@ -164,7 +171,8 @@ OS_NetworkSocket_create(
                          pClientStruct->domain,
                          pClientStruct->type,
                          phandle);
-    if (err < 0)
+
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
         return err;
@@ -174,7 +182,7 @@ OS_NetworkSocket_create(
               *phandle,
               pClientStruct->name,
               pClientStruct->port);
-    if (err < 0)
+    if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_connect() failed with error %d", err);
         return err;

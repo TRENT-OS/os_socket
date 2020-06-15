@@ -1,9 +1,9 @@
 /*
  *  OS Network App CAmkES wrapper
  *
- *  Copyright (C) 2019, Hensoldt Cyber GmbH
+ *  Copyright (C) 2019-2020, Hensoldt Cyber GmbH
  *
- *  The API's provided here must be used by the Nw Application to create,
+ *  The API's provided here can be used by the Application to create,
  *  connect, write and read data over socket connections.
  *
  */

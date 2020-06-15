@@ -27,20 +27,7 @@ typedef struct
 
     struct pico_device          seos_nic;
 
-    // As of now there is only one app per network stack and there is also only
-    // one socket. Hence one global variable can be used which represents the
-    // network stack
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-    struct pico_socket* socket[1];
-
-#elif defined(OS_NWSTACK_AS_SERVER)
-
     struct pico_socket* socket[2];
-
-#else
-#error "Error: Configure as client or server!!"
-#endif
 
     int
     event; /**< Pico Internal event representing current state of connected socket */
@@ -116,22 +103,11 @@ static struct pico_socket*
 get_pico_socket_from_handle(
     int handle)
 {
-#if defined(OS_NWSTACK_AS_CLIENT)
 
-    // we support only one handle
-    return (0 == handle) ? instance.socket[0] : NULL;
-
-#elif defined(OS_NWSTACK_AS_SERVER)
-
-    // handle = 0: server socket
-    // handle = 1: client connection
     return (0 == handle) ? instance.socket[0]
            : (1 == handle) ? instance.socket[1]
            : NULL;
 
-#else
-#error "Error: Configure as client or server!!"
-#endif
 }
 
 
@@ -449,29 +425,10 @@ network_stack_rpc_socket_bind(
     int handle,
     uint16_t port)
 {
-
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-    Debug_LOG_ERROR("[socket %d] bind() not supported in client-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_CLIENT
-
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] bind() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
-
-    // currently we support just one incoming connection, so everything is hard
-    // coded
-    int handle_socket_server = 0;
-    if (handle_socket_server != handle)
-    {
-        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, socket, handle_socket_server);
         return OS_ERROR_INVALID_HANDLE;
     }
 
@@ -490,8 +447,6 @@ network_stack_rpc_socket_bind(
     }
 
     return OS_SUCCESS;
-
-#endif // [not] OS_NWSTACK_AS_CLIENT
 
 }
 

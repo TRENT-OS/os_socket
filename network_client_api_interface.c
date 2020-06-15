@@ -128,7 +128,7 @@ OS_NetworkServerSocket_create(
                          pSrvHandle);
     if (err < 0)
     {
-        Debug_LOG_INFO("os_socket_create() failed with error %d", err);
+        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
         return err;
     }
 
@@ -136,14 +136,14 @@ OS_NetworkServerSocket_create(
         network_stack_rpc_socket_bind(*pSrvHandle, pServerStruct->listen_port);
     if (err < 0)
     {
-        Debug_LOG_INFO("os_socket_bind() failed with error %d", err);
+        Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
         return err;
     }
 
     err = network_stack_rpc_socket_listen(*pSrvHandle, pServerStruct->backlog);
     if (err < 0)
     {
-        Debug_LOG_INFO("os_socket_listen() failed with error %d", err);
+        Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
         return err;
     }
 
@@ -165,7 +165,7 @@ OS_NetworkSocket_create(
                          phandle);
     if (err < 0)
     {
-        Debug_LOG_INFO("os_socket_create() failed with error %d", err);
+        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
         return err;
     }
 
@@ -175,7 +175,7 @@ OS_NetworkSocket_create(
               pClientStruct->port);
     if (err < 0)
     {
-        Debug_LOG_INFO("os_socket_connect() failed with error %d", err);
+        Debug_LOG_ERROR("os_socket_connect() failed with error %d", err);
         return err;
     }
 

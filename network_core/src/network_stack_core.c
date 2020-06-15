@@ -161,22 +161,22 @@ translate_socket_domain(
 //------------------------------------------------------------------------------
 static int
 translate_socket_type(
-    unsigned int type)
+    unsigned int socket_type)
 {
-    switch (type)
+    switch (socket_type)
     {
     //----------------------------------------
     case OS_SOCK_STREAM:
         return PICO_PROTO_TCP;
     //----------------------------------------
-    // case OS_SOCK_DGRAM:
-    //    return PICO_PROTO_UDP;
+    case OS_SOCK_DGRAM:
+        return PICO_PROTO_UDP;
     //----------------------------------------
     default:
         break;
     }
 
-    Debug_LOG_ERROR("unsupported socket type %u", type);
+    Debug_LOG_ERROR("unsupported socket type %u", socket_type);
     return INVALID_SOCKET_TYPE_OR_DOMAIN;
 }
 
@@ -322,7 +322,7 @@ handle_pico_socket_event(
 OS_Error_t
 network_stack_rpc_socket_create(
     int   domain,
-    int   type,
+    int   socket_type,
     int*  pHandle)
 {
     int pico_domain = translate_socket_domain(domain);
@@ -332,10 +332,10 @@ network_stack_rpc_socket_create(
         return OS_ERROR_GENERIC;
     }
 
-    int pico_type = translate_socket_type(type);
+    int pico_type = translate_socket_type(socket_type);
     if (INVALID_SOCKET_TYPE_OR_DOMAIN == pico_type)
     {
-        Debug_LOG_ERROR("unsupported type %d", type);
+        Debug_LOG_ERROR("unsupported type %d", socket_type);
         return OS_ERROR_GENERIC;
     }
 

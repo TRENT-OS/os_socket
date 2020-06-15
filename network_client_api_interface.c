@@ -124,6 +124,49 @@ OS_NetworkSocket_read(
 
 /******************************************************************************/
 OS_Error_t
+OS_NetworkSocket_recvfrom(
+    OS_NetworkSocket_Handle_t handle,
+    void*                     buf,
+    size_t*                   plen,
+    OS_Network_Socket_t*      other)
+{
+    OS_Error_t err = network_stack_rpc_socket_recvfrom(handle, plen, other);
+
+    if (err != OS_SUCCESS)
+    {
+        return err;
+    }
+
+    void* data_port = get_data_port();
+    memcpy(buf, data_port, *plen);
+
+    return OS_SUCCESS;
+}
+
+/******************************************************************************/
+OS_Error_t
+OS_NetworkSocket_sendto(
+    OS_NetworkSocket_Handle_t handle,
+    const void*               buf,
+    size_t*                   plen,
+    OS_Network_Socket_t       other)
+{
+    void* data_port = get_data_port();
+    memcpy(data_port, buf, *plen);
+    return network_stack_rpc_socket_sendto(handle, plen, other);
+}
+
+/******************************************************************************/
+OS_Error_t
+OS_NetworkSocket_bind(
+    OS_NetworkSocket_Handle_t handle,
+    uint16_t                  receiving_port)
+{
+    return network_stack_rpc_socket_bind(handle, receiving_port);
+}
+
+/******************************************************************************/
+OS_Error_t
 OS_NetworkServerSocket_create(
     OS_Network_Context_t       ctx,
     OS_NetworkServer_Socket_t* pServerStruct,
@@ -176,6 +219,11 @@ OS_NetworkSocket_create(
     {
         Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
         return err;
+    }
+
+    if (pClientStruct->type == OS_SOCK_DGRAM)
+    {
+        return OS_SUCCESS;
     }
 
     err = network_stack_rpc_socket_connect(

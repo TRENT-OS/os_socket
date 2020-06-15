@@ -329,8 +329,11 @@ network_stack_rpc_socket_create(
         return OS_ERROR_GENERIC;
     }
 
-    // disable nagle algorithm (1=disable, 0=enable)
-    helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
+    if (socket_type == OS_SOCK_STREAM) // TCP socket
+    {
+        // disable nagle algorithm (1=disable, 0=enable)
+        helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
+    }
 
     int handle = 0; // we support just one socket at the moment
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, socket);
@@ -673,6 +676,117 @@ network_stack_rpc_socket_read(
     return retval;
 }
 
+//------------------------------------------------------------------------------
+OS_Error_t
+network_stack_rpc_socket_sendto(
+    int                 handle,
+    size_t*             pLen,
+    OS_Network_Socket_t dst_socket)
+{
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (NULL == socket)
+    {
+        Debug_LOG_ERROR("[socket %d] sendto() with invalid handle", handle);
+        *pLen = 0;
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    const OS_SharedBuffer_t* app_port = get_app_port();
+
+    struct pico_ip4 dst = {};
+    uint16_t        dport;
+    pico_string_to_ipv4(dst_socket.name, &dst.addr);
+    dport = short_be(dst_socket.port);
+
+    int ret = pico_socket_sendto(socket, app_port->buffer, *pLen, &dst, dport);
+    instance.event = 0;
+
+    if (ret < 0)
+    {
+        pico_err_t cur_pico_err = pico_err;
+        Debug_LOG_ERROR(
+            "[socket %d/%p] nw_socket_sendto() failed with error %d, "
+            "pico_err %d (%s)",
+            handle,
+            socket,
+            ret,
+            cur_pico_err,
+            pico_err2str(cur_pico_err));
+        *pLen = 0;
+        return OS_ERROR_GENERIC;
+    }
+
+    *pLen = ret;
+    return OS_SUCCESS;
+}
+
+//------------------------------------------------------------------------------
+// Is a blocking call. Wait until we get a read event from Stack
+OS_Error_t
+network_stack_rpc_socket_recvfrom(
+    int                  handle,
+    size_t*              pLen,
+    OS_Network_Socket_t* source_socket)
+{
+    struct pico_socket* socket = get_pico_socket_from_handle(handle);
+    if (NULL == socket)
+    {
+        Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
+        *pLen = 0;
+        return OS_ERROR_INVALID_HANDLE;
+    }
+
+    OS_Error_t retval = OS_SUCCESS;
+    size_t     len    = *pLen;
+
+    const OS_SharedBuffer_t* app_port = get_app_port();
+    uint8_t*                 buf      = app_port->buffer;
+
+    struct pico_ip4 src = {};
+    uint16_t        sport;
+
+    int ret;
+
+    // pico_socket_recvfrom will from time to time return 0 bytes read,
+    // even though there is a valid datagram to return. Although 0 payload is a
+    // valid UDP packet, it looks like picotcp treats it as a try-again
+    // condition (see example apps). So we wait/loop here until we get
+    // something to return.
+    do
+    {
+        internal_wait_read();
+
+        ret = pico_socket_recvfrom(socket, buf, len, &src, &sport);
+
+        if (ret < 0)
+        {
+            pico_err_t cur_pico_err = pico_err;
+
+            Debug_LOG_ERROR(
+                "[socket %d/%p] nw_socket_read() failed with error %d, "
+                "pico_err %d (%s)", handle, socket, ret, cur_pico_err,
+                pico_err2str(cur_pico_err));
+
+            return OS_ERROR_GENERIC;
+        }
+
+        pico_ipv4_to_string(source_socket->name, src.addr);
+
+        source_socket->port = short_be(sport);
+    }
+    while (ret == 0);
+
+#if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
+
+    Debug_LOG_TRACE(
+        "[socket %d/%p] read data length=%d, data follows below",
+        handle, socket, tot_len);
+
+    Debug_hexDump(TRACE, app_port->buffer, tot_len);
+#endif
+
+    *pLen = ret;
+    return retval;
+}
 
 //------------------------------------------------------------------------------
 // NIC Driver interface

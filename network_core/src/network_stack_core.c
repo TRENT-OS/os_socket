@@ -412,7 +412,7 @@ network_stack_rpc_socket_connect(
     Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
     internal_wait_connection();
 
-    Debug_LOG_INFO("[socket %d/%p] connection esablished to %s:%d",
+    Debug_LOG_INFO("[socket %d/%p] connection established to %s:%d",
                    handle, socket, name, port);
 
     return OS_SUCCESS;

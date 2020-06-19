@@ -51,14 +51,12 @@ typedef struct
 
 } os_camkes_network_stack_config_t;
 
-
 typedef struct
 {
     char*  dev_addr; /**< pointer to device address e.g. tap0, tap1 */
     char*  gateway_addr; /**< pointer to gateway addr */
     char*  subnet_mask; /**< pointer to subnet mask */
 } os_network_stack_config_t;
-
 
 OS_Error_t
 OS_NetworkStack_run(

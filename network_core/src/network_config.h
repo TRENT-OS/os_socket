@@ -11,9 +11,7 @@
 #include "OS_NetworkStackConf.h"
 #include <stddef.h>
 
-
 const os_camkes_network_stack_config_t* config_get_handlers(void);
-
 
 //------------------------------------------------------------------------------
 // System interface

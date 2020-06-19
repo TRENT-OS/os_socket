@@ -6,7 +6,7 @@
 
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
-#include "os_util/OS_NetworkStack.h"
+#include "network/OS_NetworkStack.h"
 #include "OS_NetworkStackConf.h"
 #include "network_config.h"
 #include "pico_stack.h"

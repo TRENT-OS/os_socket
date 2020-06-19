@@ -6,6 +6,7 @@
 
 
 #include "OS_Types.h"
+#include "OS_Dataport.h"
 #include "LibDebug/Debug.h"
 #include "OS_NetworkStackConf.h"
 #include "network_config.h"
@@ -149,34 +150,34 @@ internal_wait_connection(void)
 
 
 //------------------------------------------------------------------------------
-const OS_SharedBuffer_t*
+const OS_Dataport_t*
 get_nic_port_from(void)
 {
     const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const OS_SharedBuffer_t* port = &(handlers->drv_nic.from);
+    const OS_Dataport_t* port = &(handlers->drv_nic.from);
 
     Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
+    Debug_ASSERT( NULL != port->io );
+    Debug_ASSERT( 0 != port->size );
 
     return port;
 }
 
 
 //------------------------------------------------------------------------------
-const OS_SharedBuffer_t*
+const OS_Dataport_t*
 get_nic_port_to(void)
 {
     const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // driver -> network stack (aka input)
-    const OS_SharedBuffer_t* port = &(handlers->drv_nic.to);
+    const OS_Dataport_t* port = &(handlers->drv_nic.to);
 
     Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
+    Debug_ASSERT( NULL != port->io );
+    Debug_ASSERT( 0 != port->size );
 
     return port;
 }
@@ -226,17 +227,17 @@ notify_app_init_done(void)
 
 
 //------------------------------------------------------------------------------
-const OS_SharedBuffer_t*
+const OS_Dataport_t*
 get_app_port(void)
 {
     const os_camkes_network_stack_config_t* handlers = config_get_handlers();
 
     // network stack -> driver (aka output)
-    const OS_SharedBuffer_t* port = &(handlers->app.port);
+    const OS_Dataport_t* port = &(handlers->app.port);
 
     Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->buffer );
-    Debug_ASSERT( 0 != port->len );
+    Debug_ASSERT( NULL != port->io );
+    Debug_ASSERT( 0 != port->size );
 
     return port;
 }

@@ -578,11 +578,17 @@ network_stack_rpc_socket_write(
         return OS_ERROR_INVALID_HANDLE;
     }
 
+    const OS_Dataport_t* app_port = get_app_port();
+
+    if (*pLen > OS_Dataport_getSize(*app_port))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
     internal_wait_write();
 
-    const OS_SharedBuffer_t* app_port = get_app_port();
-
-    int ret = pico_socket_write(socket, app_port->buffer, *pLen);
+    int ret = pico_socket_write(socket, OS_Dataport_getBuf(*app_port), *pLen);
     instance.event = 0;
 
     if (ret < 0)
@@ -619,8 +625,14 @@ network_stack_rpc_socket_read(
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
-    const OS_SharedBuffer_t* app_port = get_app_port();
-    uint8_t* buf = app_port->buffer;
+    const OS_Dataport_t* app_port = get_app_port();
+    uint8_t* buf = OS_Dataport_getBuf(*app_port);
+
+    if (*pLen > OS_Dataport_getSize(*app_port))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
 
     do
     {
@@ -669,7 +681,7 @@ network_stack_rpc_socket_read(
     Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
                     handle, socket, tot_len);
 
-    Debug_hexDump(TRACE, app_port->buffer, tot_len);
+    Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
 #endif
 
     *pLen = tot_len;
@@ -690,14 +702,21 @@ network_stack_rpc_socket_sendto(
         *pLen = 0;
         return OS_ERROR_INVALID_HANDLE;
     }
-    const OS_SharedBuffer_t* app_port = get_app_port();
+    const OS_Dataport_t* app_port = get_app_port();
+
+    if (*pLen > OS_Dataport_getSize(*app_port))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
 
     struct pico_ip4 dst = {};
     uint16_t        dport;
     pico_string_to_ipv4(dst_socket.name, &dst.addr);
     dport = short_be(dst_socket.port);
 
-    int ret = pico_socket_sendto(socket, app_port->buffer, *pLen, &dst, dport);
+    int ret = pico_socket_sendto(socket, OS_Dataport_getBuf(*app_port), *pLen, &dst,
+                                 dport);
     instance.event = 0;
 
     if (ret < 0)
@@ -738,14 +757,19 @@ network_stack_rpc_socket_recvfrom(
     OS_Error_t retval = OS_SUCCESS;
     size_t     len    = *pLen;
 
-    const OS_SharedBuffer_t* app_port = get_app_port();
-    uint8_t*                 buf      = app_port->buffer;
+    const OS_Dataport_t* app_port = get_app_port();
+    uint8_t*             buf      = OS_Dataport_getBuf(*app_port);
 
     struct pico_ip4 src = {};
     uint16_t        sport;
 
     int ret;
 
+    if (*pLen > OS_Dataport_getSize(*app_port))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
     // pico_socket_recvfrom will from time to time return 0 bytes read,
     // even though there is a valid datagram to return. Although 0 payload is a
     // valid UDP packet, it looks like picotcp treats it as a try-again
@@ -781,7 +805,7 @@ network_stack_rpc_socket_recvfrom(
         "[socket %d/%p] read data length=%d, data follows below",
         handle, socket, tot_len);
 
-    Debug_hexDump(TRACE, app_port->buffer, tot_len);
+    Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
 #endif
 
     *pLen = ret;
@@ -803,8 +827,14 @@ nic_send_frame(
     // currently we support only one NIC
     Debug_ASSERT( &(instance.seos_nic) == dev );
 
-    const OS_SharedBuffer_t* nic_in = get_nic_port_to();
-    void* wrbuf = nic_in->buffer;
+    const OS_Dataport_t* nic_in = get_nic_port_to();
+    void* wrbuf = OS_Dataport_getBuf(*nic_in);
+
+    if (OS_Dataport_getSize(*nic_in) < len )
+    {
+        Debug_LOG_ERROR("Buffer doesn't fit in dataport");
+        return -1;
+    }
 
     // copy data it into shared buffer
     size_t wr_len = len;
@@ -839,8 +869,9 @@ nic_poll_data(
     // frame in the buffer and give it to PicoTCP
     if (loop_score > 0)
     {
-        const OS_SharedBuffer_t* nw_in = get_nic_port_from();
-        OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)nw_in->buffer;
+        const OS_Dataport_t* nw_in = get_nic_port_from();
+        OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)
+                                            OS_Dataport_getBuf(*nw_in);
 
         size_t len = nw_rx->len;
         if (len > 0)
@@ -892,8 +923,9 @@ initialize_nic(void)
         return OS_ERROR_GENERIC;
     }
 
-    const OS_SharedBuffer_t* nw_in = get_nic_port_from();
-    OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)nw_in->buffer;
+    const OS_Dataport_t* nw_in = get_nic_port_from();
+    OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)
+                                        OS_Dataport_getBuf(*nw_in);
     uint8_t* mac = nw_rx->data;
 
     Debug_LOG_INFO("MAC: %02x:%02x:%02x:%02x:%02x:%02x",

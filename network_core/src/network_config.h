@@ -7,6 +7,7 @@
 #pragma once
 
 #include "OS_Types.h"
+#include "OS_Dataport.h"
 #include "OS_NetworkStackConf.h"
 #include <stddef.h>
 
@@ -29,11 +30,11 @@ void internal_notify_connection(void);
 void internal_wait_connection(void);
 
 void wait_nic_init_done(void);
-const OS_SharedBuffer_t* get_nic_port_from(void);
-const OS_SharedBuffer_t* get_nic_port_to(void);
+const OS_Dataport_t* get_nic_port_from(void);
+const OS_Dataport_t* get_nic_port_to(void);
 
 OS_Error_t nic_rpc_dev_write(size_t* pLen);
 OS_Error_t nic_rpc_get_mac(void);
 
 void notify_app_init_done(void);
-const OS_SharedBuffer_t* get_app_port(void);
+const OS_Dataport_t* get_app_port(void);

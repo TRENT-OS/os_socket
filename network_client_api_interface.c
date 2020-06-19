@@ -9,6 +9,7 @@
  */
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
+#include "OS_Dataport.h"
 #include <camkes.h>
 #include <string.h>
 
@@ -43,10 +44,12 @@ extern OS_Error_t
 network_stack_rpc_socket_read(unsigned int handle, size_t* pLen);
 
 /******************************************************************************/
-static void*
+OS_Dataport_t dataport = OS_DATAPORT_ASSIGN(NwAppDataPort);
+
+const OS_Dataport_t
 get_data_port(void)
 {
-    return NwAppDataPort;
+    return dataport;
 }
 
 /*******************************************************************************
@@ -87,8 +90,16 @@ OS_NetworkSocket_write(
     const void*               buf,
     size_t*                   plen)
 {
-    void* data_port = get_data_port();
-    memcpy(data_port, buf, *plen);
+    const OS_Dataport_t dp = get_data_port();
+
+    if (*plen > OS_Dataport_getSize(dp))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    memcpy(OS_Dataport_getBuf(dp), buf, *plen);
+
     return network_stack_rpc_socket_write(handle, plen);
 }
 
@@ -116,8 +127,15 @@ OS_NetworkSocket_read(
         return err;
     }
 
-    void* data_port = get_data_port();
-    memcpy(buf, data_port, *plen);
+    const OS_Dataport_t dp = get_data_port();
+
+    if (*plen > OS_Dataport_getSize(dp))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    memcpy(buf, OS_Dataport_getBuf(dp), *plen);
 
     return OS_SUCCESS;
 }
@@ -137,8 +155,15 @@ OS_NetworkSocket_recvfrom(
         return err;
     }
 
-    void* data_port = get_data_port();
-    memcpy(buf, data_port, *plen);
+    const OS_Dataport_t dp = get_data_port();
+
+    if (*plen > OS_Dataport_getSize(dp))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    memcpy(buf, OS_Dataport_getBuf(dp), *plen);
 
     return OS_SUCCESS;
 }
@@ -151,8 +176,16 @@ OS_NetworkSocket_sendto(
     size_t*                   plen,
     OS_Network_Socket_t       other)
 {
-    void* data_port = get_data_port();
-    memcpy(data_port, buf, *plen);
+    const OS_Dataport_t dp = get_data_port();
+
+    if (*plen > OS_Dataport_getSize(dp))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    memcpy(OS_Dataport_getBuf(dp), buf, *plen);
+
     return network_stack_rpc_socket_sendto(handle, plen, other);
 }
 

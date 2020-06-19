@@ -10,6 +10,7 @@
 #include "OS_Types.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include "OS_Dataport.h"
 
 typedef struct
 {
@@ -32,8 +33,8 @@ typedef struct
 
     struct
     {
-        OS_SharedBuffer_t  from;      // NIC -> stack
-        OS_SharedBuffer_t  to;        // stack -> NIC
+        OS_Dataport_t from; // NIC -> stack
+        OS_Dataport_t to;   // stack -> NIC
         struct
         {
             OS_Error_t (*dev_write)(size_t* len);
@@ -45,7 +46,7 @@ typedef struct
     struct
     {
         event_notify_func_t   notify_init_done;
-        OS_SharedBuffer_t  port;
+        OS_Dataport_t port;
     } app;
 
 } os_camkes_network_stack_config_t;

@@ -169,7 +169,6 @@ helper_socket_set_option_int(
 
 
 //------------------------------------------------------------------------------
-#if defined(OS_NWSTACK_AS_SERVER)
 static void
 handle_incoming_connection(
     struct pico_socket*  socket)
@@ -222,8 +221,6 @@ handle_incoming_connection(
 
     instance.socket[handle_socket_client] = s_in;
 }
-#endif // defined(OS_NWSTACK_AS_SERVER)
-
 
 //------------------------------------------------------------------------------
 // This is called from the PicoTCP main tick loop to report socket events
@@ -239,20 +236,19 @@ handle_pico_socket_event(
     {
         Debug_LOG_INFO("[socket %p] PICO_SOCK_EV_CONN", socket);
 
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-        // SYN-ACK has arrived
-        Debug_LOG_INFO("[socket %p] incoming connection established", socket);
-
-#elif defined(OS_NWSTACK_AS_SERVER)
-
-        // SYN has arrived
-        handle_incoming_connection(socket);
-        instance.event = 0; // no event is pending
-
-#else
-#error "Error: Configure as client or server!!"
-#endif
+        if (socket->state & PICO_SOCKET_STATE_BOUND)
+        {
+            // SYN has arrived
+            handle_incoming_connection(socket);
+            instance.event = 0; // no event is pending
+        }
+        else
+        {
+            // SYN-ACK has arrived
+            Debug_LOG_INFO(
+                "[socket %p] incoming connection established",
+                socket);
+        }
 
         internal_notify_connection();
     }
@@ -379,14 +375,6 @@ network_stack_rpc_socket_connect(
     int          port)
 {
 
-#if defined(OS_NWSTACK_AS_SERVER)
-
-    Debug_LOG_ERROR("[socket %d] connect() not supported in server-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_SERVER
-
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
     {
@@ -416,8 +404,6 @@ network_stack_rpc_socket_connect(
                    handle, socket, name, port);
 
     return OS_SUCCESS;
-
-#endif // [not] OS_NWSTACK_AS_SERVER
 
 }
 
@@ -460,13 +446,6 @@ network_stack_rpc_socket_listen(
     int handle,
     int backlog)
 {
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-    Debug_LOG_ERROR("[socket %d] listen() not supported in client-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_CLIENT
 
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
@@ -497,8 +476,6 @@ network_stack_rpc_socket_listen(
 
     return OS_SUCCESS;
 
-#endif // [not] OS_NWSTACK_AS_CLIENT
-
 }
 
 
@@ -513,14 +490,6 @@ network_stack_rpc_socket_accept(
 {
     // set default
     *pClient_handle = 0;
-
-#if defined(OS_NWSTACK_AS_CLIENT)
-
-    Debug_LOG_ERROR("[socket %d] accept() not supported in client-only mode",
-                    handle);
-    return OS_ERROR_NOT_SUPPORTED;
-
-#else // not OS_NWSTACK_AS_CLIENT
 
     struct pico_socket* socket = get_pico_socket_from_handle(handle);
     if (socket == NULL)
@@ -558,8 +527,6 @@ network_stack_rpc_socket_accept(
 
     *pClient_handle = handle_socket_client;
     return OS_SUCCESS;
-
-#endif // [not] OS_NWSTACK_AS_CLIENT
 
 }
 

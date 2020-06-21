@@ -54,12 +54,8 @@ In order to use the Stack, your component definition needs to include the
  
 ## CMakeLists.txt file
 
-The component muth be build with one of the 2 `OS_NWSTACK_AS` defines. 
-
 Define                            | Description
 ----------------------------------|---------------------------------------------------------------------------
-OS_NWSTACK_AS_CLIENT              | use the Network stack as client (connect to remote host)
-OS_NWSTACK_AS_SERVER              | use the Network stack as server (accept connection from remote host)
 OS_NETWORK_STACK_USE_CONFIGSERVER | use configuration server to configure IP addresses
 
  

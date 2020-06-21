@@ -19,6 +19,8 @@ target_sources(${PROJECT_NAME}
     INTERFACE
         network_core/src/network_stack_core.c
         network_core/src/network_config.c
+        network_core/src/network_stack_pico.c
+        network_core/src/network_stack_pico_nic.c
 )
 
 target_include_directories(${PROJECT_NAME}

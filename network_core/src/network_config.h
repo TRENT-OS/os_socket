@@ -11,6 +11,18 @@
 #include "OS_NetworkStackConf.h"
 #include <stddef.h>
 
+typedef OS_Error_t (*nic_initialize_func_t)(
+    const os_network_stack_config_t* config);
+typedef OS_Error_t (*stack_initialize_func_t)(void);
+typedef void (*stack_tick_func_t)(void);
+
+typedef struct
+{
+    nic_initialize_func_t nic_init;
+    stack_initialize_func_t stack_init;
+    stack_tick_func_t stack_tick;
+} network_stack_interface_t;
+
 const os_camkes_network_stack_config_t* config_get_handlers(void);
 
 //------------------------------------------------------------------------------

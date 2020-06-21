@@ -241,3 +241,70 @@ get_app_port(void)
 
     return port;
 }
+
+
+//------------------------------------------------------------------------------
+void
+internal_socket_control_block_mutex_lock(void)
+{
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
+
+    mutex_lock_func_t lock_mutex = handlers->internal.socketCB_lock;
+    if (!lock_mutex)
+    {
+        Debug_LOG_WARNING("socket_control_block_mutex_lock not set");
+        return;
+    }
+
+    Debug_LOG_INFO("%s", __func__);
+    lock_mutex();
+}
+
+
+//------------------------------------------------------------------------------
+void internal_socket_control_block_mutex_unlock(void)
+{
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
+
+    mutex_unlock_func_t unlock_mutex = handlers->internal.socketCB_unlock;
+    if (!unlock_mutex)
+    {
+        Debug_LOG_WARNING("socket_control_block_mutex_unlock not set");
+        return;
+    }
+
+    Debug_LOG_INFO("%s", __func__);
+    unlock_mutex();
+}
+
+//------------------------------------------------------------------------------
+void internal_network_stack_thread_safety_mutex_lock(void)
+{
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
+
+    mutex_lock_func_t lock_mutex = handlers->internal.stackTS_lock;
+    if (!lock_mutex)
+    {
+        Debug_LOG_WARNING("socket_thread_safety_mutex_lock not set");
+        return;
+    }
+
+    Debug_LOG_INFO("%s", __func__);
+    lock_mutex();
+}
+
+//------------------------------------------------------------------------------
+void internal_network_stack_thread_safety_mutex_unlock(void)
+{
+    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
+
+    mutex_unlock_func_t unlock_mutex = handlers->internal.stackTS_unlock;
+    if (!unlock_mutex)
+    {
+        Debug_LOG_WARNING("socket_thread_safety_mutex_unlock not set");
+        return;
+    }
+
+    Debug_LOG_INFO("%s", __func__);
+    unlock_mutex();
+}

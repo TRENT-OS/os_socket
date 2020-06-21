@@ -48,3 +48,9 @@ OS_Error_t nic_rpc_get_mac(void);
 
 void notify_app_init_done(void);
 const OS_Dataport_t* get_app_port(void);
+
+void internal_socket_control_block_mutex_lock(void);
+void internal_socket_control_block_mutex_unlock(void);
+
+void internal_network_stack_thread_safety_mutex_lock(void);
+void internal_network_stack_thread_safety_mutex_unlock(void);

@@ -29,6 +29,18 @@ typedef struct
 
         event_notify_func_t  notify_read;   // e_read_emit
         event_wait_func_t    wait_read;     // c_read_wait
+
+        mutex_lock_func_t    allocator_lock;
+        mutex_unlock_func_t  allocator_unlock;
+
+        mutex_lock_func_t    nwStack_lock;
+        mutex_unlock_func_t  nwStack_unlock;
+
+        mutex_lock_func_t    socketCB_lock;
+        mutex_unlock_func_t  socketCB_unlock;
+
+        mutex_lock_func_t    stackTS_lock;
+        mutex_unlock_func_t  stackTS_unlock;
     } internal;
 
     struct

@@ -10,46 +10,29 @@
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
 #include "OS_Dataport.h"
-#include <camkes.h>
 #include <string.h>
-
-//------------------------------------------------------------------------------
-// RPC API, prefix "network_stack_rpc" comes from CAmkES RPC, the rest from the
-// interface method list.
-//------------------------------------------------------------------------------
-extern OS_Error_t
-network_stack_rpc_socket_create(
-    unsigned int  domain,
-    unsigned int type,
-    unsigned int* pHandle);
-extern OS_Error_t
-network_stack_rpc_socket_accept(
-    unsigned int  handle,
-    unsigned int* pHandleClient,
-    uint16_t  port);
-extern OS_Error_t
-network_stack_rpc_socket_bind(unsigned int handle, uint16_t port);
-extern OS_Error_t
-network_stack_rpc_socket_listen(unsigned int handle, unsigned int backlog);
-extern OS_Error_t
-network_stack_rpc_socket_connect(
-    unsigned int  handle,
-    const char* name,
-    uint16_t    port);
-extern OS_Error_t
-network_stack_rpc_socket_close(unsigned int handle);
-extern OS_Error_t
-network_stack_rpc_socket_write(unsigned int handle, size_t* pLen);
-extern OS_Error_t
-network_stack_rpc_socket_read(unsigned int handle, size_t* pLen);
+#include "OS_Network_client_api.h"
 
 /******************************************************************************/
-OS_Dataport_t dataport = OS_DATAPORT_ASSIGN(NwAppDataPort);
+
+os_network_dataports_socket_t* instance ;
 
 const OS_Dataport_t
-get_data_port(void)
+get_data_port(int handle)
 {
-    return dataport;
+    Debug_ASSERT( handle >= 0 && handle < instance->number_of_sockets );
+    return instance->dataport[handle];
+}
+
+/*******************************************************************************/
+OS_Error_t
+OS_Network_client_api_init(
+    os_network_dataports_socket_t* config)
+{
+    Debug_ASSERT( NULL != config );
+    Debug_ASSERT( NULL != config->dataport );
+    instance = config;
+    return OS_SUCCESS;
 }
 
 /*******************************************************************************
@@ -90,7 +73,7 @@ OS_NetworkSocket_write(
     const void*               buf,
     size_t*                   plen)
 {
-    const OS_Dataport_t dp = get_data_port();
+    const OS_Dataport_t dp = get_data_port(handle);
 
     if (*plen > OS_Dataport_getSize(dp))
     {
@@ -127,7 +110,7 @@ OS_NetworkSocket_read(
         return err;
     }
 
-    const OS_Dataport_t dp = get_data_port();
+    const OS_Dataport_t dp = get_data_port(handle);
 
     if (*plen > OS_Dataport_getSize(dp))
     {
@@ -155,7 +138,7 @@ OS_NetworkSocket_recvfrom(
         return err;
     }
 
-    const OS_Dataport_t dp = get_data_port();
+    const OS_Dataport_t dp = get_data_port(handle);
 
     if (*plen > OS_Dataport_getSize(dp))
     {
@@ -176,7 +159,7 @@ OS_NetworkSocket_sendto(
     size_t*                   plen,
     OS_Network_Socket_t       other)
 {
-    const OS_Dataport_t dp = get_data_port();
+    const OS_Dataport_t dp = get_data_port(handle);
 
     if (*plen > OS_Dataport_getSize(dp))
     {

@@ -32,22 +32,41 @@ const os_camkes_network_stack_config_t* config_get_handlers(void);
 void wait_network_event(void);
 
 void internal_notify_main_loop(void);
-void internal_notify_read(void);
-void internal_wait_read(void);
-void internal_notify_write(void);
-void internal_wait_write(void);
-void internal_notify_connection(void);
-void internal_wait_connection(void);
+
+void internal_notify_read(
+    int handle);
+
+void internal_wait_read(
+    int handle);
+
+void internal_notify_write(
+    int handle);
+
+void internal_wait_write(
+    int handle);
+
+void internal_notify_connection(
+    int handle);
+
+void internal_wait_connection(
+    int handle);
 
 void wait_nic_init_done(void);
 const OS_Dataport_t* get_nic_port_from(void);
 const OS_Dataport_t* get_nic_port_to(void);
 
-OS_Error_t nic_rpc_dev_write(size_t* pLen);
-OS_Error_t nic_rpc_get_mac(void);
+OS_Error_t
+nic_rpc_dev_write(
+    size_t* pLen);
+
+OS_Error_t
+nic_rpc_get_mac(void);
 
 void notify_app_init_done(void);
-const OS_Dataport_t* get_app_port(void);
+
+const OS_Dataport_t*
+get_app_port(
+    int handle);
 
 void internal_socket_control_block_mutex_lock(void);
 void internal_socket_control_block_mutex_unlock(void);

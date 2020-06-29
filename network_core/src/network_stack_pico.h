@@ -1,6 +1,8 @@
 /*
  *  OS Network Stack
  *
+ *  The PicoTCP implementation of the TRENTOS-M Network Stack.
+ *
  *  Copyright (C) 2020, Hensoldt Cyber GmbH
  */
 #pragma once
@@ -14,19 +16,30 @@ network_stack_interface_t
 network_stack_pico_get_config(void);
 
 OS_Error_t
-network_stack_pico_socket_create(int domain, int socket_type, int* pHandle);
+network_stack_pico_socket_create(
+    int domain,
+    int socket_type,
+    int* pHandle);
 
 OS_Error_t
-network_stack_pico_socket_close(int handle);
+network_stack_pico_socket_close(
+    int handle);
 
 OS_Error_t
-network_stack_pico_socket_connect(int handle, const char* name, int port);
+network_stack_pico_socket_connect(
+    int handle,
+    const char* name,
+    int port);
 
 OS_Error_t
-network_stack_pico_socket_bind(int handle, uint16_t port);
+network_stack_pico_socket_bind(
+    int handle,
+    uint16_t port);
 
 OS_Error_t
-network_stack_pico_socket_listen(int handle, int backlog);
+network_stack_pico_socket_listen(
+    int handle,
+    int backlog);
 
 OS_Error_t
 network_stack_pico_socket_accept(
@@ -35,10 +48,14 @@ network_stack_pico_socket_accept(
     uint16_t port);
 
 OS_Error_t
-network_stack_pico_socket_write(int handle, size_t* pLen);
+network_stack_pico_socket_write(
+    int handle,
+    size_t* pLen);
 
 OS_Error_t
-network_stack_pico_socket_read(int handle, size_t* pLen);
+network_stack_pico_socket_read(
+    int handle,
+    size_t* pLen);
 
 OS_Error_t
 network_stack_pico_socket_sendto(

@@ -10,6 +10,7 @@
 #include "LibDebug/Debug.h"
 #include "OS_NetworkStackConf.h"
 #include "network_config.h"
+#include "network_stack_core.h"
 #include <stddef.h>
 
 
@@ -50,11 +51,10 @@ internal_notify_main_loop(void)
 
 //------------------------------------------------------------------------------
 void
-internal_notify_read(void)
+internal_notify_read(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_notify_func_t do_notify = handlers->internal.notify_read;
+    event_notify_func_t do_notify = get_notify_read_func_for_handle(handle);
     if (!do_notify)
     {
         Debug_LOG_WARNING("notify_read not set");
@@ -66,11 +66,10 @@ internal_notify_read(void)
 
 //------------------------------------------------------------------------------
 void
-internal_wait_read(void)
+internal_wait_read(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_wait_func_t do_wait = handlers->internal.wait_read;
+    event_wait_func_t do_wait = get_wait_read_func_for_handle(handle);
     if (!do_wait)
     {
         Debug_LOG_WARNING("internal.wait_read not set");
@@ -83,11 +82,10 @@ internal_wait_read(void)
 
 //------------------------------------------------------------------------------
 void
-internal_notify_write(void)
+internal_notify_write(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_notify_func_t do_notify = handlers->internal.notify_write;
+    event_notify_func_t do_notify = get_notify_write_func_for_handle(handle);
     if (!do_notify)
     {
         Debug_LOG_WARNING("notify_write not set");
@@ -100,11 +98,10 @@ internal_notify_write(void)
 
 //------------------------------------------------------------------------------
 void
-internal_wait_write(void)
+internal_wait_write(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_wait_func_t do_wait = handlers->internal.wait_write;
+    event_wait_func_t do_wait = get_wait_write_func_for_handle(handle);
     if (!do_wait)
     {
         Debug_LOG_WARNING("internal.wait_write not set");
@@ -117,11 +114,10 @@ internal_wait_write(void)
 
 //------------------------------------------------------------------------------
 void
-internal_notify_connection(void)
+internal_notify_connection(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_notify_func_t do_notify = handlers->internal.notify_connection;
+    event_notify_func_t do_notify = get_notify_conn_func_for_handle(handle);
     if (!do_notify)
     {
         Debug_LOG_WARNING("internal.notify_connection not set");
@@ -134,11 +130,10 @@ internal_notify_connection(void)
 
 //------------------------------------------------------------------------------
 void
-internal_wait_connection(void)
+internal_wait_connection(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    event_wait_func_t do_wait = handlers->internal.wait_connection;
+    event_wait_func_t do_wait = get_wait_conn_func_for_handle(handle);
     if (!do_wait)
     {
         Debug_LOG_WARNING("internal.wait_connection not set");
@@ -228,12 +223,10 @@ notify_app_init_done(void)
 
 //------------------------------------------------------------------------------
 const OS_Dataport_t*
-get_app_port(void)
+get_app_port(
+    int handle)
 {
-    const os_camkes_network_stack_config_t* handlers = config_get_handlers();
-
-    // network stack -> driver (aka output)
-    const OS_Dataport_t* port = &(handlers->app.port);
+    const OS_Dataport_t* port = get_dataport_for_handle(handle);
 
     Debug_ASSERT( NULL != port );
     Debug_ASSERT( NULL != port->io );
@@ -289,8 +282,8 @@ void internal_network_stack_thread_safety_mutex_lock(void)
         return;
     }
 
-    Debug_LOG_INFO("%s", __func__);
-    lock_mutex();
+    // Debug_LOG_INFO("%s", __func__);
+    // lock_mutex();
 }
 
 //------------------------------------------------------------------------------
@@ -305,6 +298,6 @@ void internal_network_stack_thread_safety_mutex_unlock(void)
         return;
     }
 
-    Debug_LOG_INFO("%s", __func__);
-    unlock_mutex();
+    // Debug_LOG_INFO("%s", __func__);
+    //  unlock_mutex();
 }

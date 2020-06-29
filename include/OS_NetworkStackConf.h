@@ -7,6 +7,7 @@
 #pragma once
 
 #include "OS_Error.h"
+#include "OS_Network.h"
 #include "OS_Types.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -14,33 +15,48 @@
 
 typedef struct
 {
-    event_notify_func_t  notify_init_done;
-    event_wait_func_t    wait_loop_event;
+    volatile int status;
+    volatile bool listening;
+    volatile int accepted_handle;
+    volatile int event;
+
+    event_notify_func_t notify_connection;
+    event_wait_func_t wait_connection;
+
+    event_notify_func_t notify_write; // e_write_emit
+    event_wait_func_t wait_write;     // c_write_wait
+
+    event_notify_func_t notify_read; // e_read_emit
+    event_wait_func_t wait_read;     // c_read_wait
+
+    const OS_Dataport_t buf;
+
+    void* implementation_socket;
+} os_network_socket_t;
+
+typedef struct
+{
+    event_notify_func_t notify_init_done;
+    event_wait_func_t wait_loop_event;
 
     struct
     {
-        event_notify_func_t  notify_loop; // -> wait_event
+        event_notify_func_t notify_loop; // -> wait_event
 
-        event_notify_func_t  notify_connection;
-        event_wait_func_t    wait_connection;
+        os_network_socket_t* sockets;
+        int number_of_sockets;
 
-        event_notify_func_t  notify_write;  // e_write_emit
-        event_wait_func_t    wait_write;    // c_write_wait
+        mutex_lock_func_t allocator_lock;
+        mutex_unlock_func_t allocator_unlock;
 
-        event_notify_func_t  notify_read;   // e_read_emit
-        event_wait_func_t    wait_read;     // c_read_wait
+        mutex_lock_func_t nwStack_lock;
+        mutex_unlock_func_t nwStack_unlock;
 
-        mutex_lock_func_t    allocator_lock;
-        mutex_unlock_func_t  allocator_unlock;
+        mutex_lock_func_t socketCB_lock;
+        mutex_unlock_func_t socketCB_unlock;
 
-        mutex_lock_func_t    nwStack_lock;
-        mutex_unlock_func_t  nwStack_unlock;
-
-        mutex_lock_func_t    socketCB_lock;
-        mutex_unlock_func_t  socketCB_unlock;
-
-        mutex_lock_func_t    stackTS_lock;
-        mutex_unlock_func_t  stackTS_unlock;
+        mutex_lock_func_t stackTS_lock;
+        mutex_unlock_func_t stackTS_unlock;
     } internal;
 
     struct
@@ -57,7 +73,7 @@ typedef struct
 
     struct
     {
-        event_notify_func_t   notify_init_done;
+        event_notify_func_t notify_init_done;
         OS_Dataport_t port;
     } app;
 
@@ -65,13 +81,12 @@ typedef struct
 
 typedef struct
 {
-    char*  dev_addr; /**< pointer to device address e.g. tap0, tap1 */
-    char*  gateway_addr; /**< pointer to gateway addr */
-    char*  subnet_mask; /**< pointer to subnet mask */
+    char* dev_addr;     /**< pointer to device address e.g. tap0, tap1 */
+    char* gateway_addr; /**< pointer to gateway addr */
+    char* subnet_mask;  /**< pointer to subnet mask */
 } os_network_stack_config_t;
 
 OS_Error_t
 OS_NetworkStack_run(
-    const os_camkes_network_stack_config_t*  camkes_config,
-    const os_network_stack_config_t*         config);
-
+    const os_camkes_network_stack_config_t* camkes_config,
+    const os_network_stack_config_t* config);

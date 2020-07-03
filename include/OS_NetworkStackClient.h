@@ -9,7 +9,7 @@ typedef struct
 } os_network_dataports_socket_t;
 
 OS_Error_t
-OS_Network_client_api_init(
+OS_NetworkStackClient_init(
     os_network_dataports_socket_t* config);
 
 //------------------------------------------------------------------------------

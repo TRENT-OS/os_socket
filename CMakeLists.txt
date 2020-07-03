@@ -43,7 +43,7 @@ add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        network_client_api_interface.c
+        network_client.c
 )
 
 target_include_directories(${PROJECT_NAME}

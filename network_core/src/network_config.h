@@ -8,7 +8,7 @@
 
 #include "OS_Types.h"
 #include "OS_Dataport.h"
-#include "OS_NetworkStackConf.h"
+#include "OS_NetworkStack.h"
 #include <stddef.h>
 
 typedef OS_Error_t (*nic_initialize_func_t)(

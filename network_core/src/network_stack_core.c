@@ -10,7 +10,7 @@
 #include "LibDebug/Debug.h"
 #include "OS_Network.h"
 #include "network/OS_NetworkStack.h"
-#include "OS_NetworkStackConf.h"
+#include "OS_NetworkStack.h"
 #include "network_config.h"
 #include "network_stack_pico.h"
 #include <stdlib.h>

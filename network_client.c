@@ -11,7 +11,7 @@
 #include "OS_Network.h"
 #include "OS_Dataport.h"
 #include <string.h>
-#include "OS_Network_client_api.h"
+#include "OS_NetworkStackClient.h"
 
 /******************************************************************************/
 
@@ -26,7 +26,7 @@ get_data_port(int handle)
 
 /*******************************************************************************/
 OS_Error_t
-OS_Network_client_api_init(
+OS_NetworkStackClient_init(
     os_network_dataports_socket_t* config)
 {
     Debug_ASSERT( NULL != config );

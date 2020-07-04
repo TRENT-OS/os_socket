@@ -141,9 +141,9 @@ OS_Error_t
 network_stack_rpc_socket_recvfrom(
     int                  handle,
     size_t*              pLen,
-    OS_Network_Socket_t* source_socket)
+    OS_Network_Socket_t* src_socket)
 {
-    return network_stack_pico_socket_recvfrom(handle, pLen, source_socket);
+    return network_stack_pico_socket_recvfrom(handle, pLen, src_socket);
 }
 
 //------------------------------------------------------------------------------

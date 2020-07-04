@@ -18,57 +18,57 @@ OS_NetworkStackClient_init(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_rpc_socket_create(
-    unsigned int domain,
-    unsigned int type,
-    unsigned int* pHandle);
+    int                        domain,
+    int                        type,
+    OS_NetworkSocket_Handle_t* pHandle);
 
 OS_Error_t
 network_stack_rpc_socket_accept(
-    unsigned int handle,
-    unsigned int* pHandleClient,
-    uint16_t port);
+    OS_NetworkSocket_Handle_t  handle,
+    OS_NetworkSocket_Handle_t* pHandleClient,
+    uint16_t                   port);
 
 OS_Error_t
 network_stack_rpc_socket_bind(
-    unsigned int handle,
-    uint16_t port);
+    OS_NetworkSocket_Handle_t handle,
+    uint16_t                  port);
 
 OS_Error_t
 network_stack_rpc_socket_listen(
-    unsigned int handle,
-    unsigned int backlog);
+    OS_NetworkSocket_Handle_t handle,
+    int                       backlog);
 
 OS_Error_t
 network_stack_rpc_socket_connect(
-    unsigned int handle,
-    const char* name,
-    uint16_t port);
+    OS_NetworkSocket_Handle_t handle,
+    const char*               name,
+    uint16_t                  port);
 
 OS_Error_t
 network_stack_rpc_socket_close(
-    unsigned int handle);
+    OS_NetworkSocket_Handle_t handle);
 
 OS_Error_t
 network_stack_rpc_socket_write(
-    unsigned int handle,
+    OS_NetworkSocket_Handle_t handle,
     size_t* pLen);
 
 OS_Error_t
 network_stack_rpc_socket_read(
-    unsigned int handle,
+    OS_NetworkSocket_Handle_t handle,
     size_t* pLen);
 
 OS_Error_t
 network_stack_rpc_socket_recvfrom(
-    unsigned int handle,
-    size_t* plen,
-    OS_Network_Socket_t* src_socket);
+    OS_NetworkSocket_Handle_t handle,
+    size_t*                   plen,
+    OS_Network_Socket_t*      src_socket);
 
 OS_Error_t
 network_stack_rpc_socket_sendto(
-    unsigned int handle,
-    size_t* pLen,
-    OS_Network_Socket_t dst_socket);
+    OS_NetworkSocket_Handle_t handle,
+    size_t*                   pLen,
+    OS_Network_Socket_t       dst_socket);
 
 // TODO: Remove init_done_event
 extern void event_network_stack_init_done_wait(void);

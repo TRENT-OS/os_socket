@@ -105,7 +105,7 @@ nic_destroy(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-pico_nic_initialize(const os_network_stack_config_t* config)
+pico_nic_initialize(const OS_NetworkStack_AddressConfig_t* config)
 {
     // currently we support only one NIC
     struct pico_device* dev = &os_nic;

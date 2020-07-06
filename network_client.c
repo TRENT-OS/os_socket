@@ -15,7 +15,7 @@
 
 /******************************************************************************/
 
-os_network_dataports_socket_t* instance ;
+OS_NetworkStackClient_SocketDataports_t* instance ;
 
 const OS_Dataport_t
 get_data_port(int handle)
@@ -27,7 +27,7 @@ get_data_port(int handle)
 /*******************************************************************************/
 OS_Error_t
 OS_NetworkStackClient_init(
-    os_network_dataports_socket_t* config)
+    OS_NetworkStackClient_SocketDataports_t* config)
 {
     Debug_ASSERT( NULL != config );
     Debug_ASSERT( NULL != config->dataport );

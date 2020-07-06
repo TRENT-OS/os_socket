@@ -32,7 +32,7 @@ typedef struct
     const OS_Dataport_t buf;
 
     void* implementation_socket;
-} os_network_socket_t;
+} OS_NetworkStack_SocketResources_t;
 
 typedef struct
 {
@@ -43,7 +43,7 @@ typedef struct
     {
         event_notify_func_t notify_loop; // -> wait_event
 
-        os_network_socket_t* sockets;
+        OS_NetworkStack_SocketResources_t* sockets;
         int number_of_sockets;
 
         mutex_lock_func_t allocator_lock;
@@ -77,16 +77,16 @@ typedef struct
         OS_Dataport_t port;
     } app;
 
-} os_camkes_network_stack_config_t;
+} OS_NetworkStack_CamkesConfig_t;
 
 typedef struct
 {
     char* dev_addr;     /**< pointer to device address e.g. tap0, tap1 */
     char* gateway_addr; /**< pointer to gateway addr */
     char* subnet_mask;  /**< pointer to subnet mask */
-} os_network_stack_config_t;
+} OS_NetworkStack_AddressConfig_t;
 
 OS_Error_t
 OS_NetworkStack_run(
-    const os_camkes_network_stack_config_t* camkes_config,
-    const os_network_stack_config_t* config);
+    const OS_NetworkStack_CamkesConfig_t* camkes_config,
+    const OS_NetworkStack_AddressConfig_t* config);

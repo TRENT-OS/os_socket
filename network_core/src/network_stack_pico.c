@@ -195,7 +195,7 @@ handle_pico_socket_event(
     {
         return;
     }
-    os_network_socket_t* sock = get_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
     sock->event = event_mask;
 
 
@@ -518,7 +518,7 @@ network_stack_pico_socket_write(
     internal_wait_write(handle);
 
     int ret = pico_socket_write(socket, OS_Dataport_getBuf(*app_port), *pLen);
-    os_network_socket_t* sock = get_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
     sock->event = 0;
 
     if (ret < 0)
@@ -588,7 +588,7 @@ network_stack_pico_socket_read(
         if ((0 == ret) && (len > 0))
         {
 
-            os_network_socket_t* sock = get_socket_from_handle(handle);
+            OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
 
             /* wait for a new RD event -- also wait possibly for a CLOSE event */
             internal_wait_read(handle);
@@ -650,7 +650,7 @@ network_stack_pico_socket_sendto(
     int ret = pico_socket_sendto(socket, OS_Dataport_getBuf(*app_port), *pLen, &dst,
                                  dport);
 
-    os_network_socket_t* sock = get_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
     sock->event = 0;
 
     if (ret < 0)

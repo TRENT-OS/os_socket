@@ -22,9 +22,9 @@
 
 typedef struct
 {
-    const os_camkes_network_stack_config_t*   camkes_cfg;
-    const os_network_stack_config_t*          cfg;
-    os_network_socket_t* sockets;
+    const OS_NetworkStack_CamkesConfig_t*   camkes_cfg;
+    const OS_NetworkStack_AddressConfig_t*          cfg;
+    OS_NetworkStack_SocketResources_t* sockets;
     int number_of_sockets;
 } network_stack_t;
 
@@ -33,10 +33,10 @@ static network_stack_t  instance = {0};
 
 
 //------------------------------------------------------------------------------
-const os_camkes_network_stack_config_t*
+const OS_NetworkStack_CamkesConfig_t*
 config_get_handlers(void)
 {
-    const os_camkes_network_stack_config_t* handlers = instance.camkes_cfg;
+    const OS_NetworkStack_CamkesConfig_t* handlers = instance.camkes_cfg;
 
     Debug_ASSERT( NULL != handlers );
 
@@ -372,8 +372,8 @@ get_dataport_for_handle(
 // CAmkES run()
 OS_Error_t
 OS_NetworkStack_run(
-    const os_camkes_network_stack_config_t*  camkes_config,
-    const os_network_stack_config_t*         config)
+    const OS_NetworkStack_CamkesConfig_t*  camkes_config,
+    const OS_NetworkStack_AddressConfig_t*         config)
 {
     OS_Error_t err;
 

@@ -12,4 +12,4 @@
 
 OS_Error_t
 pico_nic_initialize(
-    const os_network_stack_config_t* config);
+    const OS_NetworkStack_AddressConfig_t* config);

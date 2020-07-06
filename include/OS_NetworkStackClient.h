@@ -6,11 +6,11 @@ typedef struct
 {
     OS_Dataport_t* dataport;
     int number_of_sockets;
-} os_network_dataports_socket_t;
+} OS_NetworkStackClient_SocketDataports_t;
 
 OS_Error_t
 OS_NetworkStackClient_init(
-    os_network_dataports_socket_t* config);
+    OS_NetworkStackClient_SocketDataports_t* config);
 
 //------------------------------------------------------------------------------
 // RPC API, prefix "network_stack_rpc" comes from CAmkES RPC, the rest from the

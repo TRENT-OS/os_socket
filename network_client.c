@@ -68,36 +68,6 @@ OS_NetworkServerSocket_close(
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkSocket_write(
-    OS_NetworkSocket_Handle_t handle,
-    const void*               buf,
-    size_t                    requestedLen,
-    size_t*                   actualLen)
-{
-    size_t tempLen = requestedLen;
-
-    const OS_Dataport_t dp = get_data_port(handle);
-
-    if (requestedLen > OS_Dataport_getSize(dp))
-    {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
-        return OS_ERROR_INVALID_PARAMETER;
-    }
-
-    memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
-
-    OS_Error_t err = network_stack_rpc_socket_write(handle, &tempLen);
-
-    if (actualLen != NULL)
-    {
-        *actualLen = tempLen;
-    }
-
-    return err;
-}
-
-/******************************************************************************/
-OS_Error_t
 OS_NetworkServerSocket_accept(
     OS_NetworkServer_Handle_t  srvHandle,
     OS_NetworkSocket_Handle_t* phSocket)
@@ -177,6 +147,36 @@ OS_NetworkSocket_recvfrom(
     memcpy(buf, OS_Dataport_getBuf(dp), tempLen);
 
     return OS_SUCCESS;
+}
+
+/******************************************************************************/
+OS_Error_t
+OS_NetworkSocket_write(
+    OS_NetworkSocket_Handle_t handle,
+    const void*               buf,
+    size_t                    requestedLen,
+    size_t*                   actualLen)
+{
+    size_t tempLen = requestedLen;
+
+    const OS_Dataport_t dp = get_data_port(handle);
+
+    if (requestedLen > OS_Dataport_getSize(dp))
+    {
+        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
+    memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
+
+    OS_Error_t err = network_stack_rpc_socket_write(handle, &tempLen);
+
+    if (actualLen != NULL)
+    {
+        *actualLen = tempLen;
+    }
+
+    return err;
 }
 
 /******************************************************************************/

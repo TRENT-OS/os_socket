@@ -186,9 +186,9 @@ handle_pico_socket_event(
     uint16_t             event_mask,
     struct pico_socket*  socket)
 {
-    Debug_LOG_INFO("Event for handle %d/%p Value: 0x%x State %x",
-                   get_handle_from_implementation_socket(socket), socket,
-                   event_mask, TCPSTATE(socket));
+    Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",
+                    get_handle_from_implementation_socket(socket), socket,
+                    event_mask, TCPSTATE(socket));
     // remember the last event
     int handle = get_handle_from_implementation_socket(socket);
     if (handle == -1)
@@ -201,7 +201,7 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_CONN)
     {
-        Debug_LOG_INFO("[socket %p] PICO_SOCK_EV_CONN", socket);
+        Debug_LOG_DEBUG("[socket %p] PICO_SOCK_EV_CONN", socket);
 
         if (socket->state & PICO_SOCKET_STATE_TCP_LISTEN)
         {

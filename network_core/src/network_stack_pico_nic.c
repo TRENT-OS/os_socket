@@ -62,30 +62,33 @@ nic_poll_data(
     struct pico_device*  dev,
     int                  loop_score)
 {
+    static unsigned int pos = 0;
     // currently we support only one NIC
     Debug_ASSERT( &os_nic == dev );
 
     // loop_score indicates max number of frames that can be processed during
-    // the invocation of this poll. Since we still lack the concept of frames
-    // in the shared memory, we can't do much here. Pretend there is one
-    // frame in the buffer and give it to PicoTCP
+    // the invocation of this poll.
     if (loop_score > 0)
     {
         const OS_Dataport_t* nw_in = get_nic_port_from();
-        OS_NetworkStack_RxBuffer_t* nw_rx = (OS_NetworkStack_RxBuffer_t*)
-                                            OS_Dataport_getBuf(*nw_in);
+        OS_NetworkStack_RxBuffer_t* buf_ptr = (OS_NetworkStack_RxBuffer_t*)
+                                              OS_Dataport_getBuf(*nw_in);
 
-        size_t len = nw_rx->len;
-        if (len > 0)
+        unsigned int ring_buffer_size = nw_in->size;
+        // As long as the loop score permits, take the next frame stored in the
+        // ring buffer.
+        while (buf_ptr[pos].len != 0 && loop_score > 0)
         {
-            Debug_LOG_DEBUG("incoming frame len %zu", len);
+            Debug_LOG_DEBUG("incoming frame len %zu", buf_ptr[pos].len);
             loop_score--;
-            pico_stack_recv(dev, nw_rx->data, (uint32_t)len);
-
+            pico_stack_recv(dev, buf_ptr[pos].data, buf_ptr[pos].len);
             // set flag in shared memory that data has been read
-            nw_rx->len = 0;
+            buf_ptr[pos].len = 0;
+
+            pos = (pos + 1) % ring_buffer_size;
         }
     }
+
     return loop_score;
 }
 

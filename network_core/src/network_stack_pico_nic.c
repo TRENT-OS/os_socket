@@ -32,8 +32,7 @@ nic_send_frame(
 
     const OS_Dataport_t* nic_in = get_nic_port_to();
     void* wrbuf = OS_Dataport_getBuf(*nic_in);
-
-    if (OS_Dataport_getSize(*nic_in) < len )
+    if (OS_Dataport_getSize(*nic_in) < len)
     {
         Debug_LOG_ERROR("Buffer doesn't fit in dataport");
         return -1;

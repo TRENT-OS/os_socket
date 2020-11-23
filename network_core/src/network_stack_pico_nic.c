@@ -120,10 +120,10 @@ pico_nic_initialize(const OS_NetworkStack_AddressConfig_t* config)
 
     //---------------------------------------------------------------
     // get MAC from NIC driver
-    OS_Error_t err = nic_rpc_get_mac();
+    OS_Error_t err = nic_rpc_get_mac_address();
     if (err != OS_SUCCESS)
     {
-        Debug_LOG_ERROR("nic_rpc_get_mac() failed, error %d", err);
+        Debug_LOG_ERROR("nic_rpc_get_mac_address() failed, error %d", err);
         nic_destroy(dev);
         return OS_ERROR_GENERIC;
     }

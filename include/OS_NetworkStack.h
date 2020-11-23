@@ -65,6 +65,7 @@ typedef struct
         OS_Dataport_t to;   // stack -> NIC
         struct
         {
+            OS_Error_t (*dev_read)(size_t* len, size_t* frames_available);
             OS_Error_t (*dev_write)(size_t* len);
             OS_Error_t (*get_mac)(void);
             // API extension: OS_Error_t (*get_link_state)(void);

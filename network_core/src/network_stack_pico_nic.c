@@ -62,30 +62,72 @@ nic_poll_data(
     struct pico_device*  dev,
     int                  loop_score)
 {
-    static unsigned int pos = 0;
     // currently we support only one NIC
-    Debug_ASSERT( &os_nic == dev );
+    Debug_ASSERT(&os_nic == dev);
 
-    // loop_score indicates max number of frames that can be processed during
-    // the invocation of this poll.
-    if (loop_score > 0)
+    static bool isLegacyInterface = false;
+    static bool isDetectionDone   = false;
+
+    const OS_Dataport_t*        nw_in = get_nic_port_from();
+    OS_NetworkStack_RxBuffer_t* buf_ptr =
+        (OS_NetworkStack_RxBuffer_t*)OS_Dataport_getBuf(*nw_in);
+
+    if (isLegacyInterface == false)
     {
-        const OS_Dataport_t* nw_in = get_nic_port_from();
-        OS_NetworkStack_RxBuffer_t* buf_ptr = (OS_NetworkStack_RxBuffer_t*)
-                                              OS_Dataport_getBuf(*nw_in);
+        size_t len;
+        size_t framesRemainig = 1;
 
-        unsigned int ring_buffer_size = nw_in->size;
-        // As long as the loop score permits, take the next frame stored in the
-        // ring buffer.
-        while (buf_ptr[pos].len != 0 && loop_score > 0)
+        while (loop_score > 0 && framesRemainig)
         {
-            Debug_LOG_DEBUG("incoming frame len %zu", buf_ptr[pos].len);
-            loop_score--;
-            pico_stack_recv(dev, buf_ptr[pos].data, buf_ptr[pos].len);
-            // set flag in shared memory that data has been read
-            buf_ptr[pos].len = 0;
+            int status = nic_rpc_dev_read(&len, &framesRemainig);
+            // if the return code is NOT_IMPLEMENTED it means the driver implements
+            // an event based interface
+            if (status != OS_SUCCESS)
+            {
+                if (status == OS_ERROR_NOT_IMPLEMENTED)
+                {
+                    if (isDetectionDone == true)
+                    {
+                        Debug_LOG_ERROR("Fatal error: RPC call returned not implemented.");
+                        exit(0);
+                    }
+                    isLegacyInterface = true;
+                    isDetectionDone   = true;
+                    Debug_LOG_WARNING("Falling back to legacy interface.");
+                }
+                else
+                {
+                    //
+                }
+                break;
+            }
 
-            pos = (pos + 1) % ring_buffer_size;
+            Debug_LOG_DEBUG("incoming frame len %zu", len);
+            pico_stack_recv(dev, (void*)buf_ptr, len);
+            loop_score--;
+            isDetectionDone = true;
+        }
+    }
+    if (isLegacyInterface == true)
+    {
+        static unsigned int pos = 0;
+        // loop_score indicates max number of frames that can be processed during
+        // the invocation of this poll.
+        if (loop_score > 0)
+        {
+            unsigned int ring_buffer_size = nw_in->size;
+            // As long as the loop score permits, take the next frame stored in the
+            // ring buffer.
+            while (buf_ptr[pos].len != 0 && loop_score > 0)
+            {
+                Debug_LOG_DEBUG("incoming frame len %zu", buf_ptr[pos].len);
+                pico_stack_recv(dev, buf_ptr[pos].data, buf_ptr[pos].len);
+                loop_score--;
+                // set flag in shared memory that data has been read
+                buf_ptr[pos].len = 0;
+
+                pos = (pos + 1) % ring_buffer_size;
+            }
         }
     }
 

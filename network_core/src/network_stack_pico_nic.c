@@ -43,15 +43,38 @@ nic_send_frame(
     memcpy(wrbuf, buf, wr_len);
     // call driver
     OS_Error_t err = nic_rpc_dev_write(&wr_len);
-    if (err != OS_SUCCESS)
+
+    int result = 0;
+    switch (err)
     {
+    case OS_SUCCESS:
+        Debug_ASSERT(wr_len == len);
+        result = len;
+        break;
+
+    case OS_ERROR_TRY_AGAIN:
+        Debug_LOG_DEBUG("Send frame couldn't complete. Retrying");
+        // returning 0 tells picotcp to retry sending the current frame
+        result = 0;
+        break;
+
+    case OS_ERROR_INVALID_PARAMETER:
+        Debug_LOG_DEBUG("Invalid frame size");
+        result = -1;
+        break;
+
+    case OS_ERROR_NOT_INITIALIZED:
+        Debug_LOG_DEBUG("Nic not initialized. Retrying");
+        // returning 0 tells picotcp to retry sending the current frame
+        result = 0;
+        break;
+
+    default:
         Debug_LOG_ERROR("nic_rpc_dev_write() failed, error %d", err);
-        return -1;
-    }
-
-    Debug_ASSERT( wr_len == len );
-
-    return len;
+        result =  -1;
+        break;
+    };
+    return result;
 }
 
 
@@ -81,25 +104,37 @@ nic_poll_data(
         {
             int status = nic_rpc_dev_read(&len, &framesRemainig);
             // if the return code is NOT_IMPLEMENTED it means the driver implements
-            // an event based interface
+            // the event based interface
             if (status != OS_SUCCESS)
             {
                 if (status == OS_ERROR_NOT_IMPLEMENTED)
                 {
                     if (isDetectionDone == true)
                     {
+                        // There is no return value we can give here which signals to the
+                        // picotcp stack that an error ocurred. The loop value we return
+                        // here is fed to a LSFR to generate randomness.
+                        // Since this error should never happen we consider it fatal and stop
+                        // execution here.
                         Debug_LOG_ERROR("Fatal error: RPC call returned not implemented.");
                         exit(0);
                     }
                     isLegacyInterface = true;
                     isDetectionDone   = true;
                     Debug_LOG_WARNING("Falling back to legacy interface.");
+                    break;
                 }
-                else
+                if (status == OS_ERROR_NOT_INITIALIZED)
                 {
-                    //
+                    // Driver didn't finish initialization. Try again later.
+                    Debug_LOG_DEBUG("Nic not initialized. Retrying");
+                    break;
                 }
-                break;
+                if (status == OS_ERROR_NO_DATA)
+                {
+                    Debug_LOG_DEBUG("No data to be read");
+                    break;
+                }
             }
 
             Debug_LOG_DEBUG("incoming frame len %zu", len);

@@ -136,7 +136,7 @@ pico_nic_initialize(const OS_NetworkStack_AddressConfig_t* config)
     Debug_LOG_INFO("MAC: %02x:%02x:%02x:%02x:%02x:%02x",
                    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5] );
 
-    static const char* drv_name  = "tapdriver";
+    static const char* drv_name  = "trentos_nic_driver";
     int ret = pico_device_init(dev, drv_name, mac);
     if (ret != 0)
     {

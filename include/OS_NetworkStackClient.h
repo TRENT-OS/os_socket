@@ -1,3 +1,4 @@
+/*  Copyright (C) 2020, Hensoldt Cyber GmbH */
 #pragma once
 
 #include "OS_Dataport.h"

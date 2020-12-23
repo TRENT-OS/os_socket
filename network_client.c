@@ -7,7 +7,7 @@
  *  connect, write and read data over socket connections.
  *
  */
-#include "LibDebug/Debug.h"
+#include "lib_debug/Debug.h"
 #include "OS_Network.h"
 #include "OS_Dataport.h"
 #include <string.h>

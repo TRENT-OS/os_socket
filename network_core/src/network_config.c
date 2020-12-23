@@ -7,7 +7,7 @@
 
 #include "OS_Types.h"
 #include "OS_Dataport.h"
-#include "LibDebug/Debug.h"
+#include "lib_debug/Debug.h"
 #include "OS_NetworkStack.h"
 #include "network_config.h"
 #include "network_stack_core.h"

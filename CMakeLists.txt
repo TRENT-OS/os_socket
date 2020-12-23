@@ -38,7 +38,7 @@ target_link_libraries(${PROJECT_NAME}
     INTERFACE
         picotcp
         os_core_api
-        os_libs
+        lib_debug
 )
 
 
@@ -60,4 +60,5 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         os_core_api
+        lib_debug
 )

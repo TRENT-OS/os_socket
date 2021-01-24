@@ -38,43 +38,47 @@ nic_send_frame(
         return -1;
     }
 
-    // copy data it into shared buffer
+    // copy data it into shared buffer and call driver
+    memcpy(wrbuf, buf, len);
     size_t wr_len = len;
-    memcpy(wrbuf, buf, wr_len);
-    // call driver
     OS_Error_t err = nic_rpc_dev_write(&wr_len);
 
-    int result = 0;
-    switch (err)
+    if (OS_SUCCESS != err)
     {
-    case OS_SUCCESS:
-        Debug_ASSERT(wr_len == len);
-        result = len;
-        break;
+        switch (err)
+        {
+        case OS_ERROR_TRY_AGAIN:
+            Debug_LOG_WARNING("Send frame couldn't complete. Retrying");
+            // returning 0 tells picoTCP to retry sending the current frame
+            return 0;
 
-    case OS_ERROR_TRY_AGAIN:
-        Debug_LOG_DEBUG("Send frame couldn't complete. Retrying");
-        // returning 0 tells picotcp to retry sending the current frame
-        result = 0;
-        break;
+        case OS_ERROR_INVALID_PARAMETER:
+            Debug_LOG_ERROR("Invalid frame size");
+            return -1;
 
-    case OS_ERROR_INVALID_PARAMETER:
-        Debug_LOG_DEBUG("Invalid frame size");
-        result = -1;
-        break;
+        case OS_ERROR_NOT_INITIALIZED:
+            Debug_LOG_ERROR("NIC not initialized");
+            return -1;
 
-    case OS_ERROR_NOT_INITIALIZED:
-        Debug_LOG_DEBUG("Nic not initialized. Retrying");
-        // returning 0 tells picotcp to retry sending the current frame
-        result = 0;
-        break;
+        default:
+            break;
+        };
 
-    default:
-        Debug_LOG_ERROR("nic_rpc_dev_write() failed, error %d", err);
-        result =  -1;
-        break;
-    };
-    return result;
+        Debug_LOG_ERROR("nic_rpc_dev_write() failed, wr_len %zu, error %d",
+                        wr_len, err);
+        return -1;
+    }
+
+    // sending was successful, do a sanity check that the whole frame was sent.
+    if (wr_len != len)
+    {
+        // this should not happen, maybe the frame is corrupt?
+        Debug_LOG_ERROR("unexpected mismatch: len %d, wr_len %zu", len, wr_len);
+        Debug_DUMP_ERROR(buf, len);
+        Debug_ASSERT(1); // halt in debug builds
+    }
+
+    return len;
 }
 
 

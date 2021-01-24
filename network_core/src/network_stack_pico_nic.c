@@ -39,7 +39,10 @@ nic_send_frame(
         return -1;
     }
 
-    // copy data into shared buffer and call driver
+    // Debug_LOG_INFO("send len %d", len);
+    // Debug_DUMP_INFO(buf, len);
+
+    // copy data it into shared buffer and call driver
     memcpy(wrbuf, buf, len);
     size_t wr_len = len;
     OS_Error_t err = nic_dev_write(&wr_len);
@@ -137,12 +140,14 @@ nic_poll_data(
                 }
                 if (status == OS_ERROR_NO_DATA)
                 {
-                    Debug_LOG_DEBUG("No data to be read");
+                    // Debug_LOG_DEBUG("No data to be read");
                     break;
                 }
             }
 
-            Debug_LOG_DEBUG("incoming frame len %zu", len);
+            // Debug_LOG_INFO("incoming frame len %zu", len);
+            // Debug_DUMP_INFO(buf_ptr, len);
+
             pico_stack_recv(dev, (void*)buf_ptr, len);
             loop_score--;
             isDetectionDone = true;
@@ -160,7 +165,9 @@ nic_poll_data(
             // ring buffer.
             while (buf_ptr[pos].len != 0 && loop_score > 0)
             {
-                Debug_LOG_DEBUG("incoming frame len %zu", buf_ptr[pos].len);
+                Debug_LOG_INFO("incoming legacy frame len %zu", buf_ptr[pos].len);
+                // Debug_DUMP_INFO(buf_ptr[pos].data, buf_ptr[pos].len);
+
                 pico_stack_recv(dev, buf_ptr[pos].data, buf_ptr[pos].len);
                 loop_score--;
                 // set flag in shared memory that data has been read

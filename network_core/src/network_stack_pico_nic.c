@@ -62,7 +62,7 @@ nic_send_frame(
 
         default:
             break;
-        };
+        }
 
         Debug_LOG_ERROR("nic_rpc_dev_write() failed, wr_len %zu, error %d",
                         wr_len, err);

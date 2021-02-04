@@ -1,10 +1,10 @@
 /*
- *  OS Network Stack
+ * OS Network Stack
  *
- *  Core functions of the TRENTOS-M Network stack, independent of any
- *  actual implementation
+ * Core functions of the TRENTOS-M Network stack, independent of any
+ * actual implementation
  *
- *  Copyright (C) 2020, Hensoldt Cyber GmbH
+ * Copyright (C) 2020-2021, HENSOLDT Cyber GmbH
  */
 
 #pragma once

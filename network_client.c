@@ -1,12 +1,12 @@
 /*
- *  OS Network App CAmkES wrapper
+ * OS Network App CAmkES wrapper
  *
- *  Copyright (C) 2019-2020, Hensoldt Cyber GmbH
+ * The API's provided here can be used by the Application to create,
+ * connect, write and read data over socket connections.
  *
- *  The API's provided here can be used by the Application to create,
- *  connect, write and read data over socket connections.
- *
+ * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */
+
 #include "lib_debug/Debug.h"
 #include "OS_Network.h"
 #include "OS_Dataport.h"

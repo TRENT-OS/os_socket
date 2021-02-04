@@ -1,10 +1,11 @@
 /*
- *  OS Network Stack
+ * OS Network Stack
  *
- *  NIC level functions for the PicoTCP implementation of the network stack.
+ * NIC level functions for the PicoTCP implementation of the network stack.
  *
- *  Copyright (C) 2020, Hensoldt Cyber GmbH
+ * Copyright (C) 2020-2021, HENSOLDT Cyber GmbH
  */
+
 #include <stddef.h>
 #include <stdlib.h>
 

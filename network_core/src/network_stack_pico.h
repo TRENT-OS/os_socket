@@ -1,10 +1,11 @@
 /*
- *  OS Network Stack
+ * OS Network Stack
  *
- *  The PicoTCP implementation of the TRENTOS-M Network Stack.
+ * The PicoTCP implementation of the TRENTOS-M Network Stack.
  *
- *  Copyright (C) 2020, Hensoldt Cyber GmbH
+ * Copyright (C) 2020-2021, HENSOLDT Cyber GmbH
  */
+
 #pragma once
 
 #include "OS_Network.h"

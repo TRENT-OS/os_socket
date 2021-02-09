@@ -103,11 +103,11 @@ nic_poll_data(
     if (isLegacyInterface == false)
     {
         size_t len;
-        size_t framesRemainig = 1;
+        size_t framesRemaining = 1;
 
-        while (loop_score > 0 && framesRemainig)
+        while (loop_score > 0 && framesRemaining)
         {
-            OS_Error_t status = nic_rpc_dev_read(&len, &framesRemainig);
+            OS_Error_t status = nic_rpc_dev_read(&len, &framesRemaining);
             // if the return code is NOT_IMPLEMENTED it means the driver implements
             // the event based interface
             if (status != OS_SUCCESS)

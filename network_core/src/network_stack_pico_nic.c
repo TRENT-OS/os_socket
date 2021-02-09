@@ -107,7 +107,7 @@ nic_poll_data(
 
         while (loop_score > 0 && framesRemainig)
         {
-            int status = nic_rpc_dev_read(&len, &framesRemainig);
+            OS_Error_t status = nic_rpc_dev_read(&len, &framesRemainig);
             // if the return code is NOT_IMPLEMENTED it means the driver implements
             // the event based interface
             if (status != OS_SUCCESS)

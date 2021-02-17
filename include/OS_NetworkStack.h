@@ -36,7 +36,6 @@ typedef struct
 
 typedef struct
 {
-    event_notify_func_t notify_init_done;
     event_wait_func_t wait_loop_event;
 
     struct
@@ -74,7 +73,6 @@ typedef struct
 
     struct
     {
-        event_notify_func_t notify_init_done;
         OS_Dataport_t port;
     } app;
 

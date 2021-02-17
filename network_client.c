@@ -35,21 +35,6 @@ OS_NetworkStackClient_init(
     return OS_SUCCESS;
 }
 
-/*******************************************************************************
- * This must actually get called during OS Run time.
- * It must initialise NW stack with Camkes glue before an APP main() is
- * triggered.
- */
-OS_Error_t
-OS_NetworkAPP_RT(
-    OS_Network_Context_t ctx)
-{
-    // wait for network stack initialization
-    event_network_stack_init_done_wait();
-
-    return OS_SUCCESS;
-}
-
 /******************************************************************************/
 OS_Error_t
 OS_NetworkSocket_close(

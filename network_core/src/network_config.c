@@ -216,24 +216,6 @@ nic_rpc_get_mac_address(void)
 
 
 //------------------------------------------------------------------------------
-void
-notify_app_init_done(void)
-{
-    const OS_NetworkStack_CamkesConfig_t* handlers = config_get_handlers();
-
-    event_notify_func_t do_notify = handlers->app.notify_init_done;
-    if (!do_notify)
-    {
-        Debug_LOG_WARNING("app.notify_init_done not set");
-        return;
-    }
-
-    Debug_LOG_INFO("%s", __func__);
-    do_notify();
-}
-
-
-//------------------------------------------------------------------------------
 const OS_Dataport_t*
 get_app_port(
     int handle)

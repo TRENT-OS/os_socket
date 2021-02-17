@@ -51,7 +51,6 @@ void internal_notify_connection(
 void internal_wait_connection(
     int handle);
 
-void wait_nic_init_done(void);
 const OS_Dataport_t* get_nic_port_from(void);
 const OS_Dataport_t* get_nic_port_to(void);
 
@@ -66,8 +65,6 @@ nic_rpc_dev_write(
 
 OS_Error_t
 nic_rpc_get_mac_address(void);
-
-void notify_app_init_done(void);
 
 const OS_Dataport_t*
 get_app_port(

@@ -400,10 +400,6 @@ OS_NetworkStack_run(
         return OS_ERROR_GENERIC;
     }
 
-    // notify app after that network stack is initialized
-    Debug_LOG_INFO("signal network stack init done");
-    notify_app_init_done();
-
     // enter endless loop processing events
     for (;;)
     {

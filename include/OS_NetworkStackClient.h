@@ -73,6 +73,3 @@ network_stack_rpc_socket_sendto(
     OS_NetworkSocket_Handle_t handle,
     size_t*                   pLen,
     OS_Network_Socket_t       dst_socket);
-
-// TODO: Remove init_done_event
-extern void event_network_stack_init_done_wait(void);

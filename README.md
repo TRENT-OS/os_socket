@@ -48,7 +48,6 @@ In order to use the Stack, your component definition needs to include the
         //A buffer to send data to/from the stack
         dataport  Buf             buffer;
         //Event received when the stack is ready to be used
-        consumes  ServiceReady    event_init_done;
     }
 
 

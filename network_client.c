@@ -234,33 +234,40 @@ OS_NetworkServerSocket_create(
     OS_NetworkServer_Socket_t* pServerStruct,
     OS_NetworkServer_Handle_t* pSrvHandle)
 {
+    OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
     OS_Error_t err = network_stack_rpc_socket_create(
                          pServerStruct->domain,
                          pServerStruct->type,
-                         pSrvHandle);
+                         &localHandle);
 
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
-        return err;
+        localHandle = OS_NetworkServer_Handle_INVALID;
+        goto exit;
     }
 
     err =
-        network_stack_rpc_socket_bind(*pSrvHandle, pServerStruct->listen_port);
+        network_stack_rpc_socket_bind(localHandle, pServerStruct->listen_port);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
-        return err;
+        goto err;
     }
 
-    err = network_stack_rpc_socket_listen(*pSrvHandle, pServerStruct->backlog);
+    err = network_stack_rpc_socket_listen(localHandle, pServerStruct->backlog);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
-        return err;
+        goto err;
     }
-
-    return OS_SUCCESS;
+    goto exit;
+err:
+    network_stack_rpc_socket_close(localHandle);
+    localHandle = OS_NetworkSocket_Handle_INVALID;
+exit:
+    *pSrvHandle = localHandle;
+    return err;
 }
 
 /*******************************************************************************
@@ -272,31 +279,38 @@ OS_NetworkSocket_create(
     OS_Network_Socket_t*       pClientStruct,
     OS_NetworkSocket_Handle_t* phandle)
 {
+    OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
     OS_Error_t err = network_stack_rpc_socket_create(
                          pClientStruct->domain,
                          pClientStruct->type,
-                         phandle);
+                         &localHandle);
 
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
-        return err;
+        localHandle = OS_NetworkSocket_Handle_INVALID;
+        goto exit;
     }
 
     if (pClientStruct->type == OS_SOCK_DGRAM)
     {
-        return OS_SUCCESS;
+        goto exit;
     }
 
     err = network_stack_rpc_socket_connect(
-              *phandle,
+              localHandle,
               pClientStruct->name,
               pClientStruct->port);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_connect() failed with error %d", err);
-        return err;
+        goto err;
     }
-
-    return OS_SUCCESS;
+    goto exit;
+err:
+    network_stack_rpc_socket_close(localHandle);
+    localHandle = OS_NetworkSocket_Handle_INVALID;
+exit:
+    *phandle = localHandle;
+    return err;
 }

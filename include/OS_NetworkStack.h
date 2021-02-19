@@ -85,7 +85,30 @@ typedef struct
     char* subnet_mask;  /**< pointer to subnet mask */
 } OS_NetworkStack_AddressConfig_t;
 
+/**
+ * @brief Initialize network stack
+ *
+ * Initialize the network stack
+ *
+ * @param camkes_config (required) camkes configuration
+ * @param config (required) network configuration
+ *
+ * @return an error code
+ * @retval OS_SUCCESS if operation succeeded
+ * @retval OS_ERROR_INVALID_PARAMETER if a parameter was missing or invalid
+ */
 OS_Error_t
-OS_NetworkStack_run(
+OS_NetworkStack_init(
     const OS_NetworkStack_CamkesConfig_t* camkes_config,
     const OS_NetworkStack_AddressConfig_t* config);
+
+/**
+ * @brief Run network stack
+ *
+ *
+ * @return an error code
+ * @retval OS_SUCCESS if gracefully stopped
+ * @retval OS_ERROR_INVALID_STATE if not initialized (see OS_NetworkStack_init())
+ */
+OS_Error_t
+OS_NetworkStack_run(void);

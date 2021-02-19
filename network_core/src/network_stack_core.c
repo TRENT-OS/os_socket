@@ -368,37 +368,55 @@ get_dataport_for_handle(
     }
     return &(instance.sockets[handle].buf);
 }
+
+
 //------------------------------------------------------------------------------
-// CAmkES run()
 OS_Error_t
-OS_NetworkStack_run(
+OS_NetworkStack_init(
     const OS_NetworkStack_CamkesConfig_t*  camkes_config,
     const OS_NetworkStack_AddressConfig_t*         config)
 {
-    OS_Error_t err;
+    if ((NULL == camkes_config) || (NULL == config))
+    {
+        Debug_LOG_ERROR("%s: cannot accept NULL arguments", __func__);
+        return OS_ERROR_INVALID_PARAMETER;
+    }
 
-    // remember config
-    Debug_ASSERT( NULL != camkes_config );
     instance.camkes_cfg = camkes_config;
-
-    Debug_ASSERT( NULL != config );
     instance.cfg        = config;
 
-    instance.sockets    = camkes_config->internal.sockets;
-    instance.number_of_sockets = camkes_config->internal.number_of_sockets;
+    instance.sockets    = instance.camkes_cfg->internal.sockets;
+    instance.number_of_sockets
+        = camkes_config->internal.number_of_sockets;
 
     network_stack_interface_t network_stack = network_stack_pico_get_config();
 
     // initialize Network Stack and set API functions
     network_stack.stack_init();
     // initialize NIC
-    err = network_stack.nic_init(config);
-
+    OS_Error_t err = network_stack.nic_init(instance.cfg);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("initialize_nic() failed, error %d", err);
         return OS_ERROR_GENERIC;
     }
+
+    return OS_SUCCESS;
+}
+
+
+//------------------------------------------------------------------------------
+// CAmkES run()
+OS_Error_t
+OS_NetworkStack_run(void)
+{
+    if ((NULL == instance.camkes_cfg) || (NULL == instance.cfg))
+    {
+        Debug_LOG_ERROR("%s: cannot run on missing or failed initialization", __func__);
+        return OS_ERROR_INVALID_STATE;
+    }
+
+    network_stack_interface_t network_stack = network_stack_pico_get_config();
 
     // enter endless loop processing events
     for (;;)

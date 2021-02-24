@@ -252,6 +252,7 @@ handle_pico_socket_event(
         pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d (%s)",
                         socket, cur_pico_err, pico_err2str(cur_pico_err));
+        internal_notify_connection(handle);
         internal_notify_read(handle);
     }
 }
@@ -374,6 +375,14 @@ network_stack_pico_socket_connect(
 
     Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
     internal_wait_connection(handle);
+
+    if ((socket->state & PICO_SOCKET_STATE_CONNECTED) == 0)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] could not connect socket",
+                        handle, socket);
+        return OS_ERROR_GENERIC;
+    }
+
     Debug_LOG_INFO("[socket %d/%p] connection established to %s:%d",
                    handle, socket, name, port);
 

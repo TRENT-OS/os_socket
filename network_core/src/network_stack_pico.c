@@ -508,17 +508,20 @@ network_stack_pico_socket_write(
         return OS_ERROR_INVALID_HANDLE;
     }
 
-    const OS_Dataport_t* app_port = get_app_port(handle);
+    const OS_Dataport_t*    app_port    = get_app_port(handle);
+    size_t                  len         = *pLen;
+    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (*pLen > OS_Dataport_getSize(*app_port))
+    if (len > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
+                        len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
     internal_wait_write(handle);
 
-    int ret = pico_socket_write(socket, OS_Dataport_getBuf(*app_port), *pLen);
+    int ret = pico_socket_write(socket, OS_Dataport_getBuf(*app_port), len);
     OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
     sock->event = 0;
 
@@ -555,12 +558,14 @@ network_stack_pico_socket_read(
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
-    const OS_Dataport_t* app_port = get_app_port(handle);
-    uint8_t* buf = OS_Dataport_getBuf(*app_port);
+    const OS_Dataport_t*    app_port    = get_app_port(handle);
+    uint8_t*                buf         = OS_Dataport_getBuf(*app_port);
+    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (*pLen > OS_Dataport_getSize(*app_port))
+    if (len > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
+                        len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
@@ -635,11 +640,14 @@ network_stack_pico_socket_sendto(
         *pLen = 0;
         return OS_ERROR_INVALID_HANDLE;
     }
-    const OS_Dataport_t* app_port = get_app_port(handle);
+    const OS_Dataport_t*    app_port    = get_app_port(handle);
+    size_t                  len         = *pLen;
+    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (*pLen > OS_Dataport_getSize(*app_port))
+    if (len > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
+                        len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
@@ -648,7 +656,7 @@ network_stack_pico_socket_sendto(
     pico_string_to_ipv4(dst_socket.name, &dst.addr);
     dport = short_be(dst_socket.port);
 
-    int ret = pico_socket_sendto(socket, OS_Dataport_getBuf(*app_port), *pLen, &dst,
+    int ret = pico_socket_sendto(socket, OS_Dataport_getBuf(*app_port), len, &dst,
                                  dport);
 
     OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
@@ -692,17 +700,19 @@ network_stack_pico_socket_recvfrom(
     OS_Error_t retval = OS_SUCCESS;
     size_t     len    = *pLen;
 
-    const OS_Dataport_t* app_port = get_app_port(handle);
-    uint8_t*             buf      = *(app_port->io);
+    const OS_Dataport_t*    app_port   = get_app_port(handle);
+    uint8_t*                buf        = OS_Dataport_getBuf(*app_port);;
+    size_t                  dpSize     = OS_Dataport_getSize(*app_port);
 
     struct pico_ip4 src = {};
     uint16_t        sport;
 
     int ret;
 
-    if (*pLen > app_port->size)
+    if (len > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
+                        len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
     // pico_socket_recvfrom will from time to time return 0 bytes read,

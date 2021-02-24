@@ -86,11 +86,13 @@ OS_NetworkSocket_read(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp = get_data_port(handle);
+    const OS_Dataport_t dp  = get_data_port(handle);
+    const size_t dpSize     = OS_Dataport_getSize(dp);
 
-    if (requestedLen > OS_Dataport_getSize(dp))
+    if (requestedLen > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
+                        requestedLen, dpSize, handle);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
@@ -123,11 +125,13 @@ OS_NetworkSocket_recvfrom(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp = get_data_port(handle);
+    const OS_Dataport_t dp  = get_data_port(handle);
+    const size_t dpSize     = OS_Dataport_getSize(dp);
 
-    if (requestedLen > OS_Dataport_getSize(dp))
+    if (requestedLen > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
+                        requestedLen, dpSize, handle);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
@@ -159,11 +163,13 @@ OS_NetworkSocket_write(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp = get_data_port(handle);
+    const OS_Dataport_t dp  = get_data_port(handle);
+    const size_t dpSize     = OS_Dataport_getSize(dp);
 
-    if (requestedLen > OS_Dataport_getSize(dp))
+    if (requestedLen > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
+                        requestedLen, dpSize, handle);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
@@ -190,11 +196,13 @@ OS_NetworkSocket_sendto(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp = get_data_port(handle);
+    const OS_Dataport_t dp  = get_data_port(handle);
+    const size_t dpSize     = OS_Dataport_getSize(dp);
 
-    if (requestedLen > OS_Dataport_getSize(dp))
+    if (requestedLen > dpSize)
     {
-        Debug_LOG_ERROR("Buffer size exceeds dataport size");
+        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
+                        requestedLen, dpSize, handle);
         return OS_ERROR_INVALID_PARAMETER;
     }
 

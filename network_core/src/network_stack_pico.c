@@ -19,6 +19,8 @@
 #include "pico_socket.h"
 #include "pico_stack.h"
 
+#include "lib_debug/Debug.h"
+
 //------------------------------------------------------------------------------
 __attribute__((unused)) static const char*
 pico_err2str(

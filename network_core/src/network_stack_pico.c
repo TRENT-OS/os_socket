@@ -97,7 +97,7 @@ translate_socket_domain(
     }
 
     Debug_LOG_ERROR("unsupported socket domain %u", domain);
-    return OS_ERROR_GENERIC;
+    return -1;
 }
 
 
@@ -120,7 +120,7 @@ translate_socket_type(
     }
 
     Debug_LOG_ERROR("unsupported socket type %u", socket_type);
-    return OS_ERROR_GENERIC;
+    return -1;
 }
 
 
@@ -266,14 +266,14 @@ network_stack_pico_socket_create(
     int*  pHandle)
 {
     int pico_domain = translate_socket_domain(domain);
-    if (OS_ERROR_GENERIC == pico_domain)
+    if (pico_domain < 0)
     {
         Debug_LOG_ERROR("unsupported domain %d", domain);
         return OS_ERROR_GENERIC;
     }
 
     int pico_type = translate_socket_type(socket_type);
-    if (OS_ERROR_GENERIC == pico_type)
+    if (pico_type < 0)
     {
         Debug_LOG_ERROR("unsupported type %d", socket_type);
         return OS_ERROR_GENERIC;

@@ -15,6 +15,9 @@
 
 typedef struct
 {
+    // The following variables are written from one thread (control thread) and
+    // read from another (RPC thread) therefore volatile is needed to tell the
+    // compiler that variable content can change outside of its control.
     volatile int status;
     volatile bool listening;
     volatile int accepted_handle;

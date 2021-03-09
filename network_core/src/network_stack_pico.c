@@ -919,10 +919,14 @@ network_stack_pico_socket_recvfrom(
 
             return err;
         }
+        // If source_socket is NULL it means the user doesn't want the
+        // sender's information.
+        if (NULL != source_socket)
+        {
+            pico_ipv4_to_string(source_socket->name, src.addr);
 
-        pico_ipv4_to_string(source_socket->name, src.addr);
-
-        source_socket->port = short_be(sport);
+            source_socket->port = short_be(sport);
+        }
     }
     while (ret == 0);
 

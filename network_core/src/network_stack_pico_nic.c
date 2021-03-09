@@ -39,7 +39,7 @@ nic_send_frame(
         return -1;
     }
 
-    // copy data it into shared buffer and call driver
+    // copy data into shared buffer and call driver
     memcpy(wrbuf, buf, len);
     size_t wr_len = len;
     OS_Error_t err = nic_dev_write(&wr_len);

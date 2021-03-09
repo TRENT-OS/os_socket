@@ -204,7 +204,6 @@ reserve_handle(
         {
             instance.sockets[i].status = SOCKET_IN_USE;
             instance.sockets[i].implementation_socket = impl_sock;
-            instance.sockets[i].listening = false;
             handle = i;
             break;
         }

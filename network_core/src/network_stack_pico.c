@@ -279,11 +279,10 @@ network_stack_pico_socket_create(
         return OS_ERROR_GENERIC;
     }
     internal_network_stack_thread_safety_mutex_lock();
-    struct pico_socket* socket = pico_socket_open(pico_domain,
-                                                  pico_type,
-                                                  &handle_pico_socket_event);
+    struct pico_socket* pico_socket =
+        pico_socket_open(pico_domain, pico_type, &handle_pico_socket_event);
     internal_network_stack_thread_safety_mutex_unlock();
-    if (NULL == socket)
+    if (NULL == pico_socket)
     {
         // try to detailed error from PicoTCP. Actually, nw_socket_open()
         // should return a proper error code and populate a handle passed as
@@ -297,22 +296,26 @@ network_stack_pico_socket_create(
     if (socket_type == OS_SOCK_STREAM) // TCP socket
     {
         // disable nagle algorithm (1=disable, 0=enable)
-        helper_socket_set_option_int(socket, PICO_TCP_NODELAY, 1);
+        helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
     }
 
-    *pHandle = reserve_handle(socket);
+    int handle = reserve_handle(pico_socket);
 
-    if (*pHandle == -1)
+    if (handle == -1)
     {
         internal_network_stack_thread_safety_mutex_lock();
-        pico_socket_close(socket);
+        if (pico_socket_close(pico_socket) != 0)
+        {
+            cur_pico_err = pico_err;
+        }
         internal_network_stack_thread_safety_mutex_unlock();
         Debug_LOG_ERROR("No free socket could be found");
         return OS_ERROR_GENERIC;
     }
 
-    Debug_LOG_INFO("[socket %d/%p] created new socket", *pHandle, socket);
+    *pHandle = handle;
 
+    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
     return OS_SUCCESS;
 }
 

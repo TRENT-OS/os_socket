@@ -770,7 +770,11 @@ network_stack_pico_socket_read(
     Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
                     handle, pico_socket, tot_len);
 
-    Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
+    Debug_hexDump(
+        Debug_LOG_LEVEL_TRACE,
+        "",
+        OS_Dataport_getBuf(*app_port),
+        tot_len);
 #endif
 
     *pLen = tot_len;
@@ -921,9 +925,15 @@ network_stack_pico_socket_recvfrom(
 
     Debug_LOG_TRACE(
         "[socket %d/%p] read data length=%d, data follows below",
-        handle, pico_socket, tot_len);
+        handle,
+        socket,
+        len);
 
-    Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
+    Debug_hexDump(
+        Debug_LOG_LEVEL_TRACE,
+        "",
+        OS_Dataport_getBuf(*app_port),
+        len);
 #endif
 
     *pLen = ret;

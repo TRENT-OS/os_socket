@@ -21,6 +21,7 @@ typedef struct
     volatile int status;
     volatile int accepted_handle;
     volatile int event;
+    volatile OS_Error_t current_error;
 
     event_notify_func_t notify_connection;
     event_wait_func_t wait_connection;

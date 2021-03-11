@@ -20,6 +20,76 @@
 #include "pico_stack.h"
 
 #include "lib_debug/Debug.h"
+#include "lib_debug/Debug_OS_Error.h"
+
+//------------------------------------------------------------------------------
+static OS_Error_t
+pico_err2os(
+    pico_err_t err)
+{
+    switch (err)
+    {
+    case PICO_ERR_NOERR:
+        return OS_SUCCESS;
+    case PICO_ERR_ENOENT:
+        return OS_ERROR_NOT_FOUND;
+    case PICO_ERR_EIO:
+    case PICO_ERR_ENXIO:
+        return OS_ERROR_IO;
+    case PICO_ERR_EAGAIN:
+    case PICO_ERR_EBUSY:
+        return OS_ERROR_TRY_AGAIN;
+    case PICO_ERR_ENOMEM:
+        return OS_ERROR_INSUFFICIENT_SPACE;
+    case PICO_ERR_EACCESS:
+        return OS_ERROR_ACCESS_DENIED;
+    case PICO_ERR_EEXIST:
+        return OS_ERROR_EXISTS;
+    case PICO_ERR_EINVAL:
+        return OS_ERROR_INVALID_PARAMETER;
+    case PICO_ERR_ENONET:
+        return OS_ERROR_NETWORK_NO_ROUTE;
+    case PICO_ERR_EPROTO:
+        return OS_ERROR_NETWORK_PROTO;
+    case PICO_ERR_ENOPROTOOPT:
+        return OS_ERROR_NETWORK_PROTO_OPT_NO_SUPPORT;
+    case PICO_ERR_EPROTONOSUPPORT:
+        return OS_ERROR_NETWORK_PROTO_NO_SUPPORT;
+    case PICO_ERR_EOPNOTSUPP:
+        return OS_ERROR_NETWORK_OP_NO_SUPPORT;
+    case PICO_ERR_EADDRINUSE:
+        return OS_ERROR_NETWORK_ADDR_IN_USE;
+    case PICO_ERR_EADDRNOTAVAIL:
+        return OS_ERROR_NETWORK_ADDR_NOT_AVAILABLE;
+    case PICO_ERR_ENETDOWN:
+        return OS_ERROR_NETWORK_DOWN;
+    case PICO_ERR_ENETUNREACH:
+        return OS_ERROR_NETWORK_UNREACHABLE;
+    case PICO_ERR_ECONNRESET:
+        return OS_ERROR_NETWORK_CONN_RESET;
+    case PICO_ERR_EISCONN:
+        return OS_ERROR_NETWORK_CONN_ALREADY_BOUND;
+    case PICO_ERR_ENOTCONN:
+        return OS_ERROR_NETWORK_CONN_NONE;
+    case PICO_ERR_ESHUTDOWN:
+        return OS_ERROR_NETWORK_CONN_SHUTDOWN;
+    case PICO_ERR_ETIMEDOUT:
+        return OS_ERROR_TIMEOUT;
+    case PICO_ERR_ECONNREFUSED:
+        return OS_ERROR_NETWORK_CONN_REFUSED;
+    case PICO_ERR_EHOSTDOWN:
+        return OS_ERROR_NETWORK_HOST_DOWN;
+    case PICO_ERR_EHOSTUNREACH:
+        return OS_ERROR_NETWORK_HOST_UNREACHABLE;
+    case PICO_ERR_EINPROGRESS:
+        return OS_ERROR_IN_PROGRESS;
+    default:
+        // PICO_ERR_EPERM
+        // PICO_ERR_EINTR
+        // PICO_ERR_EFAULT
+        return OS_ERROR_GENERIC;
+    }
+}
 
 //------------------------------------------------------------------------------
 __attribute__((unused)) static const char*
@@ -137,19 +207,24 @@ helper_socket_set_option_int(
 
 //------------------------------------------------------------------------------
 static void
-handle_incoming_connection(
-    struct pico_socket*  socket)
+handle_incoming_connection(OS_NetworkStack_SocketResources_t* socket)
 {
+    Debug_ASSERT(socket != NULL);// can't be null, as callers do the check
     uint16_t port = 0;
     struct pico_ip4 orig = {0};
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid socket above
+
     internal_network_stack_thread_safety_mutex_lock();
-    struct pico_socket* s_in = pico_socket_accept(socket, &orig, &port);
+    struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
     if (NULL == s_in)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, pico_err = %d (%s)",
-                        socket, cur_pico_err, pico_err2str(cur_pico_err));
+        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, OS error = %d (%s)",
+                        pico_socket, err, Debug_OS_Error_toString(err));
         return;
     }
 
@@ -160,7 +235,7 @@ handle_incoming_connection(
     //       better use short_be(port)
 
     Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
-                   socket, peer, port, s_in);
+                   pico_socket, peer, port, s_in);
 
     // The default values below are taken from the TCP unit tests of
     // PicoTCP, see tests/examples/tcpecho.c
@@ -178,7 +253,7 @@ handle_incoming_connection(
     helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
 
     int accepted_handle = reserve_handle(s_in);
-    set_accepted_handle(get_handle_from_implementation_socket(socket),
+    set_accepted_handle(get_handle_from_implementation_socket(pico_socket),
                         accepted_handle);
 }
 
@@ -187,50 +262,47 @@ handle_incoming_connection(
 static void
 handle_pico_socket_event(
     uint16_t             event_mask,
-    struct pico_socket*  socket)
+    struct pico_socket*  pico_socket)
 {
-    Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",
-                    get_handle_from_implementation_socket(socket), socket,
-                    event_mask, TCPSTATE(socket));
-    // remember the last event
-    int handle = get_handle_from_implementation_socket(socket);
-    if (handle == -1)
+    int handle = get_handle_from_implementation_socket(pico_socket);
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
     {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
         return;
     }
-    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
-    sock->event = event_mask;
+    Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",
+                    handle, pico_socket, event_mask, TCPSTATE(pico_socket));
 
+    socket->event = event_mask;
 
     if (event_mask & PICO_SOCK_EV_CONN)
     {
-        Debug_LOG_DEBUG("[socket %p] PICO_SOCK_EV_CONN", socket);
+        Debug_LOG_DEBUG("[socket %p] PICO_SOCK_EV_CONN", pico_socket);
 
-        if (socket->state & PICO_SOCKET_STATE_TCP_LISTEN)
+        if (pico_socket->state & PICO_SOCKET_STATE_TCP_LISTEN)
         {
             // SYN has arrived
             handle_incoming_connection(socket);
-            sock->event = event_mask; // no event is pending
         }
         else
         {
             // SYN-ACK has arrived
-            Debug_LOG_INFO(
-                "[socket %p] incoming connection established",
-                socket);
+            Debug_LOG_INFO("[socket %p] incoming connection established",
+                           pico_socket);
         }
         internal_notify_connection(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_RD)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", socket);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", pico_socket);
         internal_notify_read(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_WR)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", socket);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", pico_socket);
         // notify app, which is waiting to write
         internal_notify_write(handle);
         // notify network stack loop about an event
@@ -239,21 +311,24 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", socket);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", pico_socket);
         internal_notify_read(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", socket);
+        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", pico_socket);
         internal_notify_read(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_ERR)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, pico_err = %d (%s)",
-                        socket, cur_pico_err, pico_err2str(cur_pico_err));
+        OS_Error_t err          =  pico_err2os(pico_err);
+        socket->current_error   = err;
+        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, OS error = %d (%s)",
+                        pico_socket,
+                        err,
+                        Debug_OS_Error_toString(err));
         internal_notify_connection(handle);
         internal_notify_read(handle);
     }
@@ -269,28 +344,28 @@ network_stack_pico_socket_create(
     if (pico_domain < 0)
     {
         Debug_LOG_ERROR("unsupported domain %d", domain);
-        return OS_ERROR_GENERIC;
+        return OS_ERROR_NETWORK_PROTO_NO_SUPPORT;
     }
 
     int pico_type = translate_socket_type(socket_type);
     if (pico_type < 0)
     {
         Debug_LOG_ERROR("unsupported type %d", socket_type);
-        return OS_ERROR_GENERIC;
+        return OS_ERROR_NETWORK_PROTO_NO_SUPPORT;
     }
     internal_network_stack_thread_safety_mutex_lock();
     struct pico_socket* pico_socket =
         pico_socket_open(pico_domain, pico_type, &handle_pico_socket_event);
+    pico_err_t cur_pico_err = pico_err;
     internal_network_stack_thread_safety_mutex_unlock();
     if (NULL == pico_socket)
     {
         // try to detailed error from PicoTCP. Actually, nw_socket_open()
         // should return a proper error code and populate a handle passed as
         // pointer parameter, so we don't need to access pico_err here.
-        pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR("socket opening failed, pico_err = %d (%s)",
                         cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
+        return pico_err2os(cur_pico_err);
     }
 
     if (socket_type == OS_SOCK_STREAM) // TCP socket
@@ -309,11 +384,21 @@ network_stack_pico_socket_create(
             cur_pico_err = pico_err;
         }
         internal_network_stack_thread_safety_mutex_unlock();
+
+        if (PICO_ERR_NOERR != cur_pico_err)
+        {
+            Debug_LOG_ERROR("socket closing failed, pico_err = %d (%s)",
+                            cur_pico_err, pico_err2str(cur_pico_err));
+        }
         Debug_LOG_ERROR("No free socket could be found");
-        return OS_ERROR_GENERIC;
+        return OS_ERROR_INSUFFICIENT_SPACE;
     }
 
-    *pHandle = handle;
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    Debug_ASSERT(socket != NULL); // can't be null, as we got a valid handle above
+
+    socket->current_error   = pico_err2os(cur_pico_err);
+    *pHandle                = handle;
 
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
     return OS_SUCCESS;
@@ -323,26 +408,31 @@ OS_Error_t
 network_stack_pico_socket_close(
     int handle)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
-    if (socket == NULL)
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] close() with invalid handle", handle);
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
         return OS_ERROR_INVALID_HANDLE;
     }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket != NULL);// can't be null, we got a valid handle above
+
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_close(socket);
+    int ret = pico_socket_close(pico_socket);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
+
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, translating to OS error %d (%s)",
+                        handle, pico_socket, ret,
+                        err, Debug_OS_Error_toString(err));
         free_handle(handle);
-        return OS_ERROR_GENERIC;
+        return err;
     }
     free_handle(handle);
-    Debug_LOG_INFO("[socket %d/%p] close() handle", handle, socket);
+    Debug_LOG_INFO("[socket %d/%p] close() handle", handle, pico_socket);
     return OS_SUCCESS;
 }
 
@@ -353,43 +443,55 @@ network_stack_pico_socket_connect(
     const char*  name,
     int          port)
 {
-
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
-    if (socket == NULL)
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] connect() with invalid handle", handle);
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
         return OS_ERROR_INVALID_HANDLE;
     }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
 
     Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
-                    handle, socket, name, port);
+                    handle, pico_socket, name, port);
 
     struct pico_ip4 dst;
-    pico_string_to_ipv4(name, &dst.addr);
+    if (pico_string_to_ipv4(name, &dst.addr) < 0)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] pico_string_to_ipv4() failed translating name '%s'",
+                        handle, pico_socket, name);
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_connect(socket, &dst, short_be(port));
+    int ret = pico_socket_connect(pico_socket, &dst, short_be(port));
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_connect() failed with error %d, translating to OS error %d (%s)",
+                        handle, pico_socket, ret,
+                        err, Debug_OS_Error_toString(err));
+        return err;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, socket);
+    Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, pico_socket);
     internal_wait_connection(handle);
+    internal_network_stack_thread_safety_mutex_lock();
+    err = socket->current_error;
+    internal_network_stack_thread_safety_mutex_unlock();
 
-    if ((socket->state & PICO_SOCKET_STATE_CONNECTED) == 0)
+    if ((pico_socket->state & PICO_SOCKET_STATE_CONNECTED) == 0)
     {
-        Debug_LOG_ERROR("[socket %d/%p] could not connect socket",
-                        handle, socket);
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %d/%p] could not connect socket, OS error %d (%s)",
+                        handle, pico_socket, err, Debug_OS_Error_toString(err));
+        return err;
     }
 
     Debug_LOG_INFO("[socket %d/%p] connection established to %s:%d",
-                   handle, socket, name, port);
+                   handle, pico_socket, name, port);
 
     return OS_SUCCESS;
 
@@ -401,27 +503,31 @@ network_stack_pico_socket_bind(
     int handle,
     uint16_t port)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
-    if (socket == NULL)
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] bind() with invalid handle", handle);
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
         return OS_ERROR_INVALID_HANDLE;
     }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
 
-    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, socket, port);
+    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, pico_socket, port);
 
     struct pico_ip4 ZERO_IP4 = { 0 };
     uint16_t be_port = short_be(port);
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_bind(socket, &ZERO_IP4, &be_port);
+    int ret = pico_socket_bind(pico_socket, &ZERO_IP4, &be_port);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_bind() failed with error %d, translating to OS error %d (%s)",
+                        handle, pico_socket, ret,
+                        err, Debug_OS_Error_toString(err));
+        return err;
     }
 
     return OS_SUCCESS;
@@ -434,13 +540,15 @@ network_stack_pico_socket_listen(
     int handle,
     int backlog)
 {
-
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
-    if (socket == NULL)
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
     {
-        Debug_LOG_ERROR("[socket %d] listen() with invalid handle", handle);
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
         return OS_ERROR_INVALID_HANDLE;
     }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
 
     // currently we support just one incoming connection, so everything is hard
     // coded
@@ -448,17 +556,20 @@ network_stack_pico_socket_listen(
     if (handle_socket_server != handle)
     {
         Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, socket, handle_socket_server);
+                        handle, pico_socket, handle_socket_server);
         return OS_ERROR_INVALID_HANDLE;
     }
-    int ret = pico_socket_listen(socket, backlog);
+    internal_network_stack_thread_safety_mutex_lock();
+    int ret = pico_socket_listen(pico_socket, backlog);
+    OS_Error_t err = pico_err2os(pico_err);
+    socket->current_error = err;
+    internal_network_stack_thread_safety_mutex_unlock();
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_listen() failed with error %d, translating to OS error %d (%s)",
+                        handle, pico_socket, ret,
+                        err, Debug_OS_Error_toString(err));
+        return err;
     }
 
     return OS_SUCCESS;
@@ -474,18 +585,30 @@ network_stack_pico_socket_accept(
     int* pClient_handle,
     uint16_t port)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+    if (NULL == socket)
+    {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
+
     // set default
     *pClient_handle = -1;
 
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
-    if (socket == NULL)
+    if (pico_socket == NULL)
     {
         Debug_LOG_ERROR("[socket %d] accept() with invalid handle", handle);
         return OS_ERROR_INVALID_HANDLE;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, socket);
+    Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, pico_socket);
     internal_wait_connection(handle);
+    internal_network_stack_thread_safety_mutex_lock();
+    OS_Error_t err = socket->current_error;
+    internal_network_stack_thread_safety_mutex_unlock();
 
     *pClient_handle = get_accepted_handle(handle);
     Debug_LOG_INFO("Accepted [socket %d/%p]",
@@ -495,14 +618,15 @@ network_stack_pico_socket_accept(
     struct pico_socket* client_socket = get_implementation_socket_from_handle(
                                             *pClient_handle);
 
-    if (client_socket == NULL )
+    if (client_socket == NULL)
     {
-        Debug_LOG_ERROR("[socket %d/%p] no client to accept", handle, socket);
-        return OS_ERROR_GENERIC;
+        Debug_LOG_ERROR("[socket %d/%p] no client to accept, OS error %d (%s)",
+                        handle, pico_socket, err, Debug_OS_Error_toString(err));
+        return socket->current_error;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
-                    handle, socket, *pClient_handle, client_socket);
+                    handle, pico_socket, *pClient_handle, client_socket);
 
     return OS_SUCCESS;
 
@@ -514,8 +638,17 @@ network_stack_pico_socket_write(
     int handle,
     size_t* pLen)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
+    {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
+
+    if (NULL == pico_socket)
     {
         Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
         *pLen = 0;
@@ -535,21 +668,23 @@ network_stack_pico_socket_write(
 
     internal_wait_write(handle);
 
-    int ret = pico_socket_write(socket, OS_Dataport_getBuf(*app_port), len);
-    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
-    sock->event = 0;
+    internal_network_stack_thread_safety_mutex_lock();
+    int ret = pico_socket_write(pico_socket, OS_Dataport_getBuf(*app_port), len);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
+    internal_network_stack_thread_safety_mutex_unlock();
 
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, pico_err %d (%s)",
-                        handle, socket, ret,
-                        cur_pico_err, pico_err2str(cur_pico_err));
+        Debug_LOG_ERROR("[socket %d/%p] nw_socket_write() failed with error %d, translating to OS error %d (%s)",
+                        handle, pico_socket, ret,
+                        err, Debug_OS_Error_toString(err));
         *pLen = 0;
-        return OS_ERROR_GENERIC;
+        return err;
     }
 
-    *pLen = ret;
+    socket->event = 0;
+    *pLen       = ret;
     return OS_SUCCESS;
 }
 
@@ -560,8 +695,18 @@ network_stack_pico_socket_read(
     int handle,
     size_t* pLen)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
+    {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
+
+
+    if (NULL == pico_socket)
     {
         Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
         *pLen = 0;
@@ -585,39 +730,30 @@ network_stack_pico_socket_read(
 
     do
     {
-        int ret = pico_socket_read(socket, buf + tot_len, len - tot_len);
+        internal_network_stack_thread_safety_mutex_lock();
+        int ret = pico_socket_read(pico_socket, buf + tot_len, len - tot_len);
+        OS_Error_t err =  pico_err2os(pico_err);
+        socket->current_error = err;
+        internal_network_stack_thread_safety_mutex_unlock();
         if (ret < 0)
         {
-            pico_err_t cur_pico_err = pico_err;
-            if (cur_pico_err == PICO_ERR_ESHUTDOWN)
-            {
-                Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
-                               handle, socket);
-                retval = OS_ERROR_CONNECTION_CLOSED;
-                break;
-            }
-
-            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, pico_err %d (%s)",
-                            handle, socket, ret,
-                            cur_pico_err, pico_err2str(cur_pico_err));
-
-            retval =  OS_ERROR_GENERIC;
+            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, translating to OS error %d (%s)",
+                            handle, pico_socket, ret,
+                            err, Debug_OS_Error_toString(err));
+            retval =  err;
             break;
         }
 
         if ((0 == ret) && (len > 0))
         {
-
-            OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
-
             /* wait for a new RD event -- also wait possibly for a CLOSE event */
             internal_wait_read(handle);
-            if (sock->event  & PICO_SOCK_EV_CLOSE)
+            if (socket->event  & PICO_SOCK_EV_CLOSE)
             {
                 /* closing of socket must be done by the app after return */
-                sock->event  = 0;
+                socket->event  = 0;
                 Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
-                               handle, socket);
+                               handle, pico_socket);
                 retval = OS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
                 break;
             }
@@ -631,7 +767,7 @@ network_stack_pico_socket_read(
 #if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
 
     Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
-                    handle, socket, tot_len);
+                    handle, pico_socket, tot_len);
 
     Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
 #endif
@@ -647,8 +783,17 @@ network_stack_pico_socket_sendto(
     size_t*             pLen,
     OS_Network_Socket_t dst_socket)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
+    {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
+
+    if (NULL == pico_socket)
     {
         Debug_LOG_ERROR("[socket %d] sendto() with invalid handle", handle);
         *pLen = 0;
@@ -670,28 +815,30 @@ network_stack_pico_socket_sendto(
     pico_string_to_ipv4(dst_socket.name, &dst.addr);
     dport = short_be(dst_socket.port);
 
-    int ret = pico_socket_sendto(socket, OS_Dataport_getBuf(*app_port), len, &dst,
+    internal_network_stack_thread_safety_mutex_lock();
+    int ret = pico_socket_sendto(pico_socket, OS_Dataport_getBuf(*app_port), len,
+                                 &dst,
                                  dport);
-
-    OS_NetworkStack_SocketResources_t* sock = get_socket_from_handle(handle);
-    sock->event = 0;
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
+    internal_network_stack_thread_safety_mutex_unlock();
 
     if (ret < 0)
     {
-        pico_err_t cur_pico_err = pico_err;
         Debug_LOG_ERROR(
             "[socket %d/%p] nw_socket_sendto() failed with error %d, "
-            "pico_err %d (%s)",
+            "translating to OS error %d (%s)",
             handle,
-            socket,
+            pico_socket,
             ret,
-            cur_pico_err,
-            pico_err2str(cur_pico_err));
+            err,
+            Debug_OS_Error_toString(err));
         *pLen = 0;
-        return OS_ERROR_GENERIC;
+        return err;
     }
 
-    *pLen = ret;
+    socket->event = 0;
+    *pLen       = ret;
     return OS_SUCCESS;
 }
 
@@ -703,8 +850,17 @@ network_stack_pico_socket_recvfrom(
     size_t*              pLen,
     OS_Network_Socket_t* source_socket)
 {
-    struct pico_socket* socket = get_implementation_socket_from_handle(handle);
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
+    {
+        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        return OS_ERROR_INVALID_HANDLE;
+    }
+    struct pico_socket* pico_socket = socket->implementation_socket;
+    Debug_ASSERT(pico_socket !=
+                 NULL); // can't be null, as we got a valid handle above
+
+    if (NULL == pico_socket)
     {
         Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
         *pLen = 0;
@@ -738,18 +894,20 @@ network_stack_pico_socket_recvfrom(
     {
         internal_wait_read(handle);
 
-        ret = pico_socket_recvfrom(socket, buf, len, &src, &sport);
+        internal_network_stack_thread_safety_mutex_lock();
+        ret = pico_socket_recvfrom(pico_socket, buf, len, &src, &sport);
+        OS_Error_t err =  pico_err2os(pico_err);
+        socket->current_error = err;
+        internal_network_stack_thread_safety_mutex_unlock();
 
         if (ret < 0)
         {
-            pico_err_t cur_pico_err = pico_err;
-
             Debug_LOG_ERROR(
                 "[socket %d/%p] nw_socket_read() failed with error %d, "
-                "pico_err %d (%s)", handle, socket, ret, cur_pico_err,
-                pico_err2str(cur_pico_err));
+                "translating to OS error %d (%s)", handle, pico_socket, ret, err,
+                Debug_OS_Error_toString(err));
 
-            return OS_ERROR_GENERIC;
+            return err;
         }
 
         pico_ipv4_to_string(source_socket->name, src.addr);
@@ -762,7 +920,7 @@ network_stack_pico_socket_recvfrom(
 
     Debug_LOG_TRACE(
         "[socket %d/%p] read data length=%d, data follows below",
-        handle, socket, tot_len);
+        handle, pico_socket, tot_len);
 
     Debug_hexDump(TRACE, OS_Dataport_getBuf(*app_port), tot_len);
 #endif

@@ -18,6 +18,8 @@
 void
 wait_network_event(void)
 {
+    Debug_LOG_TRACE("wait_network_event for handle");
+
     const OS_NetworkStack_CamkesConfig_t* handlers = config_get_handlers();
 
     event_wait_func_t do_wait = handlers->wait_loop_event;
@@ -35,6 +37,8 @@ wait_network_event(void)
 void
 internal_notify_main_loop(void)
 {
+    Debug_LOG_TRACE("internal_notify_main_loop for handle");
+
     const OS_NetworkStack_CamkesConfig_t* handlers = config_get_handlers();
 
     event_notify_func_t do_notify = handlers->internal.notify_loop;
@@ -53,6 +57,8 @@ void
 internal_notify_read(
     int handle)
 {
+    Debug_LOG_TRACE("internal_notify read for handle %d", handle);
+
     event_notify_func_t do_notify = get_notify_read_func_for_handle(handle);
     if (!do_notify)
     {
@@ -68,6 +74,8 @@ void
 internal_wait_read(
     int handle)
 {
+    Debug_LOG_TRACE("internal_wait_read for handle %d", handle);
+
     event_wait_func_t do_wait = get_wait_read_func_for_handle(handle);
     if (!do_wait)
     {
@@ -84,6 +92,8 @@ void
 internal_notify_write(
     int handle)
 {
+    Debug_LOG_TRACE("internal_notify_write for handle %d", handle);
+
     event_notify_func_t do_notify = get_notify_write_func_for_handle(handle);
     if (!do_notify)
     {
@@ -100,6 +110,8 @@ void
 internal_wait_write(
     int handle)
 {
+    Debug_LOG_TRACE("internal_wait_write for handle %d", handle);
+
     event_wait_func_t do_wait = get_wait_write_func_for_handle(handle);
     if (!do_wait)
     {
@@ -116,6 +128,8 @@ void
 internal_notify_connection(
     int handle)
 {
+    Debug_LOG_TRACE("internal_notify_connection for handle %d", handle);
+
     event_notify_func_t do_notify = get_notify_conn_func_for_handle(handle);
     if (!do_notify)
     {
@@ -132,6 +146,8 @@ void
 internal_wait_connection(
     int handle)
 {
+    Debug_LOG_TRACE("internal_wait_connection for handle %d", handle);
+
     event_wait_func_t do_wait = get_wait_conn_func_for_handle(handle);
     if (!do_wait)
     {

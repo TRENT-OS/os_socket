@@ -292,8 +292,8 @@ void internal_network_stack_thread_safety_mutex_lock(void)
         return;
     }
 
-    // Debug_LOG_INFO("%s", __func__);
-    // lock_mutex();
+    Debug_LOG_TRACE("%s", __func__);
+    lock_mutex();
 }
 
 //------------------------------------------------------------------------------
@@ -308,6 +308,6 @@ void internal_network_stack_thread_safety_mutex_unlock(void)
         return;
     }
 
-    // Debug_LOG_INFO("%s", __func__);
-    //  unlock_mutex();
+    Debug_LOG_TRACE("%s", __func__);
+    unlock_mutex();
 }

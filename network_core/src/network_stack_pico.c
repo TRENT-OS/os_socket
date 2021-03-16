@@ -220,11 +220,12 @@ handle_incoming_connection(OS_NetworkStack_SocketResources_t* socket)
     Debug_ASSERT(pico_socket !=
                  NULL); // can't be null, as we got a valid socket above
 
-    internal_network_stack_thread_safety_mutex_lock();
+    // This call into the pico stack happens in the context of the stack tick
+    // function and is protected by a mutex used there.
     struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
     OS_Error_t err =  pico_err2os(pico_err);
     socket->current_error = err;
-    internal_network_stack_thread_safety_mutex_unlock();
+
     if (NULL == s_in)
     {
         Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, OS error = %d (%s)",

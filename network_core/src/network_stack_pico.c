@@ -146,6 +146,7 @@ network_stack_pico_get_config(void)
     config.nic_init   = pico_nic_initialize;
     config.stack_init = pico_stack_init;
     config.stack_tick = pico_stack_tick;
+
     return config;
 }
 
@@ -168,6 +169,7 @@ translate_socket_domain(
     }
 
     Debug_LOG_ERROR("unsupported socket domain %u", domain);
+
     return -1;
 }
 
@@ -191,6 +193,7 @@ translate_socket_type(
     }
 
     Debug_LOG_ERROR("unsupported socket type %u", socket_type);
+
     return -1;
 }
 
@@ -354,6 +357,7 @@ network_stack_pico_socket_create(
         Debug_LOG_ERROR("unsupported type %d", socket_type);
         return OS_ERROR_NETWORK_PROTO_NO_SUPPORT;
     }
+
     internal_network_stack_thread_safety_mutex_lock();
     struct pico_socket* pico_socket =
         pico_socket_open(pico_domain, pico_type, &handle_pico_socket_event);
@@ -432,8 +436,11 @@ network_stack_pico_socket_close(
         free_handle(handle);
         return err;
     }
+
     free_handle(handle);
+
     Debug_LOG_INFO("[socket %d/%p] close() handle", handle, pico_socket);
+
     return OS_SUCCESS;
 }
 
@@ -495,7 +502,6 @@ network_stack_pico_socket_connect(
                    handle, pico_socket, name, port);
 
     return OS_SUCCESS;
-
 }
 
 //------------------------------------------------------------------------------
@@ -532,7 +538,6 @@ network_stack_pico_socket_bind(
     }
 
     return OS_SUCCESS;
-
 }
 
 //------------------------------------------------------------------------------
@@ -574,7 +579,6 @@ network_stack_pico_socket_listen(
     }
 
     return OS_SUCCESS;
-
 }
 
 //------------------------------------------------------------------------------
@@ -630,7 +634,6 @@ network_stack_pico_socket_accept(
                     handle, pico_socket, *pClient_handle, client_socket);
 
     return OS_SUCCESS;
-
 }
 
 //------------------------------------------------------------------------------
@@ -686,6 +689,7 @@ network_stack_pico_socket_write(
 
     socket->event = 0;
     *pLen       = ret;
+
     return OS_SUCCESS;
 }
 
@@ -778,6 +782,7 @@ network_stack_pico_socket_read(
 #endif
 
     *pLen = tot_len;
+
     return retval;
 }
 
@@ -937,5 +942,6 @@ network_stack_pico_socket_recvfrom(
 #endif
 
     *pLen = ret;
+
     return retval;
 }

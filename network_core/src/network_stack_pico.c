@@ -309,8 +309,6 @@ handle_pico_socket_event(
         Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", pico_socket);
         // notify app, which is waiting to write
         internal_notify_write(handle);
-        // notify network stack loop about an event
-        internal_notify_main_loop();
     }
 
     if (event_mask & PICO_SOCK_EV_CLOSE)

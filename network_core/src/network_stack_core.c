@@ -204,6 +204,7 @@ reserve_handle(
         {
             instance.sockets[i].status = SOCKET_IN_USE;
             instance.sockets[i].implementation_socket = impl_sock;
+            instance.sockets[i].accepted_handle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
             handle = i;
             break;
@@ -232,6 +233,7 @@ free_handle(
     internal_socket_control_block_mutex_lock();
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
+    instance.sockets[handle].accepted_handle = -1;
     internal_socket_control_block_mutex_unlock();
 }
 

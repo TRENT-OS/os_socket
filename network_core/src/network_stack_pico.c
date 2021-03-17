@@ -19,6 +19,7 @@
 #include "pico_socket.h"
 #include "pico_stack.h"
 
+#include "lib_compiler/compiler.h"
 #include "lib_debug/Debug.h"
 #include "lib_debug/Debug_OS_Error.h"
 
@@ -622,7 +623,7 @@ network_stack_pico_socket_accept(
     {
         Debug_LOG_ERROR("[socket %d/%p] no client to accept, OS error %d (%s)",
                         handle, pico_socket, err, Debug_OS_Error_toString(err));
-        return socket->current_error;
+        return err;
     }
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",

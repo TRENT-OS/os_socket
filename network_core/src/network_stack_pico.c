@@ -689,6 +689,8 @@ network_stack_pico_socket_write(
     socket->event = 0;
     *pLen       = ret;
 
+    internal_notify_main_loop();
+
     return OS_SUCCESS;
 }
 
@@ -731,6 +733,8 @@ network_stack_pico_socket_read(
                         len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
+
+    internal_notify_main_loop();
 
     do
     {
@@ -848,6 +852,9 @@ network_stack_pico_socket_sendto(
 
     socket->event = 0;
     *pLen       = ret;
+
+    internal_notify_main_loop();
+
     return OS_SUCCESS;
 }
 
@@ -894,6 +901,9 @@ network_stack_pico_socket_recvfrom(
                         len, dpSize);
         return OS_ERROR_INVALID_PARAMETER;
     }
+
+    internal_notify_main_loop();
+
     // pico_socket_recvfrom will from time to time return 0 bytes read,
     // even though there is a valid datagram to return. Although 0 payload is a
     // valid UDP packet, it looks like picotcp treats it as a try-again

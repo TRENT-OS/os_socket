@@ -178,7 +178,7 @@ get_nic_port_to(void)
 
 //------------------------------------------------------------------------------
 OS_Error_t
-nic_rpc_dev_read(
+nic_dev_read(
     size_t* pLen,
     size_t* frameRemaining)
 {
@@ -192,7 +192,7 @@ nic_rpc_dev_read(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-nic_rpc_dev_write(
+nic_dev_write(
     size_t* pLen)
 {
     const OS_NetworkStack_CamkesConfig_t* handlers = config_get_handlers();
@@ -205,7 +205,7 @@ nic_rpc_dev_write(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-nic_rpc_get_mac_address(void)
+nic_dev_get_mac_address(void)
 {
     const OS_NetworkStack_CamkesConfig_t* handlers = config_get_handlers();
 

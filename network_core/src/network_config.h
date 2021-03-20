@@ -55,16 +55,16 @@ const OS_Dataport_t* get_nic_port_from(void);
 const OS_Dataport_t* get_nic_port_to(void);
 
 OS_Error_t
-nic_rpc_dev_read(
+nic_dev_read(
     size_t* pLen,
     size_t* frameRemaining);
 
 OS_Error_t
-nic_rpc_dev_write(
+nic_dev_write(
     size_t* pLen);
 
 OS_Error_t
-nic_rpc_get_mac_address(void);
+nic_dev_get_mac_address(void);
 
 const OS_Dataport_t*
 get_app_port(

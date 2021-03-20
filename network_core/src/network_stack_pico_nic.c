@@ -42,7 +42,7 @@ nic_send_frame(
     // copy data it into shared buffer and call driver
     memcpy(wrbuf, buf, len);
     size_t wr_len = len;
-    OS_Error_t err = nic_rpc_dev_write(&wr_len);
+    OS_Error_t err = nic_dev_write(&wr_len);
 
     if (OS_SUCCESS != err)
     {
@@ -65,7 +65,7 @@ nic_send_frame(
             break;
         }
 
-        Debug_LOG_ERROR("nic_rpc_dev_write() failed, wr_len %zu, error %d",
+        Debug_LOG_ERROR("nic_dev_write() failed, wr_len %zu, error %d",
                         wr_len, err);
         return -1;
     }
@@ -107,7 +107,7 @@ nic_poll_data(
 
         while (loop_score > 0 && framesRemaining)
         {
-            OS_Error_t status = nic_rpc_dev_read(&len, &framesRemaining);
+            OS_Error_t status = nic_dev_read(&len, &framesRemaining);
             // if the return code is NOT_IMPLEMENTED it means the driver implements
             // the event based interface
             if (status != OS_SUCCESS)
@@ -202,10 +202,10 @@ pico_nic_initialize(const OS_NetworkStack_AddressConfig_t* config)
 
     //---------------------------------------------------------------
     // get MAC from NIC driver
-    OS_Error_t err = nic_rpc_get_mac_address();
+    OS_Error_t err = nic_dev_get_mac_address();
     if (err != OS_SUCCESS)
     {
-        Debug_LOG_ERROR("nic_rpc_get_mac_address() failed, error %d", err);
+        Debug_LOG_ERROR("nic_dev_get_mac_address() failed, error %d", err);
         nic_destroy(dev);
         return OS_ERROR_GENERIC;
     }

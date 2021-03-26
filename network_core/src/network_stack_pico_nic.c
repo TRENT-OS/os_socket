@@ -76,7 +76,7 @@ nic_send_frame(
         // this should not happen, maybe the frame is corrupt?
         Debug_LOG_ERROR("unexpected mismatch: len %d, wr_len %zu", len, wr_len);
         Debug_DUMP_ERROR(buf, len);
-        Debug_ASSERT(1); // halt in debug builds
+        Debug_ASSERT(0); // halt in debug builds
     }
 
     return len;

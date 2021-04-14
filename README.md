@@ -50,14 +50,6 @@ In order to use the Stack, your component definition needs to include the
         //Event received when the stack is ready to be used
     }
 
-
-## CMakeLists.txt file
-
-Define                            | Description
-----------------------------------|---------------------------------------------------------------------------
-OS_NETWORK_STACK_USE_CONFIGSERVER | use configuration server to configure IP addresses
-
-
 ## Limitations
 * Only IPv4 connections are supported
 * Only TCP socket is supported

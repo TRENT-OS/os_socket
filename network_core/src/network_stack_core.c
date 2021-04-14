@@ -46,7 +46,7 @@ config_get_handlers(void)
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_create(
+networkStack_rpc_socket_create(
     int   domain,
     int   socket_type,
     int*  pHandle)
@@ -57,7 +57,7 @@ network_stack_rpc_socket_create(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_close(
+networkStack_rpc_socket_close(
     int handle)
 {
     return network_stack_pico_socket_close(handle);
@@ -66,7 +66,7 @@ network_stack_rpc_socket_close(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_connect(
+networkStack_rpc_socket_connect(
     int          handle,
     const char*  name,
     int          port)
@@ -77,7 +77,7 @@ network_stack_rpc_socket_connect(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_bind(
+networkStack_rpc_socket_bind(
     int handle,
     uint16_t port)
 {
@@ -87,7 +87,7 @@ network_stack_rpc_socket_bind(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_listen(
+networkStack_rpc_socket_listen(
     int handle,
     int backlog)
 {
@@ -99,7 +99,7 @@ network_stack_rpc_socket_listen(
 // For server wait on accept until client connects. Not much useful for client
 // as we cannot accept incoming connections
 OS_Error_t
-network_stack_rpc_socket_accept(
+networkStack_rpc_socket_accept(
     int handle,
     int* pClient_handle,
     uint16_t port)
@@ -110,7 +110,7 @@ network_stack_rpc_socket_accept(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_write(
+networkStack_rpc_socket_write(
     int handle,
     size_t* pLen)
 {
@@ -119,7 +119,7 @@ network_stack_rpc_socket_write(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_read(
+networkStack_rpc_socket_read(
     int handle,
     size_t* pLen)
 {
@@ -128,7 +128,7 @@ network_stack_rpc_socket_read(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_sendto(
+networkStack_rpc_socket_sendto(
     int                 handle,
     size_t*             pLen,
     OS_Network_Socket_t dst_socket)
@@ -138,7 +138,7 @@ network_stack_rpc_socket_sendto(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-network_stack_rpc_socket_recvfrom(
+networkStack_rpc_socket_recvfrom(
     int                  handle,
     size_t*              pLen,
     OS_Network_Socket_t* src_socket)

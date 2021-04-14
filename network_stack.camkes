@@ -98,7 +98,7 @@ import <if_OS_Timer.camkes>;
         NwStack_INTERFACE_LOG_SERVER \
         /*------------------------------------------------------------------*/ \
         /* interface to application */ \
-        provides  if_OS_Socket          network_stack_rpc; \
+        provides  if_OS_Socket          networkStack_rpc; \
         _NWSTACK_MACRO_LOOP(_num_sockets_, NwStack_Socket_DECLARE) \
         \
         composition \
@@ -133,7 +133,7 @@ import <if_OS_Timer.camkes>;
     \
     connection seL4RPCCall conn_rpc_##_client_##_##_inst_##_##_n_( \
         from _client_rpc_, \
-        to   _inst_.network_stack_rpc); \
+        to   _inst_.networkStack_rpc); \
     \
     connection seL4SharedData conn_port_##_client_##_##_inst_##_##_n_( \
         from _client_port_, \

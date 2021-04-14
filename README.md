@@ -44,7 +44,7 @@ In order to use the Stack, your component definition needs to include the
 
     component <COMPONENT_NAME> {
         //Reference to the RPC socket interface
-        uses      if_OS_Socket    network_stack_rpc;
+        uses      if_OS_Socket    networkStack_rpc;
         //A buffer to send data to/from the stack
         dataport  Buf             buffer;
         //Event received when the stack is ready to be used

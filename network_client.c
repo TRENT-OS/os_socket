@@ -40,7 +40,7 @@ OS_Error_t
 OS_NetworkSocket_close(
     OS_NetworkSocket_Handle_t handle)
 {
-    return network_stack_rpc_socket_close(handle);
+    return networkStack_rpc_socket_close(handle);
 }
 
 /******************************************************************************/
@@ -48,7 +48,7 @@ OS_Error_t
 OS_NetworkServerSocket_close(
     OS_NetworkServer_Handle_t srvHandle)
 {
-    return network_stack_rpc_socket_close(srvHandle);
+    return networkStack_rpc_socket_close(srvHandle);
 }
 
 /******************************************************************************/
@@ -58,7 +58,7 @@ OS_NetworkServerSocket_accept(
     OS_NetworkSocket_Handle_t* phSocket)
 {
     uint16_t   port = 0;
-    return network_stack_rpc_socket_accept(srvHandle, phSocket, port);
+    return networkStack_rpc_socket_accept(srvHandle, phSocket, port);
 }
 
 /******************************************************************************/
@@ -81,7 +81,7 @@ OS_NetworkSocket_read(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    OS_Error_t err = network_stack_rpc_socket_read(handle, &tempLen);
+    OS_Error_t err = networkStack_rpc_socket_read(handle, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -120,8 +120,8 @@ OS_NetworkSocket_recvfrom(
         return OS_ERROR_INVALID_PARAMETER;
     }
 
-    OS_Error_t err = network_stack_rpc_socket_recvfrom(handle, &tempLen,
-                                                       src_socket);
+    OS_Error_t err = networkStack_rpc_socket_recvfrom(handle, &tempLen,
+                                                      src_socket);
 
     if (actualLen != NULL)
     {
@@ -160,7 +160,7 @@ OS_NetworkSocket_write(
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    OS_Error_t err = network_stack_rpc_socket_write(handle, &tempLen);
+    OS_Error_t err = networkStack_rpc_socket_write(handle, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -193,7 +193,7 @@ OS_NetworkSocket_sendto(
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    OS_Error_t err = network_stack_rpc_socket_sendto(handle, &tempLen, dst_socket);
+    OS_Error_t err = networkStack_rpc_socket_sendto(handle, &tempLen, dst_socket);
 
     if (actualLen != NULL)
     {
@@ -209,7 +209,7 @@ OS_NetworkSocket_bind(
     OS_NetworkSocket_Handle_t handle,
     uint16_t                  receiving_port)
 {
-    return network_stack_rpc_socket_bind(handle, receiving_port);
+    return networkStack_rpc_socket_bind(handle, receiving_port);
 }
 
 /******************************************************************************/
@@ -220,7 +220,7 @@ OS_NetworkServerSocket_create(
     OS_NetworkServer_Handle_t* pSrvHandle)
 {
     OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
-    OS_Error_t err = network_stack_rpc_socket_create(
+    OS_Error_t err = networkStack_rpc_socket_create(
                          pServerStruct->domain,
                          pServerStruct->type,
                          &localHandle);
@@ -233,14 +233,14 @@ OS_NetworkServerSocket_create(
     }
 
     err =
-        network_stack_rpc_socket_bind(localHandle, pServerStruct->listen_port);
+        networkStack_rpc_socket_bind(localHandle, pServerStruct->listen_port);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
         goto err;
     }
 
-    err = network_stack_rpc_socket_listen(localHandle, pServerStruct->backlog);
+    err = networkStack_rpc_socket_listen(localHandle, pServerStruct->backlog);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
@@ -248,7 +248,7 @@ OS_NetworkServerSocket_create(
     }
     goto exit;
 err:
-    network_stack_rpc_socket_close(localHandle);
+    networkStack_rpc_socket_close(localHandle);
     localHandle = OS_NetworkSocket_Handle_INVALID;
 exit:
     *pSrvHandle = localHandle;
@@ -265,7 +265,7 @@ OS_NetworkSocket_create(
     OS_NetworkSocket_Handle_t* phandle)
 {
     OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
-    OS_Error_t err = network_stack_rpc_socket_create(
+    OS_Error_t err = networkStack_rpc_socket_create(
                          pClientStruct->domain,
                          pClientStruct->type,
                          &localHandle);
@@ -282,7 +282,7 @@ OS_NetworkSocket_create(
         goto exit;
     }
 
-    err = network_stack_rpc_socket_connect(
+    err = networkStack_rpc_socket_connect(
               localHandle,
               pClientStruct->name,
               pClientStruct->port);
@@ -293,7 +293,7 @@ OS_NetworkSocket_create(
     }
     goto exit;
 err:
-    network_stack_rpc_socket_close(localHandle);
+    networkStack_rpc_socket_close(localHandle);
     localHandle = OS_NetworkSocket_Handle_INVALID;
 exit:
     *phandle = localHandle;

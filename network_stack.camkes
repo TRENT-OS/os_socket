@@ -6,7 +6,7 @@
 
 #pragma once
 
-import <if_OS_Nic.camkes>;
+#include <if_OS_Nic.camkes>
 import <if_OS_Socket.camkes>;
 import <if_OS_Timer.camkes>;
 
@@ -90,10 +90,9 @@ import <if_OS_Timer.camkes>;
         consumes  TimerReady            timeServer_notify; \
         \
         /*------------------------------------------------------------------*/ \
-        /* interface NIC driver */ \
-        uses      if_OS_Nic             nic_rpc; \
-        dataport  Buf(_nic_port_size_)  nic_from_port; /* NIC -> stack */ \
-        dataport  Buf                   nic_to_port;   /* stack -> NIC */ \
+        /* if_OS_Nic without a dedicated event, because our interface */ \
+        /* 'event_tick_or_data' is a shared sink for multiple event sources */ \
+        IF_OS_NIC_UPPER_INTERFACE_FIELDS_WITHOUT_EVENT(nic, _nic_port_size_) \
         \
         /*------------------------------------------------------------------*/ \
         /* interface to application */ \
@@ -115,14 +114,33 @@ import <if_OS_Timer.camkes>;
 
 
 //------------------------------------------------------------------------------
-// Connect a network stack instance to a ticker event.
+// Connect a network stack instance to a ticker event and a NIC to it. So far,
+// all if_OS_Nic related fields of the network stack use the prefix 'nic', and
+// the same prefix is also used by all network drivers for their if_OS_Nic
+// related fields. As long a no NIC driver breaks this scheme (e.g. because it
+// has multiple if_OS_Nic), there is no need to have an additional macro
+// parameter here that passes the driver's prefix.
+// additional macro parameter.
 #define NwStack_INSTANCE_CONNECT( \
     _name_, \
-    _ticker_event_src_) \
+    _ticker_event_src_, \
+    _nic_) \
     \
     connection seL4NotificationNative conn_event_##_name_##_ticker( \
         from _ticker_event_src_, \
-        to   _name_.event_tick_or_data);
+        to   _name_.event_tick_or_data); \
+    \
+    IF_OS_NIC_CONNECT_WITHOUT_EVENT( \
+        _name_, \
+        nic, \
+        _nic_, \
+        nic) \
+    \
+    IF_OS_NIC_CONNECT_EVENT( \
+        _name_, \
+        event_tick_or_data, \
+        _nic_, \
+        nic)
 
 
 //------------------------------------------------------------------------------

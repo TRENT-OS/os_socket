@@ -85,8 +85,8 @@ import <if_OS_Timer.camkes>;
         /*------------------------------------------------------------------*/ \
         /* interface NIC driver */ \
         uses      if_OS_Nic             nic_rpc; \
-        dataport  Buf(_nic_port_size_)  nic_port_from; /* NIC -> stack */ \
-        dataport  Buf                   nic_port_to;   /* stack -> NIC */ \
+        dataport  Buf(_nic_port_size_)  nic_from_port; /* NIC -> stack */ \
+        dataport  Buf                   nic_to_port;   /* stack -> NIC */ \
         \
         /*------------------------------------------------------------------*/ \
         /* interface Configuration server - macro must be set by caller, as */ \

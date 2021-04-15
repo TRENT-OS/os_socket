@@ -64,7 +64,14 @@ import <if_OS_Timer.camkes>;
 
 
 //------------------------------------------------------------------------------
-#define NwStack_COMPONENT_DEFINE(_name_, _nic_port_size_, _num_sockets_) \
+#define _NwStack_EMPTY
+#define NwStack_NO_ADDITIONAL_INTERFACES _NwStack_EMPTY
+
+#define NwStack_COMPONENT_DEFINE( \
+    _name_, \
+    _nic_port_size_, \
+    _num_sockets_, \
+    _other_interfaces_) \
     \
     component _name_ \
     { \
@@ -89,17 +96,12 @@ import <if_OS_Timer.camkes>;
         dataport  Buf                   nic_to_port;   /* stack -> NIC */ \
         \
         /*------------------------------------------------------------------*/ \
-        /* interface Configuration server - macro must be set by caller, as */ \
-        /* we still have different variants here  */ \
-        NwStack_INTERFACE_CONFIG_SERVER \
-        /*------------------------------------------------------------------*/ \
-        /* interface Log server - macro must be set by caller, as we still */ \
-        /* have different variants here  */ \
-        NwStack_INTERFACE_LOG_SERVER \
-        /*------------------------------------------------------------------*/ \
         /* interface to application */ \
         provides  if_OS_Socket          networkStack_rpc; \
         _NWSTACK_MACRO_LOOP(_num_sockets_, NwStack_Socket_DECLARE) \
+        /*------------------------------------------------------------------*/ \
+        /* other interfaces */ \
+        _other_interfaces_ \
         \
         composition \
         { \

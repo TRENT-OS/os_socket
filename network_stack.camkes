@@ -45,7 +45,7 @@ import <if_OS_Timer.camkes>;
     emits     NwStack_ConnEv  e_conn_##_n_; \
     consumes  NwStack_ConnEv  c_conn_##_n_; \
     \
-    dataport  Buf             port_socket_##_n_;
+    dataport  Buf             socket_##_n_##_port;
 
 
 //------------------------------------------------------------------------------
@@ -157,4 +157,4 @@ import <if_OS_Timer.camkes>;
     \
     connection seL4SharedData conn_port_##_client_##_##_inst_##_##_n_( \
         from _client_port_, \
-        to   _inst_.port_socket_##_n_);
+        to   _inst_.socket_##_n_##_port);

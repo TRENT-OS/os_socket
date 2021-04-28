@@ -745,6 +745,14 @@ network_stack_pico_socket_read(
         internal_network_stack_thread_safety_mutex_unlock();
         if (ret < 0)
         {
+            if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
+            {
+                Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
+                               handle, socket);
+                retval = err;
+                break;
+            }
+
             Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, translating to OS error %d (%s)",
                             handle, pico_socket, ret,
                             err, Debug_OS_Error_toString(err));

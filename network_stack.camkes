@@ -92,7 +92,7 @@ import <if_OS_Timer.camkes>;
         /*------------------------------------------------------------------*/ \
         /* if_OS_Nic without a dedicated event, because our interface */ \
         /* 'event_tick_or_data' is a shared sink for multiple event sources */ \
-        IF_OS_NIC_UPPER_INTERFACE_FIELDS_WITHOUT_EVENT(nic, _nic_port_size_) \
+        IF_OS_NIC_USE_WITHOUT_EVENT(nic, _nic_port_size_) \
         \
         /*------------------------------------------------------------------*/ \
         /* interface to application */ \

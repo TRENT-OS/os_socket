@@ -270,10 +270,21 @@ handle_pico_socket_event(
     struct pico_socket*  pico_socket)
 {
     int handle = get_handle_from_implementation_socket(pico_socket);
+    if (handle < 0)
+    {
+        // Don't log an ERROR here, as an invalid handle can also result from a
+        // recently closed socket that receives final teardown events.
+        Debug_LOG_TRACE("%s: invalid handle %d. "
+                        "Handle might already be freed due to recent close().",
+                        __func__, handle);
+        return;
+    }
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        Debug_LOG_ERROR("%s: failed to get socket from handle %d",
+                        __func__, handle);
         return;
     }
     Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",

@@ -130,14 +130,9 @@ import <if_OS_Timer.camkes>;
         from _ticker_event_src_, \
         to   _name_.event_tick_or_data); \
     \
-    IF_OS_NIC_CONNECT_WITHOUT_EVENT( \
+    IF_OS_NIC_CONNECT(\
         _name_, \
         nic, \
-        _nic_, \
-        nic) \
-    \
-    IF_OS_NIC_CONNECT_EVENT( \
-        _name_, \
         event_tick_or_data, \
         _nic_, \
         nic)

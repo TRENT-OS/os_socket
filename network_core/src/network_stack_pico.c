@@ -754,20 +754,23 @@ network_stack_pico_socket_read(
         OS_Error_t err =  pico_err2os(pico_err);
         socket->current_error = err;
         internal_network_stack_thread_safety_mutex_unlock();
+
         if (ret < 0)
         {
             if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
             {
                 Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
                                handle, socket);
-                retval = err;
-                break;
+            }
+            else
+            {
+                Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with "
+                                "error %d, translating to OS error %d (%s)",
+                                handle, pico_socket, ret, err,
+                                Debug_OS_Error_toString(err));
             }
 
-            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with error %d, translating to OS error %d (%s)",
-                            handle, pico_socket, ret,
-                            err, Debug_OS_Error_toString(err));
-            retval =  err;
+            retval = err;
             break;
         }
 
@@ -787,7 +790,6 @@ network_stack_pico_socket_read(
         }
 
         tot_len += (unsigned)ret;
-
     }
     while (0 == tot_len);
 

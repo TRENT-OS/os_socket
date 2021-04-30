@@ -272,11 +272,23 @@ handle_pico_socket_event(
     int handle = get_handle_from_implementation_socket(pico_socket);
     if (handle < 0)
     {
-        // Don't log an ERROR here, as an invalid handle can also result from a
-        // recently closed socket that receives final teardown events.
-        Debug_LOG_TRACE("%s: invalid handle %d. "
-                        "Handle might already be freed due to recent close().",
-                        __func__, handle);
+        if (pico_socket->state & (PICO_SOCKET_STATE_SHUT_LOCAL |
+                                  PICO_SOCKET_STATE_SHUT_REMOTE |
+                                  PICO_SOCKET_STATE_TCP_CLOSED))
+        {
+            // Don't log an ERROR here, as an invalid handle can also result
+            // from a recently closed socket that receives final teardown
+            // events.
+            Debug_LOG_TRACE(
+                "%s: invalid handle %d. "
+                "Handle might already be freed due to recent close(). ",
+                __func__, handle);
+        }
+        else
+        {
+            Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+        }
+
         return;
     }
 

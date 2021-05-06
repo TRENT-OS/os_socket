@@ -1,7 +1,15 @@
 /*
+ * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
+ */
+
+/**
+ * @file
+ *
  * TRENTOS Network Stack, generic CAmkES template code
  *
- * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
+ * This file provides macros that can be used to define a network stack component that
+ * implements the Socket interface and can connect to a NIC driver component via
+ * the NIC component interface.
  */
 
 #pragma once
@@ -11,7 +19,8 @@ import <if_OS_Socket.camkes>;
 import <if_OS_Timer.camkes>;
 
 
-//------------------------------------------------------------------------------
+// Private macros --------------------------------------------------------------
+
 #define _NWSTACK_MACRO_LOOP_1(_m_)      _m_(1)
 #define _NWSTACK_MACRO_LOOP_2(_m_)      _m_(2)  _NWSTACK_MACRO_LOOP_1(_m_)
 #define _NWSTACK_MACRO_LOOP_3(_m_)      _m_(3)  _NWSTACK_MACRO_LOOP_2(_m_)
@@ -29,51 +38,85 @@ import <if_OS_Timer.camkes>;
 #define _NWSTACK_MACRO_LOOP_15(_m_)     _m_(15) _NWSTACK_MACRO_LOOP_14(_m_)
 #define _NWSTACK_MACRO_LOOP_16(_m_)     _m_(16) _NWSTACK_MACRO_LOOP_15(_m_)
 
-// We need this intermediate macro so macro expansion to work properly.
-#define _NWSTACK_MACRO_LOOP(_cnt_, _macro_) \
-    _NWSTACK_MACRO_LOOP_##_cnt_(_macro_)
+/**
+ * Internal macro that will expand into multiple invocations of the macro passed as
+ * argument passing to it the number of the invocation as argument.
+ *
+ * @param[in] cnt   Number of invocations.
+ * @param[in] macro Macro that has to be invoked.
+ */
+#define _NWSTACK_MACRO_LOOP(cnt, macro) \
+    _NWSTACK_MACRO_LOOP_##cnt(macro)
+
+/**
+ * Internal macro that connects the events internally used by the network stack
+ * associated to socket activity.
+ *
+ * @param[in] n Number of the socket.
+ */
+#define _NWSTACK_CONNECT_SOCKET(n) \
+    connection seL4Notification conn_event_write_##n( \
+        from e_write_##n, \
+        to   c_write_##n); \
+    \
+    connection seL4Notification conn_event_read_##n( \
+        from e_read_##n, \
+        to   c_read_##n); \
+    \
+    connection seL4Notification conn_event_connect_##n( \
+        from e_conn_##n, \
+        to   c_conn_##n);
 
 
-//------------------------------------------------------------------------------
-#define NwStack_Socket_DECLARE(_n_) \
-    emits     NwStack_WrEv    e_write_##_n_; \
-    consumes  NwStack_WrEv    c_write_##_n_; \
-    \
-    emits     NwStack_RdEv    e_read_##_n_; \
-    consumes  NwStack_RdEv    c_read_##_n_; \
-    \
-    emits     NwStack_ConnEv  e_conn_##_n_; \
-    consumes  NwStack_ConnEv  c_conn_##_n_; \
-    \
-    dataport  Buf             socket_##_n_##_port;
+// Public macros ---------------------------------------------------------------
 
-
-//------------------------------------------------------------------------------
-#define NwStack_SocketConn_DECLARE(_n_) \
-    connection seL4Notification conn_event_write_##_n_( \
-        from e_write_##_n_, \
-        to   c_write_##_n_); \
+/**
+ * Declare a socket number "n" as member of the network stack.
+ *
+ * It does declare the fields needed for a socket connection.
+ *
+ * @param[in] n Number of the socket.
+ */
+#define NwStack_Socket_DECLARE(n) \
+    emits     NwStack_WrEv    e_write_##n; \
+    consumes  NwStack_WrEv    c_write_##n; \
     \
-    connection seL4Notification conn_event_read_##_n_( \
-        from e_read_##_n_, \
-        to   c_read_##_n_); \
+    emits     NwStack_RdEv    e_read_##n; \
+    consumes  NwStack_RdEv    c_read_##n; \
     \
-    connection seL4Notification conn_event_connect_##_n_( \
-        from e_conn_##_n_, \
-        to   c_conn_##_n_);
-
+    emits     NwStack_ConnEv  e_conn_##n; \
+    consumes  NwStack_ConnEv  c_conn_##n; \
+    \
+    dataport  Buf             socket_##n##_port;
 
 //------------------------------------------------------------------------------
 #define _NwStack_EMPTY
 #define NwStack_NO_ADDITIONAL_INTERFACES _NwStack_EMPTY
 
+/**
+ * Define a network stack component that can offer one or more socket interfaces
+ * and can connect to a NIC driver component via a NIC component interface.
+ *
+ * @param[in] name             Name of the network stack component. This is
+ *                             meant not to be an instance name but rather a
+ *                             'type' name.
+ * @param[in] nic_port_size    Size of the dataport to connect to the NIC driver
+ *                             component.
+ * @param[in] num_sockets      Number of sockets connections that the network
+ *                             stack can offer.
+ *
+ * @param[in] other_interfaces Definitions of fields of additional interfaces to
+ *                             which this component could connect to (e.g.: a
+ *                             logger component to which the network stack could
+ *                             be connected to log its error messages).
+ */
 #define NwStack_COMPONENT_DEFINE( \
-    _name_, \
-    _nic_port_size_, \
-    _num_sockets_, \
-    _other_interfaces_) \
+    name, \
+    nic_port_size, \
+    num_sockets, \
+    other_interfaces) \
     \
-    component _name_ \
+    component name \
     { \
         control; \
         \
@@ -92,15 +135,15 @@ import <if_OS_Timer.camkes>;
         /*------------------------------------------------------------------*/ \
         /* if_OS_Nic without a dedicated event, because our interface */ \
         /* 'event_tick_or_data' is a shared sink for multiple event sources */ \
-        IF_OS_NIC_USE_WITHOUT_EVENT(nic, _nic_port_size_) \
+        IF_OS_NIC_USE_WITHOUT_EVENT(nic, nic_port_size) \
         \
         /*------------------------------------------------------------------*/ \
         /* interface to application */ \
         provides  if_OS_Socket          networkStack_rpc; \
-        _NWSTACK_MACRO_LOOP(_num_sockets_, NwStack_Socket_DECLARE) \
+        _NWSTACK_MACRO_LOOP(num_sockets, NwStack_Socket_DECLARE) \
         /*------------------------------------------------------------------*/ \
         /* other interfaces */ \
-        _other_interfaces_ \
+        other_interfaces \
         \
         composition \
         { \
@@ -108,48 +151,59 @@ import <if_OS_Timer.camkes>;
                 from event_internal, \
                 to   event_tick_or_data); \
             \
-            _NWSTACK_MACRO_LOOP(_num_sockets_, NwStack_SocketConn_DECLARE) \
+            _NWSTACK_MACRO_LOOP(num_sockets, _NWSTACK_CONNECT_SOCKET) \
         } \
     }
 
-
-//------------------------------------------------------------------------------
-// Connect a network stack instance to a ticker event and a NIC to it. So far,
-// all if_OS_Nic related fields of the network stack use the prefix 'nic', and
-// the same prefix is also used by all network drivers for their if_OS_Nic
-// related fields. As long a no NIC driver breaks this scheme (e.g. because it
-// has multiple if_OS_Nic), there is no need to have an additional macro
-// parameter here that passes the driver's prefix.
-// additional macro parameter.
+/**
+ * Connect a network stack instance to a ticker event and a NIC to it.
+ *
+ * So far, all if_OS_Nic related fields of the network stack use the prefix
+ *'nic', and the same prefix is also used by all network drivers for their
+ * if_OS_Nic related fields. As long a no NIC driver breaks this scheme (e.g.
+ * because it has multiple if_OS_Nic), there is no need to have an additional
+ * macro parameter here that passes the driver's prefix.
+ *
+ * @param[in] inst             Name of the network stack component instance.
+ * @param[in] ticker_event_src Source ticker event to connect to the network
+ *                             stack.
+ * @param[in] nic_inst         Name of the NIC component instance to which the
+ *                             network stack component has to connect to.
+ */
 #define NwStack_INSTANCE_CONNECT( \
-    _name_, \
-    _ticker_event_src_, \
-    _nic_) \
+    inst, \
+    ticker_event_src, \
+    nic_inst) \
     \
-    connection seL4NotificationNative conn_event_##_name_##_ticker( \
-        from _ticker_event_src_, \
-        to   _name_.event_tick_or_data); \
+    connection seL4NotificationNative conn_event_##inst##_ticker( \
+        from ticker_event_src, \
+        to   inst.event_tick_or_data); \
     \
     IF_OS_NIC_CONNECT(\
-        _name_, \
+        inst, \
         nic, \
         event_tick_or_data, \
-        _nic_, \
+        nic_inst, \
         nic)
 
 
-//------------------------------------------------------------------------------
-// Connect an application to a network stack socket.
+/**
+ * Connect an application to a network stack socket.
+ *
+ * @param[in] inst        Name of the network stack component instance.
+ * @param[in] client_rpc  Name of the client RPC to connect to a socket.
+ * @param[in] client_port Name of the client dataport to connect to a socket.
+ */
 #define NwStack_INSTANCE_CONNECT_SOCKET( \
-    _inst_, \
-    _n_, \
-    _client_rpc_, \
-    _client_port_) \
+    inst, \
+    n, \
+    client_rpc, \
+    client_port) \
     \
-    connection seL4RPCCall conn_rpc_##_client_##_##_inst_##_##_n_( \
-        from _client_rpc_, \
-        to   _inst_.networkStack_rpc); \
+    connection seL4RPCCall conn_rpc_##_client_##_##inst##_##n( \
+        from client_rpc, \
+        to   inst.networkStack_rpc); \
     \
-    connection seL4SharedData conn_port_##_client_##_##_inst_##_##_n_( \
-        from _client_port_, \
-        to   _inst_.socket_##_n_##_port);
+    connection seL4SharedData conn_port_##_client_##_##inst##_##n( \
+        from client_port, \
+        to   inst.socket_##n##_port);

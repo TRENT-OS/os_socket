@@ -23,7 +23,7 @@ import <if_OS_Timer.camkes>;
 
 // Private macros --------------------------------------------------------------
 
-#define _NwStack_EMPTY
+#define _NWSTACK_EMPTY
 
 #define _NWSTACK_MACRO_LOOP_1(_m_)      _m_(1)
 #define _NWSTACK_MACRO_LOOP_2(_m_)      _m_(2)  _NWSTACK_MACRO_LOOP_1(_m_)
@@ -94,7 +94,7 @@ import <if_OS_Timer.camkes>;
     dataport  Buf             socket_##n##_port;
 
 //! Macro for the component definition if no other interfaces are used.
-#define NwStack_NO_ADDITIONAL_INTERFACES _NwStack_EMPTY
+#define NwStack_NO_ADDITIONAL_INTERFACES _NWSTACK_EMPTY
 
 /**
  * Define a network stack component.

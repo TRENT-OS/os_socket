@@ -5,21 +5,25 @@
 /**
  * @file
  *
- * TRENTOS Network Stack, generic CAmkES template code
+ * Generic TRENTOS Network Stack CAmkES template code.
  *
- * This file provides macros that can be used to define a network stack component that
- * implements the Socket interface and can connect to a NIC driver component via
- * the NIC component interface.
+ * This file provides macros to define a network stack component that implements
+ * the socket interface (if_OS_Socket) and connects to a NIC driver component
+ * via the NIC component interface (if_OS_Nic).
  */
 
 #pragma once
 
 #include <if_OS_Nic.camkes>
+
+/** @cond SKIP_IMPORTS */
 import <if_OS_Socket.camkes>;
 import <if_OS_Timer.camkes>;
-
+/** @endcond */
 
 // Private macros --------------------------------------------------------------
+
+#define _NwStack_EMPTY
 
 #define _NWSTACK_MACRO_LOOP_1(_m_)      _m_(1)
 #define _NWSTACK_MACRO_LOOP_2(_m_)      _m_(2)  _NWSTACK_MACRO_LOOP_1(_m_)
@@ -39,8 +43,8 @@ import <if_OS_Timer.camkes>;
 #define _NWSTACK_MACRO_LOOP_16(_m_)     _m_(16) _NWSTACK_MACRO_LOOP_15(_m_)
 
 /**
- * Internal macro that will expand into multiple invocations of the macro passed as
- * argument passing to it the number of the invocation as argument.
+ * Internal macro that will expand into multiple invocations of the macro passed
+ * as argument passing to it the number of the invocation as argument.
  *
  * @param[in] cnt   Number of invocations.
  * @param[in] macro Macro that has to be invoked.
@@ -71,9 +75,9 @@ import <if_OS_Timer.camkes>;
 // Public macros ---------------------------------------------------------------
 
 /**
- * Declare a socket number "n" as member of the network stack.
+ * Declare a socket number 'n' as member of the network stack.
  *
- * It does declare the fields needed for a socket connection.
+ * It declares the fields needed for a socket connection.
  *
  * @param[in] n Number of the socket.
  */
@@ -89,26 +93,25 @@ import <if_OS_Timer.camkes>;
     \
     dataport  Buf             socket_##n##_port;
 
-//------------------------------------------------------------------------------
-#define _NwStack_EMPTY
+//! Macro for the component definition if no other interfaces are used.
 #define NwStack_NO_ADDITIONAL_INTERFACES _NwStack_EMPTY
 
 /**
- * Define a network stack component that can offer one or more socket interfaces
- * and can connect to a NIC driver component via a NIC component interface.
+ * Define a network stack component.
+ *
+ * It can offer one or more socket interfaces and can connect to a NIC driver
+ * component via the NIC component interface.
  *
  * @param[in] name             Name of the network stack component. This is
  *                             meant not to be an instance name but rather a
  *                             'type' name.
  * @param[in] nic_port_size    Size of the dataport to connect to the NIC driver
  *                             component.
- * @param[in] num_sockets      Number of sockets connections that the network
+ * @param[in] num_sockets      Number of socket connections that the network
  *                             stack can offer.
- *
  * @param[in] other_interfaces Definitions of fields of additional interfaces to
  *                             which this component could connect to (e.g.: a
- *                             logger component to which the network stack could
- *                             be connected to log its error messages).
+ *                             logger component to log its error messages).
  */
 #define NwStack_COMPONENT_DEFINE( \
     name, \
@@ -156,13 +159,14 @@ import <if_OS_Timer.camkes>;
     }
 
 /**
- * Connect a network stack instance to a ticker event and a NIC to it.
+ * Connect a network stack instance to a ticker event and a NIC component.
  *
- * So far, all if_OS_Nic related fields of the network stack use the prefix
- *'nic', and the same prefix is also used by all network drivers for their
- * if_OS_Nic related fields. As long a no NIC driver breaks this scheme (e.g.
- * because it has multiple if_OS_Nic), there is no need to have an additional
- * macro parameter here that passes the driver's prefix.
+ * So far, all NIC component interface related fields of the network stack use
+ * the prefix 'nic', and the same prefix is also used by all network drivers for
+ * their NIC component interface related fields. As long a no NIC driver breaks
+ * this scheme (e.g. because it has multiple NIC component interfaces), there is
+ * no need to have an additional macro parameter here that passes the driver's
+ * prefix.
  *
  * @param[in] inst             Name of the network stack component instance.
  * @param[in] ticker_event_src Source ticker event to connect to the network
@@ -191,6 +195,7 @@ import <if_OS_Timer.camkes>;
  * Connect an application to a network stack socket.
  *
  * @param[in] inst        Name of the network stack component instance.
+ * @param[in] n           Number of the socket.
  * @param[in] client_rpc  Name of the client RPC to connect to a socket.
  * @param[in] client_port Name of the client dataport to connect to a socket.
  */

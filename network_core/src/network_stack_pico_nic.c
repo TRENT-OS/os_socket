@@ -126,7 +126,7 @@ nic_poll_data(
                     }
                     isLegacyInterface = true;
                     isDetectionDone   = true;
-                    Debug_LOG_WARNING("Falling back to legacy interface.");
+                    Debug_LOG_INFO("Falling back to legacy interface.");
                     break;
                 }
                 if (status == OS_ERROR_NOT_INITIALIZED)

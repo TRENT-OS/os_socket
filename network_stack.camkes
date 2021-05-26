@@ -98,7 +98,7 @@ import <if_OS_Timer.camkes>;
 #define NwStack_NO_ADDITIONAL_INTERFACES _NWSTACK_EMPTY
 
 /**
- * Define a network stack component.
+ * Defines a network stack component.
  *
  * It can offer one or more socket interfaces and can connect to a NIC driver
  * component via the NIC component interface.
@@ -160,7 +160,7 @@ import <if_OS_Timer.camkes>;
     }
 
 /**
- * Connect a network stack instance to a ticker event and a NIC component.
+ * Connects a network stack instance to a ticker event and a NIC component.
  *
  * So far, all NIC component interface related fields of the network stack use
  * the prefix 'nic', and the same prefix is also used by all network drivers for

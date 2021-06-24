@@ -242,6 +242,7 @@ OS_NetworkSocket_bind(
     uint16_t                  receiving_port)
 {
     CHECK_PTR_NOT_NULL(handle.ctx);
+
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_bind);
@@ -296,11 +297,13 @@ OS_NetworkServerSocket_create(
         goto err;
     }
     goto exit;
+
 err:
     CHECK_PTR_NOT_NULL(vtable->socket_close);
 
     vtable->socket_close(localHandle.handleID);
     localHandle = OS_NetworkServer_Handle_INVALID;
+
 exit:
     localHandle.ctx = ctx;
     *pSrvHandle     = localHandle;
@@ -355,11 +358,13 @@ OS_NetworkSocket_create(
         goto err;
     }
     goto exit;
+
 err:
     CHECK_PTR_NOT_NULL(vtable->socket_close);
 
     vtable->socket_close(localHandle.handleID);
     localHandle = OS_NetworkSocket_Handle_INVALID;
+
 exit:
     localHandle.ctx = ctx;
     *phandle        = localHandle;

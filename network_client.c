@@ -12,6 +12,7 @@
 #include "OS_Dataport.h"
 #include <string.h>
 #include "OS_NetworkStackClient.h"
+#include "interfaces/if_OS_NetworkStack.h"
 #include "lib_macros/Check.h"
 
 /******************************************************************************/
@@ -19,10 +20,9 @@
 OS_NetworkStackClient_SocketDataports_t* instance;
 
 const OS_Dataport_t
-get_data_port(int handle)
+get_data_port(OS_NetworkSocket_Handle_t* handle)
 {
-    Debug_ASSERT( handle >= 0 && handle < instance->number_of_sockets );
-    return instance->dataport[handle];
+    return instance->dataport[handle->handleID];
 }
 
 /*******************************************************************************/
@@ -44,7 +44,10 @@ OS_Error_t
 OS_NetworkSocket_close(
     OS_NetworkSocket_Handle_t handle)
 {
-    return networkStack_rpc_socket_close(handle);
+    CHECK_PTR_NOT_NULL(handle.ctx);
+
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    return vtable->socket_close(handle.handleID);
 }
 
 /******************************************************************************/
@@ -52,7 +55,10 @@ OS_Error_t
 OS_NetworkServerSocket_close(
     OS_NetworkServer_Handle_t srvHandle)
 {
-    return networkStack_rpc_socket_close(srvHandle);
+    CHECK_PTR_NOT_NULL(srvHandle.ctx);
+
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
+    return vtable->socket_close(srvHandle.handleID);
 }
 
 /******************************************************************************/
@@ -61,8 +67,14 @@ OS_NetworkServerSocket_accept(
     OS_NetworkServer_Handle_t  srvHandle,
     OS_NetworkSocket_Handle_t* phSocket)
 {
-    uint16_t   port = 0;
-    return networkStack_rpc_socket_accept(srvHandle, phSocket, port);
+    CHECK_PTR_NOT_NULL(srvHandle.ctx);
+    CHECK_PTR_NOT_NULL(phSocket);
+
+    uint16_t port = 0;
+
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
+    phSocket->ctx                = srvHandle.ctx;
+    return vtable->socket_accept(srvHandle.handleID, &phSocket->handleID, port);
 }
 
 /******************************************************************************/
@@ -74,15 +86,18 @@ OS_NetworkSocket_read(
     size_t*                   actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(handle.ctx);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(handle);
+    const OS_Dataport_t dp     = get_data_port(&handle);
 
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
-    OS_Error_t err = networkStack_rpc_socket_read(handle, &tempLen);
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    OS_Error_t err = vtable->socket_read(handle.handleID, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -109,16 +124,19 @@ OS_NetworkSocket_recvfrom(
     OS_Network_Socket_t*      src_socket)
 {
     CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(handle.ctx);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(handle);
+    const OS_Dataport_t dp     = get_data_port(&handle);
 
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
-    OS_Error_t err = networkStack_rpc_socket_recvfrom(handle, &tempLen,
-                                                      src_socket);
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    OS_Error_t err =
+        vtable->socket_recvfrom(handle.handleID, &tempLen, src_socket);
 
     if (actualLen != NULL)
     {
@@ -144,17 +162,20 @@ OS_NetworkSocket_write(
     size_t*                   actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(handle.ctx);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(handle);
+    const OS_Dataport_t dp     = get_data_port(&handle);
 
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    OS_Error_t err = networkStack_rpc_socket_write(handle, &tempLen);
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    OS_Error_t err = vtable->socket_write(handle.handleID, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -174,17 +195,20 @@ OS_NetworkSocket_sendto(
     OS_Network_Socket_t       dst_socket)
 {
     CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(handle.ctx);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(handle);
+    const OS_Dataport_t dp     = get_data_port(&handle);
 
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    OS_Error_t err = networkStack_rpc_socket_sendto(handle, &tempLen, dst_socket);
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    OS_Error_t err = vtable->socket_sendto(handle.handleID, &tempLen, dst_socket);
 
     if (actualLen != NULL)
     {
@@ -200,7 +224,9 @@ OS_NetworkSocket_bind(
     OS_NetworkSocket_Handle_t handle,
     uint16_t                  receiving_port)
 {
-    return networkStack_rpc_socket_bind(handle, receiving_port);
+    CHECK_PTR_NOT_NULL(handle.ctx);
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    return vtable->socket_bind(handle.handleID, receiving_port);
 }
 
 /******************************************************************************/
@@ -214,11 +240,14 @@ OS_NetworkServerSocket_create(
     CHECK_PTR_NOT_NULL(pServerStruct);
     CHECK_PTR_NOT_NULL(pSrvHandle);
 
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)ctx;
+
     OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
-    OS_Error_t err = networkStack_rpc_socket_create(
+
+    OS_Error_t err = vtable->socket_create(
                          pServerStruct->domain,
                          pServerStruct->type,
-                         &localHandle);
+                         &localHandle.handleID);
 
     if (err != OS_SUCCESS)
     {
@@ -227,15 +256,14 @@ OS_NetworkServerSocket_create(
         goto exit;
     }
 
-    err =
-        networkStack_rpc_socket_bind(localHandle, pServerStruct->listen_port);
+    err = vtable->socket_bind(localHandle.handleID, pServerStruct->listen_port);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
         goto err;
     }
 
-    err = networkStack_rpc_socket_listen(localHandle, pServerStruct->backlog);
+    err = vtable->socket_listen(localHandle.handleID, pServerStruct->backlog);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
@@ -243,10 +271,11 @@ OS_NetworkServerSocket_create(
     }
     goto exit;
 err:
-    networkStack_rpc_socket_close(localHandle);
-    localHandle = OS_NetworkSocket_Handle_INVALID;
+    vtable->socket_close(localHandle.handleID);
+    localHandle = OS_NetworkServer_Handle_INVALID;
 exit:
-    *pSrvHandle = localHandle;
+    localHandle.ctx = ctx;
+    *pSrvHandle     = localHandle;
     return err;
 }
 
@@ -264,10 +293,13 @@ OS_NetworkSocket_create(
     CHECK_PTR_NOT_NULL(phandle);
 
     OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
-    OS_Error_t err = networkStack_rpc_socket_create(
+
+    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)ctx;
+
+    OS_Error_t err = vtable->socket_create(
                          pClientStruct->domain,
                          pClientStruct->type,
-                         &localHandle);
+                         &localHandle.handleID);
 
     if (err != OS_SUCCESS)
     {
@@ -281,8 +313,8 @@ OS_NetworkSocket_create(
         goto exit;
     }
 
-    err = networkStack_rpc_socket_connect(
-              localHandle,
+    err = vtable->socket_connect(
+              localHandle.handleID,
               pClientStruct->name,
               pClientStruct->port);
     if (err != OS_SUCCESS)
@@ -292,9 +324,10 @@ OS_NetworkSocket_create(
     }
     goto exit;
 err:
-    networkStack_rpc_socket_close(localHandle);
+    vtable->socket_close(localHandle.handleID);
     localHandle = OS_NetworkSocket_Handle_INVALID;
 exit:
-    *phandle = localHandle;
+    localHandle.ctx = ctx;
+    *phandle        = localHandle;
     return err;
 }

@@ -47,6 +47,9 @@ OS_NetworkSocket_close(
     CHECK_PTR_NOT_NULL(handle.ctx);
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_close);
+
     return vtable->socket_close(handle.handleID);
 }
 
@@ -58,6 +61,9 @@ OS_NetworkServerSocket_close(
     CHECK_PTR_NOT_NULL(srvHandle.ctx);
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_close);
+
     return vtable->socket_close(srvHandle.handleID);
 }
 
@@ -74,6 +80,9 @@ OS_NetworkServerSocket_accept(
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
     phSocket->ctx                = srvHandle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_accept);
+
     return vtable->socket_accept(srvHandle.handleID, &phSocket->handleID, port);
 }
 
@@ -96,6 +105,8 @@ OS_NetworkSocket_read(
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_read);
 
     OS_Error_t err = vtable->socket_read(handle.handleID, &tempLen);
 
@@ -134,6 +145,8 @@ OS_NetworkSocket_recvfrom(
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_recvfrom);
 
     OS_Error_t err =
         vtable->socket_recvfrom(handle.handleID, &tempLen, src_socket);
@@ -175,6 +188,8 @@ OS_NetworkSocket_write(
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
 
+    CHECK_PTR_NOT_NULL(vtable->socket_write);
+
     OS_Error_t err = vtable->socket_write(handle.handleID, &tempLen);
 
     if (actualLen != NULL)
@@ -208,6 +223,8 @@ OS_NetworkSocket_sendto(
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
 
+    CHECK_PTR_NOT_NULL(vtable->socket_sendto);
+
     OS_Error_t err = vtable->socket_sendto(handle.handleID, &tempLen, dst_socket);
 
     if (actualLen != NULL)
@@ -226,6 +243,9 @@ OS_NetworkSocket_bind(
 {
     CHECK_PTR_NOT_NULL(handle.ctx);
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+
+    CHECK_PTR_NOT_NULL(vtable->socket_bind);
+
     return vtable->socket_bind(handle.handleID, receiving_port);
 }
 
@@ -244,6 +264,8 @@ OS_NetworkServerSocket_create(
 
     OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
 
+    CHECK_PTR_NOT_NULL(vtable->socket_create);
+
     OS_Error_t err = vtable->socket_create(
                          pServerStruct->domain,
                          pServerStruct->type,
@@ -256,12 +278,16 @@ OS_NetworkServerSocket_create(
         goto exit;
     }
 
+    CHECK_PTR_NOT_NULL(vtable->socket_bind);
+
     err = vtable->socket_bind(localHandle.handleID, pServerStruct->listen_port);
     if (err != OS_SUCCESS)
     {
         Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
         goto err;
     }
+
+    CHECK_PTR_NOT_NULL(vtable->socket_listen);
 
     err = vtable->socket_listen(localHandle.handleID, pServerStruct->backlog);
     if (err != OS_SUCCESS)
@@ -271,6 +297,8 @@ OS_NetworkServerSocket_create(
     }
     goto exit;
 err:
+    CHECK_PTR_NOT_NULL(vtable->socket_close);
+
     vtable->socket_close(localHandle.handleID);
     localHandle = OS_NetworkServer_Handle_INVALID;
 exit:
@@ -296,6 +324,8 @@ OS_NetworkSocket_create(
 
     if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)ctx;
 
+    CHECK_PTR_NOT_NULL(vtable->socket_create);
+
     OS_Error_t err = vtable->socket_create(
                          pClientStruct->domain,
                          pClientStruct->type,
@@ -313,6 +343,8 @@ OS_NetworkSocket_create(
         goto exit;
     }
 
+    CHECK_PTR_NOT_NULL(vtable->socket_connect);
+
     err = vtable->socket_connect(
               localHandle.handleID,
               pClientStruct->name,
@@ -324,6 +356,8 @@ OS_NetworkSocket_create(
     }
     goto exit;
 err:
+    CHECK_PTR_NOT_NULL(vtable->socket_close);
+
     vtable->socket_close(localHandle.handleID);
     localHandle = OS_NetworkSocket_Handle_INVALID;
 exit:

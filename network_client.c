@@ -15,7 +15,7 @@
 
 /******************************************************************************/
 
-OS_NetworkStackClient_SocketDataports_t* instance ;
+OS_NetworkStackClient_SocketDataports_t* instance;
 
 const OS_Dataport_t
 get_data_port(int handle)
@@ -29,8 +29,8 @@ OS_Error_t
 OS_NetworkStackClient_init(
     OS_NetworkStackClient_SocketDataports_t* config)
 {
-    Debug_ASSERT( NULL != config );
-    Debug_ASSERT( NULL != config->dataport );
+    Debug_ASSERT(NULL != config);
+    Debug_ASSERT(NULL != config->dataport);
     instance = config;
     return OS_SUCCESS;
 }
@@ -71,8 +71,8 @@ OS_NetworkSocket_read(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp  = get_data_port(handle);
-    const size_t dpSize     = OS_Dataport_getSize(dp);
+    const OS_Dataport_t dp     = get_data_port(handle);
+    const size_t        dpSize = OS_Dataport_getSize(dp);
 
     if (requestedLen > dpSize)
     {
@@ -87,7 +87,6 @@ OS_NetworkSocket_read(
     {
         *actualLen = tempLen;
     }
-
 
     if (err != OS_SUCCESS)
     {
@@ -110,8 +109,8 @@ OS_NetworkSocket_recvfrom(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp  = get_data_port(handle);
-    const size_t dpSize     = OS_Dataport_getSize(dp);
+    const OS_Dataport_t dp     = get_data_port(handle);
+    const size_t        dpSize = OS_Dataport_getSize(dp);
 
     if (requestedLen > dpSize)
     {
@@ -148,8 +147,8 @@ OS_NetworkSocket_write(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp  = get_data_port(handle);
-    const size_t dpSize     = OS_Dataport_getSize(dp);
+    const OS_Dataport_t dp     = get_data_port(handle);
+    const size_t        dpSize = OS_Dataport_getSize(dp);
 
     if (requestedLen > dpSize)
     {
@@ -181,8 +180,8 @@ OS_NetworkSocket_sendto(
 {
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp  = get_data_port(handle);
-    const size_t dpSize     = OS_Dataport_getSize(dp);
+    const OS_Dataport_t dp     = get_data_port(handle);
+    const size_t        dpSize = OS_Dataport_getSize(dp);
 
     if (requestedLen > dpSize)
     {

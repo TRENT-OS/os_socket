@@ -12,6 +12,7 @@
 #include "OS_Dataport.h"
 #include <string.h>
 #include "OS_NetworkStackClient.h"
+#include "lib_macros/Check.h"
 
 /******************************************************************************/
 
@@ -31,6 +32,9 @@ OS_NetworkStackClient_init(
 {
     Debug_ASSERT(NULL != config);
     Debug_ASSERT(NULL != config->dataport);
+
+    CHECK_PTR_NOT_NULL(config);
+
     instance = config;
     return OS_SUCCESS;
 }
@@ -69,17 +73,14 @@ OS_NetworkSocket_read(
     size_t                    requestedLen,
     size_t*                   actualLen)
 {
+    CHECK_PTR_NOT_NULL(buf);
+
     size_t tempLen = requestedLen;
 
     const OS_Dataport_t dp     = get_data_port(handle);
-    const size_t        dpSize = OS_Dataport_getSize(dp);
 
-    if (requestedLen > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
-                        requestedLen, dpSize, handle);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SET(dp);
+    CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     OS_Error_t err = networkStack_rpc_socket_read(handle, &tempLen);
 
@@ -107,17 +108,14 @@ OS_NetworkSocket_recvfrom(
     size_t*                   actualLen,
     OS_Network_Socket_t*      src_socket)
 {
+    CHECK_PTR_NOT_NULL(buf);
+
     size_t tempLen = requestedLen;
 
     const OS_Dataport_t dp     = get_data_port(handle);
-    const size_t        dpSize = OS_Dataport_getSize(dp);
 
-    if (requestedLen > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
-                        requestedLen, dpSize, handle);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SET(dp);
+    CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     OS_Error_t err = networkStack_rpc_socket_recvfrom(handle, &tempLen,
                                                       src_socket);
@@ -145,17 +143,14 @@ OS_NetworkSocket_write(
     size_t                    requestedLen,
     size_t*                   actualLen)
 {
+    CHECK_PTR_NOT_NULL(buf);
+
     size_t tempLen = requestedLen;
 
     const OS_Dataport_t dp     = get_data_port(handle);
-    const size_t        dpSize = OS_Dataport_getSize(dp);
 
-    if (requestedLen > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
-                        requestedLen, dpSize, handle);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SET(dp);
+    CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
@@ -178,17 +173,14 @@ OS_NetworkSocket_sendto(
     size_t*                   actualLen,
     OS_Network_Socket_t       dst_socket)
 {
+    CHECK_PTR_NOT_NULL(buf);
+
     size_t tempLen = requestedLen;
 
     const OS_Dataport_t dp     = get_data_port(handle);
-    const size_t        dpSize = OS_Dataport_getSize(dp);
 
-    if (requestedLen > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu for handle %d",
-                        requestedLen, dpSize, handle);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SET(dp);
+    CHECK_DATAPORT_SIZE(dp, requestedLen);
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
@@ -218,6 +210,10 @@ OS_NetworkServerSocket_create(
     OS_NetworkServer_Socket_t* pServerStruct,
     OS_NetworkServer_Handle_t* pSrvHandle)
 {
+    CHECK_PTR_NOT_NULL(ctx);
+    CHECK_PTR_NOT_NULL(pServerStruct);
+    CHECK_PTR_NOT_NULL(pSrvHandle);
+
     OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
     OS_Error_t err = networkStack_rpc_socket_create(
                          pServerStruct->domain,
@@ -263,6 +259,10 @@ OS_NetworkSocket_create(
     OS_Network_Socket_t*       pClientStruct,
     OS_NetworkSocket_Handle_t* phandle)
 {
+    CHECK_PTR_NOT_NULL(ctx);
+    CHECK_PTR_NOT_NULL(pClientStruct);
+    CHECK_PTR_NOT_NULL(phandle);
+
     OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
     OS_Error_t err = networkStack_rpc_socket_create(
                          pClientStruct->domain,

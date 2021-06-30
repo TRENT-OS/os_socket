@@ -12,7 +12,7 @@
 #include "OS_Dataport.h"
 #include <string.h>
 #include "OS_NetworkStackClient.h"
-#include "interfaces/if_OS_NetworkStack.h"
+#include "interfaces/if_OS_Socket.h"
 #include "lib_macros/Check.h"
 
 /******************************************************************************/
@@ -46,7 +46,7 @@ OS_NetworkSocket_close(
 {
     CHECK_PTR_NOT_NULL(handle.ctx);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_close);
 
@@ -60,7 +60,7 @@ OS_NetworkServerSocket_close(
 {
     CHECK_PTR_NOT_NULL(srvHandle.ctx);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)srvHandle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_close);
 
@@ -78,7 +78,7 @@ OS_NetworkServerSocket_accept(
 
     uint16_t port = 0;
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)srvHandle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)srvHandle.ctx;
     phSocket->ctx                = srvHandle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_accept);
@@ -104,7 +104,7 @@ OS_NetworkSocket_read(
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_read);
 
@@ -144,7 +144,7 @@ OS_NetworkSocket_recvfrom(
     CHECK_DATAPORT_SET(dp);
     CHECK_DATAPORT_SIZE(dp, requestedLen);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_recvfrom);
 
@@ -186,7 +186,7 @@ OS_NetworkSocket_write(
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_write);
 
@@ -221,7 +221,7 @@ OS_NetworkSocket_sendto(
 
     memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_sendto);
 
@@ -243,7 +243,7 @@ OS_NetworkSocket_bind(
 {
     CHECK_PTR_NOT_NULL(handle.ctx);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)handle.ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_bind);
 
@@ -261,7 +261,7 @@ OS_NetworkServerSocket_create(
     CHECK_PTR_NOT_NULL(pServerStruct);
     CHECK_PTR_NOT_NULL(pSrvHandle);
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)ctx;
 
     OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
 
@@ -325,7 +325,7 @@ OS_NetworkSocket_create(
 
     OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
 
-    if_OS_NetworkStack_t* vtable = (if_OS_NetworkStack_t*)ctx;
+    if_OS_Socket_t* vtable = (if_OS_Socket_t*)ctx;
 
     CHECK_PTR_NOT_NULL(vtable->socket_create);
 

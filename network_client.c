@@ -11,7 +11,6 @@
 #include "OS_Network.h"
 #include "OS_Dataport.h"
 #include <string.h>
-#include "OS_NetworkStackClient.h"
 #include "interfaces/if_OS_Socket.h"
 #include "lib_macros/Check.h"
 

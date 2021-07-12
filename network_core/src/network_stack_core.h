@@ -62,3 +62,12 @@ get_wait_read_func_for_handle(
 const OS_Dataport_t*
 get_dataport_for_handle(
     int handle);
+
+int
+get_client_id(void);
+
+uint8_t*
+get_client_id_buf(void);
+
+int
+get_client_id_buf_size(void);

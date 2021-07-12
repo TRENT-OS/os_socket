@@ -213,9 +213,54 @@ import <if_OS_Timer.camkes>;
     ...) \
     connection seL4RPCDataport conn_rpc_##client##_##inst( \
         from client.client_rpc, \
-        to   inst.networkStack_rpc); \
+        to   inst.networkStack_rpc);
+
+//------------------------------------------------------------------------------
+
+
+// Assign a single badge; this is used internally
+#define NwStack_BADGE_ASSIGNER( \
+    _unused0_, \
+    _unused1_, \
+    _rpc_, \
+    _num_) \
     \
-    FOR_EACH_1P(_NWSTACK_INSTANCE_CONNECT_SOCKET_DATAPORT, \
-        inst, \
-        client, \
-        __VA_ARGS__)
+    _rpc_ ## _attributes = (100 + _num_);
+
+
+/*
+ * Assign all clients a badge, in the order in which they are connected to the
+ * StorageServer instance via NwStack_INSTANCE_CONNECT_CLIENTS():
+ *
+ *      NwStack_CLIENT_ASSIGN_BADGE(
+ *          <client_rpc>, <ID>
+ *      )
+ *
+ * NOTE: IDs need to start at 101!
+ *
+ */
+#define NwStack_CLIENT_ASSIGN_BADGE( \
+    _rpc_, \
+    _val_) \
+    \
+    _rpc_ ## _attributes = _val_;
+
+
+/*
+ * Assign badges to a list of clients; badge IDs will start at 101 and then be
+ * incremented. Make sure to pass clients in same order as they are passed
+ * in the NwStack_INSTANCE_CONNECT_CLIENTS() macro:
+ *
+ *      NwStack_CLIENT_ASSIGN_BADGES(
+ *          <client0_rpc>,
+ *          <client1_rpc>,
+ *           ...
+ *      )
+ *
+ * NOTE: Can take up to 8 clients.
+ *
+ */
+#define NwStack_CLIENT_ASSIGN_BADGES( \
+    ...) \
+    \
+    FOR_EACH_1P(NwStack_BADGE_ASSIGNER,UNUSED,UNUSED,__VA_ARGS__)

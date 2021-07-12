@@ -447,13 +447,14 @@ network_stack_pico_socket_close(
     int handle)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket != NULL);// can't be null, we got a valid handle above
+
+    CHECK_SOCKET(pico_socket, handle);
 
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_close(pico_socket);
@@ -486,14 +487,14 @@ network_stack_pico_socket_connect(
     CHECK_PTR_NOT_NULL(dstAddr);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
+
+    CHECK_SOCKET(pico_socket, handle);
 
     Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%u ...",
                     handle, pico_socket, dstAddr->addr, dstAddr->port);
@@ -547,14 +548,14 @@ network_stack_pico_socket_bind(
     CHECK_PTR_NOT_NULL(localAddr);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
+
+    CHECK_SOCKET(pico_socket, handle);
 
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, pico_socket,
                    localAddr->port);
@@ -591,14 +592,14 @@ network_stack_pico_socket_listen(
     int backlog)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
+
+    CHECK_SOCKET(pico_socket, handle);
 
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_listen(pico_socket, backlog);
@@ -629,23 +630,17 @@ network_stack_pico_socket_accept(
     CHECK_PTR_NOT_NULL(srcAddr);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
 
     // set default
     *pClient_handle = -1;
 
-    if (pico_socket == NULL)
-    {
-        Debug_LOG_ERROR("[socket %d] accept() with invalid handle", handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    CHECK_SOCKET(pico_socket, handle);
 
     Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, pico_socket);
     internal_wait_connection(handle);
@@ -705,32 +700,19 @@ network_stack_pico_socket_write(
     CHECK_PTR_NOT_NULL(pLen);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
-    struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
 
-    if (NULL == pico_socket)
-    {
-        Debug_LOG_ERROR("[socket %d] write() with invalid handle", handle);
-        *pLen = 0;
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    struct pico_socket* pico_socket = socket->implementation_socket;
+
+    CHECK_SOCKET(pico_socket, handle);
 
     const OS_Dataport_t*    app_port    = get_app_port(handle);
     size_t                  len         = *pLen;
-    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (len > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
-                        len, dpSize);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SIZE(socket->buf, len);
 
     internal_wait_write(handle);
 
@@ -767,22 +749,14 @@ network_stack_pico_socket_read(
     CHECK_PTR_NOT_NULL(pLen);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
 
-
-    if (NULL == pico_socket)
-    {
-        Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
-        *pLen = 0;
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    CHECK_SOCKET(pico_socket, handle);
 
     OS_Error_t retval = OS_SUCCESS;
     int tot_len = 0;
@@ -790,14 +764,8 @@ network_stack_pico_socket_read(
 
     const OS_Dataport_t*    app_port    = get_app_port(handle);
     uint8_t*                buf         = OS_Dataport_getBuf(*app_port);
-    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (len > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
-                        len, dpSize);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SIZE(socket->buf, len);
 
     internal_notify_main_loop();
 
@@ -875,11 +843,11 @@ network_stack_pico_socket_sendto(
     CHECK_PTR_NOT_NULL(dstAddr);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     struct pico_socket* pico_socket = socket->implementation_socket;
     Debug_ASSERT(pico_socket !=
                  NULL); // can't be null, as we got a valid handle above
@@ -892,14 +860,8 @@ network_stack_pico_socket_sendto(
     }
     const OS_Dataport_t*    app_port    = get_app_port(handle);
     size_t                  len         = *pLen;
-    size_t                  dpSize      = OS_Dataport_getSize(*app_port);
 
-    if (len > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
-                        len, dpSize);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
+    CHECK_DATAPORT_SIZE(socket->buf, len);
 
     struct pico_ip4 dst = {};
     uint16_t        dport;
@@ -947,40 +909,27 @@ network_stack_pico_socket_recvfrom(
     CHECK_PTR_NOT_NULL(pLen);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-    if (NULL == socket)
-    {
-        Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
-        return OS_ERROR_INVALID_HANDLE;
-    }
-    struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
 
-    if (NULL == pico_socket)
-    {
-        Debug_LOG_ERROR("[socket %d] read() with invalid handle", handle);
-        *pLen = 0;
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    struct pico_socket* pico_socket = socket->implementation_socket;
+
+    CHECK_SOCKET(pico_socket, handle);
 
     OS_Error_t retval = OS_SUCCESS;
     size_t     len    = *pLen;
 
     const OS_Dataport_t*    app_port   = get_app_port(handle);
     uint8_t*                buf        = OS_Dataport_getBuf(*app_port);;
-    size_t                  dpSize     = OS_Dataport_getSize(*app_port);
+
+    CHECK_DATAPORT_SIZE(socket->buf, len);
 
     struct pico_ip4 src = {};
     uint16_t        sport;
 
     int ret;
-
-    if (len > dpSize)
-    {
-        Debug_LOG_ERROR("Buffer size %zu exceeds dataport size %zu",
-                        len, dpSize);
-        return OS_ERROR_INVALID_PARAMETER;
-    }
 
     internal_notify_main_loop();
 

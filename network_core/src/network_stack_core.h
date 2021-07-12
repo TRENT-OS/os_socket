@@ -59,6 +59,6 @@ event_wait_func_t
 get_wait_read_func_for_handle(
     int handle);
 
-OS_Dataport_t*
+const OS_Dataport_t*
 get_dataport_for_handle(
     int handle);

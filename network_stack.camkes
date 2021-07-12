@@ -15,6 +15,9 @@
 
 #pragma once
 
+import <std_connector.camkes>;
+import <global-connectors.camkes>;
+
 #include "lib_macros/ForEach.h"
 
 #include <if_OS_Nic.camkes>
@@ -74,33 +77,7 @@ import <if_OS_Timer.camkes>;
         from e_conn_##n, \
         to   c_conn_##n);
 
-/**
- * Connects an application dataport to a network stack socket dataport.
- *
- * @param[in] inst        Name of the network stack component instance.
- * @param[in] client      Name of client component instance.
- *                        FOR_EACH_1P() iterator from "lib_macros/ForEach.h"
- * @param[in] client_port Name of the client dataport to connect to a socket.
- * @param[in] n           Number of the socket.
- */
-#define _NWSTACK_INSTANCE_CONNECT_SOCKET_DATAPORT( \
-    inst, \
-    client, \
-    client_port, \
-    n) \
-    \
-    connection seL4SharedData conn_port_##client##_##inst##_##n( \
-        from client.client_port, \
-        to   inst.NwStack_SOCKET_PORT_NAME(n));
-
 // Public macros ---------------------------------------------------------------
-/**
- * Helper macro to create a socket dataport name including its number.
- *
- * @param[in] n Number of the socket.
- */
-#define NwStack_SOCKET_PORT_NAME(n) socket_##n##_port
-
 /**
  * Declare a socket number 'n' as member of the network stack.
  *
@@ -116,9 +93,7 @@ import <if_OS_Timer.camkes>;
     consumes  NwStack_RdEv    c_read_##n; \
     \
     emits     NwStack_ConnEv  e_conn_##n; \
-    consumes  NwStack_ConnEv  c_conn_##n; \
-    \
-    dataport  Buf             NwStack_SOCKET_PORT_NAME(n);
+    consumes  NwStack_ConnEv  c_conn_##n;
 
 //! Macro for the component definition if no other interfaces are used.
 #define NwStack_NO_ADDITIONAL_INTERFACES _NWSTACK_EMPTY
@@ -236,7 +211,7 @@ import <if_OS_Timer.camkes>;
     client, \
     client_rpc, \
     ...) \
-    connection seL4RPCCall conn_rpc_##client##_##inst( \
+    connection seL4RPCDataport conn_rpc_##client##_##inst( \
         from client.client_rpc, \
         to   inst.networkStack_rpc); \
     \

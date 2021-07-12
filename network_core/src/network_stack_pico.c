@@ -593,15 +593,6 @@ network_stack_pico_socket_listen(
     Debug_ASSERT(pico_socket !=
                  NULL); // can't be null, as we got a valid handle above
 
-    // currently we support just one incoming connection, so everything is hard
-    // coded
-    int handle_socket_server = 0;
-    if (handle_socket_server != handle)
-    {
-        Debug_LOG_ERROR("[socket %d/%p] only socket handle %d is currently allowed",
-                        handle, pico_socket, handle_socket_server);
-        return OS_ERROR_INVALID_HANDLE;
-    }
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_listen(pico_socket, backlog);
     OS_Error_t err = pico_err2os(pico_err);

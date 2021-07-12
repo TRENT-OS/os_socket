@@ -66,10 +66,6 @@ nic_dev_write(
 OS_Error_t
 nic_dev_get_mac_address(void);
 
-const OS_Dataport_t*
-get_app_port(
-    int handle);
-
 void internal_socket_control_block_mutex_lock(void);
 void internal_socket_control_block_mutex_unlock(void);
 

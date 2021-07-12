@@ -232,21 +232,6 @@ nic_dev_get_mac_address(void)
 
 
 //------------------------------------------------------------------------------
-const OS_Dataport_t*
-get_app_port(
-    int handle)
-{
-    const OS_Dataport_t* port = get_dataport_for_handle(handle);
-
-    Debug_ASSERT( NULL != port );
-    Debug_ASSERT( NULL != port->io );
-    Debug_ASSERT( 0 != port->size );
-
-    return port;
-}
-
-
-//------------------------------------------------------------------------------
 void
 internal_socket_control_block_mutex_lock(void)
 {

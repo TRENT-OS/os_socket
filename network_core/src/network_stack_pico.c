@@ -709,15 +709,17 @@ network_stack_pico_socket_write(
 
     CHECK_SOCKET(pico_socket, handle);
 
-    const OS_Dataport_t*    app_port    = get_app_port(handle);
-    size_t                  len         = *pLen;
+    uint8_t* buf = OS_Dataport_getBuf(socket->buf);
+    size_t len = *pLen;
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
     internal_wait_write(handle);
 
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_write(pico_socket, OS_Dataport_getBuf(*app_port), len);
+    int ret = pico_socket_write(pico_socket,
+                                buf,
+                                len);
     OS_Error_t err =  pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
@@ -762,8 +764,7 @@ network_stack_pico_socket_read(
     int tot_len = 0;
     size_t len = *pLen; /* App requested length */
 
-    const OS_Dataport_t*    app_port    = get_app_port(handle);
-    uint8_t*                buf         = OS_Dataport_getBuf(*app_port);
+    uint8_t* buf = OS_Dataport_getBuf(socket->buf);
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
@@ -858,8 +859,9 @@ network_stack_pico_socket_sendto(
         *pLen = 0;
         return OS_ERROR_INVALID_HANDLE;
     }
-    const OS_Dataport_t*    app_port    = get_app_port(handle);
-    size_t                  len         = *pLen;
+
+    uint8_t* buf = OS_Dataport_getBuf(socket->buf);
+    size_t len = *pLen;
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
@@ -869,7 +871,9 @@ network_stack_pico_socket_sendto(
     dport = short_be(dstAddr->port);
 
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_sendto(pico_socket, OS_Dataport_getBuf(*app_port), len,
+    int ret = pico_socket_sendto(pico_socket,
+                                 buf,
+                                 len,
                                  &dst,
                                  dport);
     OS_Error_t err =  pico_err2os(pico_err);
@@ -921,8 +925,7 @@ network_stack_pico_socket_recvfrom(
     OS_Error_t retval = OS_SUCCESS;
     size_t     len    = *pLen;
 
-    const OS_Dataport_t*    app_port   = get_app_port(handle);
-    uint8_t*                buf        = OS_Dataport_getBuf(*app_port);;
+    uint8_t* buf = OS_Dataport_getBuf(socket->buf);
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 

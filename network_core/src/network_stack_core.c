@@ -13,6 +13,7 @@
 #include "network/OS_Network_types.h"
 #include "OS_NetworkStack.h"
 #include "network_config.h"
+#include "network_stack_core.h"
 #include "network_stack_pico.h"
 #include <stdlib.h>
 #include <stdint.h>

@@ -797,7 +797,7 @@ network_stack_pico_socket_read(
             if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
             {
                 Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
-                               handle, socket);
+                               handle, pico_socket);
             }
             else
             {

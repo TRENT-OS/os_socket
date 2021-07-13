@@ -22,14 +22,14 @@
 
 typedef struct
 {
-    const OS_NetworkStack_CamkesConfig_t*   camkes_cfg;
-    const OS_NetworkStack_AddressConfig_t*          cfg;
+    const OS_NetworkStack_CamkesConfig_t* camkes_cfg;
+    const OS_NetworkStack_AddressConfig_t* cfg;
     OS_NetworkStack_SocketResources_t* sockets;
     int number_of_sockets;
 } network_stack_t;
 
 // network stack state
-static network_stack_t  instance = {0};
+static network_stack_t instance = {0};
 
 
 //------------------------------------------------------------------------------
@@ -47,9 +47,9 @@ config_get_handlers(void)
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_create(
-    int   domain,
-    int   socket_type,
-    int*  pHandle)
+    int  domain,
+    int  socket_type,
+    int* pHandle)
 {
     return network_stack_pico_socket_create(domain, socket_type, pHandle);
 }
@@ -78,7 +78,7 @@ networkStack_rpc_socket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_bind(
-    int handle,
+    int      handle,
     uint16_t port)
 {
     return network_stack_pico_socket_bind(handle, port);
@@ -100,8 +100,8 @@ networkStack_rpc_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 networkStack_rpc_socket_accept(
-    int handle,
-    int* pClient_handle,
+    int      handle,
+    int*     pClient_handle,
     uint16_t port)
 {
     return network_stack_pico_socket_accept(handle, pClient_handle, port);
@@ -120,7 +120,7 @@ networkStack_rpc_socket_write(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_read(
-    int handle,
+    int     handle,
     size_t* pLen)
 {
     return network_stack_pico_socket_read(handle, pLen);
@@ -376,7 +376,7 @@ get_dataport_for_handle(
 OS_Error_t
 OS_NetworkStack_init(
     const OS_NetworkStack_CamkesConfig_t*  camkes_config,
-    const OS_NetworkStack_AddressConfig_t*         config)
+    const OS_NetworkStack_AddressConfig_t* config)
 {
     if ((NULL == camkes_config) || (NULL == config))
     {

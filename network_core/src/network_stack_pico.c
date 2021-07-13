@@ -201,9 +201,9 @@ translate_socket_type(
 //------------------------------------------------------------------------------
 int
 helper_socket_set_option_int(
-    struct pico_socket*  s,
-    int                  option,
-    int                  value)
+    struct pico_socket* s,
+    int                 option,
+    int                 value)
 {
     return pico_socket_setoption(s, option, &value);
 }
@@ -266,8 +266,8 @@ handle_incoming_connection(OS_NetworkStack_SocketResources_t* socket)
 // This is called from the PicoTCP main tick loop to report socket events
 static void
 handle_pico_socket_event(
-    uint16_t             event_mask,
-    struct pico_socket*  pico_socket)
+    uint16_t            event_mask,
+    struct pico_socket* pico_socket)
 {
     int handle = get_handle_from_implementation_socket(pico_socket);
     if (handle < 0)
@@ -362,9 +362,9 @@ handle_pico_socket_event(
 
 OS_Error_t
 network_stack_pico_socket_create(
-    int   domain,
-    int   socket_type,
-    int*  pHandle)
+    int  domain,
+    int  socket_type,
+    int* pHandle)
 {
     int pico_domain = translate_socket_domain(domain);
     if (pico_domain < 0)
@@ -529,7 +529,7 @@ network_stack_pico_socket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_bind(
-    int handle,
+    int      handle,
     uint16_t port)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
@@ -608,8 +608,8 @@ network_stack_pico_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 network_stack_pico_socket_accept(
-    int handle,
-    int* pClient_handle,
+    int      handle,
+    int*     pClient_handle,
     uint16_t port)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
@@ -673,7 +673,7 @@ network_stack_pico_socket_accept(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_write(
-    int handle,
+    int     handle,
     size_t* pLen)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
@@ -733,7 +733,7 @@ network_stack_pico_socket_write(
 // Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_read(
-    int handle,
+    int     handle,
     size_t* pLen)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);

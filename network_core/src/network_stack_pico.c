@@ -683,14 +683,14 @@ network_stack_pico_socket_accept(
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
                     handle, pico_socket, *pClient_handle, client_socket);
 
-    socket = get_socket_from_handle(*pClient_handle);
+    OS_NetworkStack_SocketResources_t* socket_client;
 
-    CHECK_CLIENT_ID(socket);
+    socket_client = get_socket_from_handle(*pClient_handle);
 
-    socket->buf_io = get_client_id_buf();
-    OS_Dataport_t tmp =
-        OS_DATAPORT_CUSTOM_SIZE_ASSIGN(socket->buf_io, get_client_id_buf_size());
-    socket->buf = tmp;
+    CHECK_CLIENT_ID(socket_client);
+
+    socket_client->buf_io = socket->buf_io;
+    socket_client->buf    = socket->buf;
     internal_network_stack_thread_safety_mutex_unlock();
 
     return OS_SUCCESS;

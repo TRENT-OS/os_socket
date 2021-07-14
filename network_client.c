@@ -15,10 +15,10 @@
 #include "interfaces/if_OS_Socket.h"
 #include "lib_macros/Check.h"
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_NetworkStackClient_SocketDataports_t* instance;
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkStackClient_init(
     OS_NetworkStackClient_SocketDataports_t* config)
@@ -32,7 +32,7 @@ OS_NetworkStackClient_init(
     return OS_SUCCESS;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_create(
     const if_OS_Socket_t*      ctx,
@@ -63,7 +63,7 @@ OS_NetworkSocket_create(
     return err;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_connect(
     OS_NetworkSocket_Handle_t      handle,
@@ -75,7 +75,7 @@ OS_NetworkSocket_connect(
     return handle.ctx.socket_connect(handle.handleID, dstAddr);
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_bind(
     OS_NetworkSocket_Handle_t      handle,
@@ -86,7 +86,7 @@ OS_NetworkSocket_bind(
     return handle.ctx.socket_bind(handle.handleID, localAddr);
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_listen(
     OS_NetworkSocket_Handle_t handle,
@@ -97,7 +97,7 @@ OS_NetworkSocket_listen(
     return handle.ctx.socket_listen(handle.handleID, backlog);
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_accept(
     OS_NetworkSocket_Handle_t  handle,
@@ -116,7 +116,7 @@ OS_NetworkSocket_accept(
                srcAddr);
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_read(
     OS_NetworkSocket_Handle_t handle,
@@ -150,7 +150,7 @@ OS_NetworkSocket_read(
     return OS_SUCCESS;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_recvfrom(
     OS_NetworkSocket_Handle_t handle,
@@ -188,7 +188,7 @@ OS_NetworkSocket_recvfrom(
     return OS_SUCCESS;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_write(
     OS_NetworkSocket_Handle_t handle,
@@ -216,7 +216,7 @@ OS_NetworkSocket_write(
     return err;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_sendto(
     OS_NetworkSocket_Handle_t      handle,
@@ -249,7 +249,7 @@ OS_NetworkSocket_sendto(
     return err;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_getPendingEvents(void)
 {
@@ -257,7 +257,7 @@ OS_NetworkSocket_getPendingEvents(void)
     return OS_ERROR_NOT_IMPLEMENTED;
 }
 
-/******************************************************************************/
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_close(
     OS_NetworkSocket_Handle_t handle)

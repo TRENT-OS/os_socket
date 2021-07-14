@@ -10,6 +10,7 @@
 #include "lib_debug/Debug.h"
 #include "OS_Network.h"
 #include "network/OS_NetworkStack.h"
+#include "network/OS_Network_types.h"
 #include "OS_NetworkStack.h"
 #include "network_config.h"
 #include "network_stack_pico.h"
@@ -67,21 +68,20 @@ networkStack_rpc_socket_close(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_connect(
-    int          handle,
-    const char*  name,
-    int          port)
+    int                            handle,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
-    return network_stack_pico_socket_connect(handle, name, port);
+    return network_stack_pico_socket_connect(handle, dstAddr);
 }
 
 
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_bind(
-    int      handle,
-    uint16_t port)
+    int                            handle,
+    const OS_NetworkSocket_Addr_t* localAddr)
 {
-    return network_stack_pico_socket_bind(handle, port);
+    return network_stack_pico_socket_bind(handle, localAddr);
 }
 
 
@@ -100,18 +100,18 @@ networkStack_rpc_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 networkStack_rpc_socket_accept(
-    int      handle,
-    int*     pClient_handle,
-    uint16_t port)
+    int                      handle,
+    int*                     pClient_handle,
+    OS_NetworkSocket_Addr_t* srcAddr)
 {
-    return network_stack_pico_socket_accept(handle, pClient_handle, port);
+    return network_stack_pico_socket_accept(handle, pClient_handle, srcAddr);
 }
 
 
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_write(
-    int handle,
+    int     handle,
     size_t* pLen)
 {
     return network_stack_pico_socket_write(handle, pLen);
@@ -129,21 +129,21 @@ networkStack_rpc_socket_read(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_sendto(
-    int                 handle,
-    size_t*             pLen,
-    OS_Network_Socket_t dst_socket)
+    int                            handle,
+    size_t*                        pLen,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
-    return network_stack_pico_socket_sendto(handle, pLen, dst_socket);
+    return network_stack_pico_socket_sendto(handle, pLen, dstAddr);
 }
 
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_recvfrom(
-    int                  handle,
-    size_t*              pLen,
-    OS_Network_Socket_t* src_socket)
+    int                      handle,
+    size_t*                  pLen,
+    OS_NetworkSocket_Addr_t* srcAddr)
 {
-    return network_stack_pico_socket_recvfrom(handle, pLen, src_socket);
+    return network_stack_pico_socket_recvfrom(handle, pLen, srcAddr);
 }
 
 //------------------------------------------------------------------------------

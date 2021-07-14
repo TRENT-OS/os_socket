@@ -10,6 +10,7 @@
 #include <stdlib.h>
 
 #include "OS_Network.h"
+#include "network/OS_Network_types.h"
 #include "network_config.h"
 #include "network_stack_core.h"
 #include "network_stack_pico_nic.h"
@@ -469,9 +470,8 @@ network_stack_pico_socket_close(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_connect(
-    int          handle,
-    const char*  name,
-    int          port)
+    int                            handle,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
@@ -483,19 +483,19 @@ network_stack_pico_socket_connect(
     Debug_ASSERT(pico_socket !=
                  NULL); // can't be null, as we got a valid handle above
 
-    Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%d ...",
-                    handle, pico_socket, name, port);
+    Debug_LOG_DEBUG("[socket %d/%p] open connection to %s:%u ...",
+                    handle, pico_socket, dstAddr->addr, dstAddr->port);
 
     struct pico_ip4 dst;
-    if (pico_string_to_ipv4(name, &dst.addr) < 0)
+    if (pico_string_to_ipv4((char*)dstAddr->addr, &dst.addr) < 0)
     {
         Debug_LOG_ERROR("[socket %d/%p] pico_string_to_ipv4() failed translating name '%s'",
-                        handle, pico_socket, name);
+                        handle, pico_socket, dstAddr->addr);
         return OS_ERROR_INVALID_PARAMETER;
     }
 
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_connect(pico_socket, &dst, short_be(port));
+    int ret = pico_socket_connect(pico_socket, &dst, short_be(dstAddr->port));
     OS_Error_t err =  pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
@@ -520,8 +520,8 @@ network_stack_pico_socket_connect(
         return err;
     }
 
-    Debug_LOG_INFO("[socket %d/%p] connection established to %s:%d",
-                   handle, pico_socket, name, port);
+    Debug_LOG_INFO("[socket %d/%p] connection established to %s:%u",
+                   handle, pico_socket, dstAddr->addr, dstAddr->port);
 
     return OS_SUCCESS;
 }
@@ -529,8 +529,8 @@ network_stack_pico_socket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_bind(
-    int      handle,
-    uint16_t port)
+    int                            handle,
+    const OS_NetworkSocket_Addr_t* localAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
@@ -542,10 +542,11 @@ network_stack_pico_socket_bind(
     Debug_ASSERT(pico_socket !=
                  NULL); // can't be null, as we got a valid handle above
 
-    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, pico_socket, port);
+    Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, pico_socket,
+                   localAddr->port);
 
     struct pico_ip4 ZERO_IP4 = { 0 };
-    uint16_t be_port = short_be(port);
+    uint16_t be_port = short_be(localAddr->port);
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_bind(pico_socket, &ZERO_IP4, &be_port);
     OS_Error_t err =  pico_err2os(pico_err);
@@ -608,9 +609,9 @@ network_stack_pico_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 network_stack_pico_socket_accept(
-    int      handle,
-    int*     pClient_handle,
-    uint16_t port)
+    int                      handle,
+    int*                     pClient_handle,
+    OS_NetworkSocket_Addr_t* srcAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
@@ -837,9 +838,9 @@ network_stack_pico_socket_read(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_sendto(
-    int                 handle,
-    size_t*             pLen,
-    OS_Network_Socket_t dst_socket)
+    int                            handle,
+    size_t*                        pLen,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
@@ -870,8 +871,8 @@ network_stack_pico_socket_sendto(
 
     struct pico_ip4 dst = {};
     uint16_t        dport;
-    pico_string_to_ipv4(dst_socket.name, &dst.addr);
-    dport = short_be(dst_socket.port);
+    pico_string_to_ipv4((char*)dstAddr->addr, &dst.addr);
+    dport = short_be(dstAddr->port);
 
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_sendto(pico_socket, OS_Dataport_getBuf(*app_port), len,
@@ -907,9 +908,9 @@ network_stack_pico_socket_sendto(
 // Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_recvfrom(
-    int                  handle,
-    size_t*              pLen,
-    OS_Network_Socket_t* source_socket)
+    int                      handle,
+    size_t*                  pLen,
+    OS_NetworkSocket_Addr_t* srcAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
@@ -973,13 +974,13 @@ network_stack_pico_socket_recvfrom(
 
             return err;
         }
-        // If source_socket is NULL it means the user doesn't want the
+        // If srcAddr is NULL it means the user doesn't want the
         // sender's information.
-        if (NULL != source_socket)
+        if (NULL != srcAddr)
         {
-            pico_ipv4_to_string(source_socket->name, src.addr);
+            pico_ipv4_to_string((char*)srcAddr->addr, src.addr);
 
-            source_socket->port = short_be(sport);
+            srcAddr->port = short_be(sport);
         }
     }
     while (ret == 0);

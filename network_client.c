@@ -16,16 +16,9 @@
 #include "lib_macros/Check.h"
 
 /******************************************************************************/
-
 OS_NetworkStackClient_SocketDataports_t* instance;
 
-const OS_Dataport_t
-get_data_port(OS_NetworkSocket_Handle_t* handle)
-{
-    return instance->dataport[handle->handleID];
-}
-
-/*******************************************************************************/
+/******************************************************************************/
 OS_Error_t
 OS_NetworkStackClient_init(
     OS_NetworkStackClient_SocketDataports_t* config)
@@ -41,49 +34,86 @@ OS_NetworkStackClient_init(
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkSocket_close(
-    OS_NetworkSocket_Handle_t handle)
+OS_NetworkSocket_create(
+    const if_OS_Socket_t*      ctx,
+    OS_NetworkSocket_Handle_t* phandle,
+    int                        domain,
+    int                        type)
 {
-    CHECK_PTR_NOT_NULL(handle.ctx);
+    CHECK_PTR_NOT_NULL(ctx);
+    CHECK_PTR_NOT_NULL(phandle);
 
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
+    OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
 
-    CHECK_PTR_NOT_NULL(vtable->socket_close);
+    CHECK_PTR_NOT_NULL(ctx->socket_create);
 
-    return vtable->socket_close(handle.handleID);
+    OS_Error_t err = ctx->socket_create(
+                         domain,
+                         type,
+                         &localHandle.handleID);
+    if (err != OS_SUCCESS)
+    {
+        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
+        localHandle = OS_NetworkSocket_Handle_INVALID;
+        return err;
+    }
+
+    localHandle.ctx = *ctx;
+    *phandle        = localHandle;
+    return err;
 }
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkServerSocket_close(
-    OS_NetworkServer_Handle_t srvHandle)
+OS_NetworkSocket_connect(
+    OS_NetworkSocket_Handle_t      handle,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
-    CHECK_PTR_NOT_NULL(srvHandle.ctx);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_connect);
+    CHECK_PTR_NOT_NULL(dstAddr);
 
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)srvHandle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_close);
-
-    return vtable->socket_close(srvHandle.handleID);
+    return handle.ctx.socket_connect(handle.handleID, dstAddr);
 }
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkServerSocket_accept(
-    OS_NetworkServer_Handle_t  srvHandle,
-    OS_NetworkSocket_Handle_t* phSocket)
+OS_NetworkSocket_bind(
+    OS_NetworkSocket_Handle_t      handle,
+    const OS_NetworkSocket_Addr_t* localAddr)
 {
-    CHECK_PTR_NOT_NULL(srvHandle.ctx);
-    CHECK_PTR_NOT_NULL(phSocket);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_bind);
 
-    uint16_t port = 0;
+    return handle.ctx.socket_bind(handle.handleID, localAddr);
+}
 
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)srvHandle.ctx;
-    phSocket->ctx                = srvHandle.ctx;
+/******************************************************************************/
+OS_Error_t
+OS_NetworkSocket_listen(
+    OS_NetworkSocket_Handle_t handle,
+    int                       backlog)
+{
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_listen);
 
-    CHECK_PTR_NOT_NULL(vtable->socket_accept);
+    return handle.ctx.socket_listen(handle.handleID, backlog);
+}
 
-    return vtable->socket_accept(srvHandle.handleID, &phSocket->handleID, port);
+/******************************************************************************/
+OS_Error_t
+OS_NetworkSocket_accept(
+    OS_NetworkSocket_Handle_t  handle,
+    OS_NetworkSocket_Handle_t* pClientHandle,
+    OS_NetworkSocket_Addr_t*   srcAddr)
+{
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_accept);
+    CHECK_PTR_NOT_NULL(pClientHandle);
+    CHECK_PTR_NOT_NULL(srcAddr);
+
+    pClientHandle->ctx = handle.ctx;
+
+    return handle.ctx.socket_accept(
+               handle.handleID,
+               &pClientHandle->handleID,
+               srcAddr);
 }
 
 /******************************************************************************/
@@ -94,21 +124,16 @@ OS_NetworkSocket_read(
     size_t                    requestedLen,
     size_t*                   actualLen)
 {
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_read);
     CHECK_PTR_NOT_NULL(buf);
-    CHECK_PTR_NOT_NULL(handle.ctx);
+    CHECK_PTR_NOT_NULL(actualLen);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(&handle);
+    CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
-    CHECK_DATAPORT_SET(dp);
-    CHECK_DATAPORT_SIZE(dp, requestedLen);
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_read);
-
-    OS_Error_t err = vtable->socket_read(handle.handleID, &tempLen);
+    OS_Error_t err = handle.ctx.socket_read(handle.handleID, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -120,7 +145,7 @@ OS_NetworkSocket_read(
         return err;
     }
 
-    memcpy(buf, OS_Dataport_getBuf(dp), tempLen);
+    memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
 
     return OS_SUCCESS;
 }
@@ -132,24 +157,21 @@ OS_NetworkSocket_recvfrom(
     void*                     buf,
     size_t                    requestedLen,
     size_t*                   actualLen,
-    OS_Network_Socket_t*      src_socket)
+    OS_NetworkSocket_Addr_t*  srcAddr)
 {
     CHECK_PTR_NOT_NULL(buf);
-    CHECK_PTR_NOT_NULL(handle.ctx);
+    CHECK_PTR_NOT_NULL(srcAddr);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_recvfrom);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(&handle);
+    CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
-    CHECK_DATAPORT_SET(dp);
-    CHECK_DATAPORT_SIZE(dp, requestedLen);
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_recvfrom);
-
-    OS_Error_t err =
-        vtable->socket_recvfrom(handle.handleID, &tempLen, src_socket);
+    OS_Error_t err = handle.ctx.socket_recvfrom(
+                         handle.handleID,
+                         &tempLen,
+                         srcAddr);
 
     if (actualLen != NULL)
     {
@@ -161,7 +183,7 @@ OS_NetworkSocket_recvfrom(
         return err;
     }
 
-    memcpy(buf, OS_Dataport_getBuf(dp), tempLen);
+    memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
 
     return OS_SUCCESS;
 }
@@ -175,22 +197,16 @@ OS_NetworkSocket_write(
     size_t*                   actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
-    CHECK_PTR_NOT_NULL(handle.ctx);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_write);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(&handle);
+    CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
-    CHECK_DATAPORT_SET(dp);
-    CHECK_DATAPORT_SIZE(dp, requestedLen);
+    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLen);
 
-    memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_write);
-
-    OS_Error_t err = vtable->socket_write(handle.handleID, &tempLen);
+    OS_Error_t err = handle.ctx.socket_write(handle.handleID, &tempLen);
 
     if (actualLen != NULL)
     {
@@ -203,29 +219,27 @@ OS_NetworkSocket_write(
 /******************************************************************************/
 OS_Error_t
 OS_NetworkSocket_sendto(
-    OS_NetworkSocket_Handle_t handle,
-    const void*               buf,
-    size_t                    requestedLen,
-    size_t*                   actualLen,
-    OS_Network_Socket_t       dst_socket)
+    OS_NetworkSocket_Handle_t      handle,
+    const void*                    buf,
+    size_t                         requestedLen,
+    size_t*                        actualLen,
+    const OS_NetworkSocket_Addr_t* dstAddr)
 {
     CHECK_PTR_NOT_NULL(buf);
-    CHECK_PTR_NOT_NULL(handle.ctx);
+    CHECK_PTR_NOT_NULL(dstAddr);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_sendto);
 
     size_t tempLen = requestedLen;
 
-    const OS_Dataport_t dp     = get_data_port(&handle);
+    CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
-    CHECK_DATAPORT_SET(dp);
-    CHECK_DATAPORT_SIZE(dp, requestedLen);
+    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLen);
 
-    memcpy(OS_Dataport_getBuf(dp), buf, requestedLen);
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_sendto);
-
-    OS_Error_t err = vtable->socket_sendto(handle.handleID, &tempLen, dst_socket);
+    OS_Error_t err = handle.ctx.socket_sendto(
+                         handle.handleID,
+                         &tempLen,
+                         dstAddr);
 
     if (actualLen != NULL)
     {
@@ -237,136 +251,18 @@ OS_NetworkSocket_sendto(
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkSocket_bind(
-    OS_NetworkSocket_Handle_t handle,
-    uint16_t                  receiving_port)
+OS_NetworkSocket_getPendingEvents(void)
 {
-    CHECK_PTR_NOT_NULL(handle.ctx);
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)handle.ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_bind);
-
-    return vtable->socket_bind(handle.handleID, receiving_port);
+    // TODO: Implement this functions with SEOS-2933.
+    return OS_ERROR_NOT_IMPLEMENTED;
 }
 
 /******************************************************************************/
 OS_Error_t
-OS_NetworkServerSocket_create(
-    OS_Network_Context_t       ctx,
-    OS_NetworkServer_Socket_t* pServerStruct,
-    OS_NetworkServer_Handle_t* pSrvHandle)
+OS_NetworkSocket_close(
+    OS_NetworkSocket_Handle_t handle)
 {
-    CHECK_PTR_NOT_NULL(ctx);
-    CHECK_PTR_NOT_NULL(pServerStruct);
-    CHECK_PTR_NOT_NULL(pSrvHandle);
+    CHECK_PTR_NOT_NULL(&handle.ctx.socket_close);
 
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)ctx;
-
-    OS_NetworkServer_Handle_t localHandle = OS_NetworkServer_Handle_INVALID;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_create);
-
-    OS_Error_t err = vtable->socket_create(
-                         pServerStruct->domain,
-                         pServerStruct->type,
-                         &localHandle.handleID);
-
-    if (err != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
-        localHandle = OS_NetworkServer_Handle_INVALID;
-        goto exit;
-    }
-
-    CHECK_PTR_NOT_NULL(vtable->socket_bind);
-
-    err = vtable->socket_bind(localHandle.handleID, pServerStruct->listen_port);
-    if (err != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("os_socket_bind() failed with error %d", err);
-        goto err;
-    }
-
-    CHECK_PTR_NOT_NULL(vtable->socket_listen);
-
-    err = vtable->socket_listen(localHandle.handleID, pServerStruct->backlog);
-    if (err != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("os_socket_listen() failed with error %d", err);
-        goto err;
-    }
-    goto exit;
-
-err:
-    CHECK_PTR_NOT_NULL(vtable->socket_close);
-
-    vtable->socket_close(localHandle.handleID);
-    localHandle = OS_NetworkServer_Handle_INVALID;
-
-exit:
-    localHandle.ctx = ctx;
-    *pSrvHandle     = localHandle;
-    return err;
-}
-
-/*******************************************************************************
- * Creates a socket and connects to a remote server
- */
-OS_Error_t
-OS_NetworkSocket_create(
-    OS_Network_Context_t       ctx,
-    OS_Network_Socket_t*       pClientStruct,
-    OS_NetworkSocket_Handle_t* phandle)
-{
-    CHECK_PTR_NOT_NULL(ctx);
-    CHECK_PTR_NOT_NULL(pClientStruct);
-    CHECK_PTR_NOT_NULL(phandle);
-
-    OS_NetworkSocket_Handle_t localHandle = OS_NetworkSocket_Handle_INVALID;
-
-    if_OS_Socket_t* vtable = (if_OS_Socket_t*)ctx;
-
-    CHECK_PTR_NOT_NULL(vtable->socket_create);
-
-    OS_Error_t err = vtable->socket_create(
-                         pClientStruct->domain,
-                         pClientStruct->type,
-                         &localHandle.handleID);
-
-    if (err != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
-        localHandle = OS_NetworkSocket_Handle_INVALID;
-        goto exit;
-    }
-
-    if (pClientStruct->type == OS_SOCK_DGRAM)
-    {
-        goto exit;
-    }
-
-    CHECK_PTR_NOT_NULL(vtable->socket_connect);
-
-    err = vtable->socket_connect(
-              localHandle.handleID,
-              pClientStruct->name,
-              pClientStruct->port);
-    if (err != OS_SUCCESS)
-    {
-        Debug_LOG_ERROR("os_socket_connect() failed with error %d", err);
-        goto err;
-    }
-    goto exit;
-
-err:
-    CHECK_PTR_NOT_NULL(vtable->socket_close);
-
-    vtable->socket_close(localHandle.handleID);
-    localHandle = OS_NetworkSocket_Handle_INVALID;
-
-exit:
-    localHandle.ctx = ctx;
-    *phandle        = localHandle;
-    return err;
+    return handle.ctx.socket_close(handle.handleID);
 }

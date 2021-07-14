@@ -15,24 +15,6 @@
 #include "interfaces/if_OS_Socket.h"
 #include "lib_macros/Check.h"
 
-//------------------------------------------------------------------------------
-OS_NetworkStackClient_SocketDataports_t* instance;
-
-//------------------------------------------------------------------------------
-OS_Error_t
-OS_NetworkStackClient_init(
-    OS_NetworkStackClient_SocketDataports_t* config)
-{
-    Debug_ASSERT(NULL != config);
-    Debug_ASSERT(NULL != config->dataport);
-
-    CHECK_PTR_NOT_NULL(config);
-
-    instance = config;
-    return OS_SUCCESS;
-}
-
-//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_create(
     const if_OS_Socket_t*      ctx,

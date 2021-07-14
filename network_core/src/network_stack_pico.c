@@ -487,6 +487,8 @@ network_stack_pico_socket_connect(
 {
     CHECK_PTR_NOT_NULL(dstAddr);
 
+    CHECK_STR_IS_NUL_TERMINATED(dstAddr->addr, 16);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -547,6 +549,8 @@ network_stack_pico_socket_bind(
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
     CHECK_PTR_NOT_NULL(localAddr);
+
+    CHECK_STR_IS_NUL_TERMINATED(localAddr->addr, 16);
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 

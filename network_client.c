@@ -51,7 +51,7 @@ OS_NetworkSocket_connect(
     OS_NetworkSocket_Handle_t      handle,
     const OS_NetworkSocket_Addr_t* dstAddr)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_connect);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_connect);
     CHECK_PTR_NOT_NULL(dstAddr);
 
     return handle.ctx.socket_connect(handle.handleID, dstAddr);
@@ -63,7 +63,7 @@ OS_NetworkSocket_bind(
     OS_NetworkSocket_Handle_t      handle,
     const OS_NetworkSocket_Addr_t* localAddr)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_bind);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_bind);
 
     return handle.ctx.socket_bind(handle.handleID, localAddr);
 }
@@ -74,7 +74,7 @@ OS_NetworkSocket_listen(
     OS_NetworkSocket_Handle_t handle,
     int                       backlog)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_listen);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_listen);
 
     return handle.ctx.socket_listen(handle.handleID, backlog);
 }
@@ -86,7 +86,7 @@ OS_NetworkSocket_accept(
     OS_NetworkSocket_Handle_t* pClientHandle,
     OS_NetworkSocket_Addr_t*   srcAddr)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_accept);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_accept);
     CHECK_PTR_NOT_NULL(pClientHandle);
     CHECK_PTR_NOT_NULL(srcAddr);
 
@@ -106,7 +106,7 @@ OS_NetworkSocket_read(
     size_t                    requestedLen,
     size_t*                   actualLen)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_read);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_read);
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(actualLen);
 
@@ -143,7 +143,7 @@ OS_NetworkSocket_recvfrom(
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(srcAddr);
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_recvfrom);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_recvfrom);
 
     size_t tempLen = requestedLen;
 
@@ -179,7 +179,7 @@ OS_NetworkSocket_write(
     size_t*                   actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_write);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_write);
 
     size_t tempLen = requestedLen;
 
@@ -209,7 +209,7 @@ OS_NetworkSocket_sendto(
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(dstAddr);
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_sendto);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_sendto);
 
     size_t tempLen = requestedLen;
 
@@ -244,7 +244,7 @@ OS_Error_t
 OS_NetworkSocket_close(
     OS_NetworkSocket_Handle_t handle)
 {
-    CHECK_PTR_NOT_NULL(&handle.ctx.socket_close);
+    CHECK_PTR_NOT_NULL(handle.ctx.socket_close);
 
     return handle.ctx.socket_close(handle.handleID);
 }

@@ -23,6 +23,7 @@
 #include "lib_compiler/compiler.h"
 #include "lib_debug/Debug.h"
 #include "lib_debug/Debug_OS_Error.h"
+#include "lib_macros/Check.h"
 
 //------------------------------------------------------------------------------
 static OS_Error_t
@@ -367,6 +368,8 @@ network_stack_pico_socket_create(
     int  socket_type,
     int* pHandle)
 {
+    CHECK_PTR_NOT_NULL(pHandle);
+
     int pico_domain = translate_socket_domain(domain);
     if (pico_domain < 0)
     {
@@ -473,6 +476,8 @@ network_stack_pico_socket_connect(
     int                            handle,
     const OS_NetworkSocket_Addr_t* dstAddr)
 {
+    CHECK_PTR_NOT_NULL(dstAddr);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -532,6 +537,8 @@ network_stack_pico_socket_bind(
     int                            handle,
     const OS_NetworkSocket_Addr_t* localAddr)
 {
+    CHECK_PTR_NOT_NULL(localAddr);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -613,6 +620,9 @@ network_stack_pico_socket_accept(
     int*                     pClient_handle,
     OS_NetworkSocket_Addr_t* srcAddr)
 {
+    CHECK_PTR_NOT_NULL(pClient_handle);
+    CHECK_PTR_NOT_NULL(srcAddr);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -677,6 +687,8 @@ network_stack_pico_socket_write(
     int     handle,
     size_t* pLen)
 {
+    CHECK_PTR_NOT_NULL(pLen);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -737,6 +749,8 @@ network_stack_pico_socket_read(
     int     handle,
     size_t* pLen)
 {
+    CHECK_PTR_NOT_NULL(pLen);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -842,6 +856,9 @@ network_stack_pico_socket_sendto(
     size_t*                        pLen,
     const OS_NetworkSocket_Addr_t* dstAddr)
 {
+    CHECK_PTR_NOT_NULL(pLen);
+    CHECK_PTR_NOT_NULL(dstAddr);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {
@@ -912,6 +929,8 @@ network_stack_pico_socket_recvfrom(
     size_t*                  pLen,
     OS_NetworkSocket_Addr_t* srcAddr)
 {
+    CHECK_PTR_NOT_NULL(pLen);
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
     if (NULL == socket)
     {

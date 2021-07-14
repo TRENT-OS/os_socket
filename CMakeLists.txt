@@ -39,6 +39,7 @@ target_link_libraries(${PROJECT_NAME}
         picotcp
         os_core_api
         lib_debug
+        lib_macros
 )
 
 

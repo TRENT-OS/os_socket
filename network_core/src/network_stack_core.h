@@ -21,21 +21,26 @@ void*
 get_socket_from_handle(
     int handle);
 
-int get_handle_from_implementation_socket(
+int
+get_handle_from_implementation_socket(
     void* impl_sock);
 
-int reserve_handle(
+int
+reserve_handle(
     void* impl_sock,
     int clientId);
 
-void free_handle(
+void 
+free_handle(
     int handle);
 
-void set_accepted_handle(
+void 
+set_accepted_handle(
     int handle,
     int accept_handle);
 
-int get_accepted_handle(
+int 
+get_accepted_handle(
     int handle);
 
 event_notify_func_t

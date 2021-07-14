@@ -552,10 +552,17 @@ network_stack_pico_socket_bind(
     Debug_LOG_INFO("[socket %d/%p] binding to port %d", handle, pico_socket,
                    localAddr->port);
 
-    struct pico_ip4 ZERO_IP4 = { 0 };
+    struct pico_ip4 convertedAddr;
+    if (pico_string_to_ipv4((char*)localAddr->addr, &convertedAddr.addr) < 0)
+    {
+        Debug_LOG_ERROR("[socket %d/%p] pico_string_to_ipv4() failed translating name '%s'",
+                        handle, pico_socket, localAddr->addr);
+        return OS_ERROR_INVALID_PARAMETER;
+    }
+
     uint16_t be_port = short_be(localAddr->port);
     internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_bind(pico_socket, &ZERO_IP4, &be_port);
+    int ret = pico_socket_bind(pico_socket, &convertedAddr, &be_port);
     OS_Error_t err =  pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();

@@ -49,9 +49,9 @@ config_get_handlers(void)
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_create(
-    int  domain,
-    int  socket_type,
-    int* pHandle)
+    const int  domain,
+    const int  socket_type,
+    int* const pHandle)
 {
     return network_stack_pico_socket_create(domain, socket_type, pHandle);
 }
@@ -60,7 +60,7 @@ networkStack_rpc_socket_create(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_close(
-    int handle)
+    const int handle)
 {
     return network_stack_pico_socket_close(handle);
 }
@@ -69,8 +69,8 @@ networkStack_rpc_socket_close(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_connect(
-    int                            handle,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const int                            handle,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     return network_stack_pico_socket_connect(handle, dstAddr);
 }
@@ -79,8 +79,8 @@ networkStack_rpc_socket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_bind(
-    int                            handle,
-    const OS_NetworkSocket_Addr_t* localAddr)
+    const int                            handle,
+    const OS_NetworkSocket_Addr_t* const localAddr)
 {
     return network_stack_pico_socket_bind(handle, localAddr);
 }
@@ -89,8 +89,8 @@ networkStack_rpc_socket_bind(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_listen(
-    int handle,
-    int backlog)
+    const int handle,
+    const int backlog)
 {
     return network_stack_pico_socket_listen(handle, backlog);
 }
@@ -101,9 +101,9 @@ networkStack_rpc_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 networkStack_rpc_socket_accept(
-    int                      handle,
-    int*                     pClient_handle,
-    OS_NetworkSocket_Addr_t* srcAddr)
+    const int                      handle,
+    int* const                     pClient_handle,
+    OS_NetworkSocket_Addr_t* const srcAddr)
 {
     return network_stack_pico_socket_accept(handle, pClient_handle, srcAddr);
 }
@@ -112,8 +112,8 @@ networkStack_rpc_socket_accept(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_write(
-    int     handle,
-    size_t* pLen)
+    const int     handle,
+    size_t* const pLen)
 {
     return network_stack_pico_socket_write(handle, pLen);
 }
@@ -121,8 +121,8 @@ networkStack_rpc_socket_write(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_read(
-    int     handle,
-    size_t* pLen)
+    const int     handle,
+    size_t* const pLen)
 {
     return network_stack_pico_socket_read(handle, pLen);
 }
@@ -130,9 +130,9 @@ networkStack_rpc_socket_read(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_sendto(
-    int                            handle,
-    size_t*                        pLen,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const int                            handle,
+    size_t* const                        pLen,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     return network_stack_pico_socket_sendto(handle, pLen, dstAddr);
 }
@@ -140,9 +140,9 @@ networkStack_rpc_socket_sendto(
 //------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_recvfrom(
-    int                      handle,
-    size_t*                  pLen,
-    OS_NetworkSocket_Addr_t* srcAddr)
+    const int                      handle,
+    size_t* const                  pLen,
+    OS_NetworkSocket_Addr_t* const srcAddr)
 {
     return network_stack_pico_socket_recvfrom(handle, pLen, srcAddr);
 }
@@ -151,7 +151,7 @@ networkStack_rpc_socket_recvfrom(
 // get implementation socket from a given handle
 void*
 get_implementation_socket_from_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -165,7 +165,7 @@ get_implementation_socket_from_handle(
 // get socket from a given handle
 void*
 get_socket_from_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -244,7 +244,7 @@ reserve_handle(
 // free a handle
 void
 free_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -266,8 +266,8 @@ free_handle(
 // free a handle
 void
 set_accepted_handle(
-    int handle,
-    int accept_handle)
+    const int handle,
+    const int accept_handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -289,7 +289,7 @@ set_accepted_handle(
 // get handle of the accepted connection
 int
 get_accepted_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -303,7 +303,7 @@ get_accepted_handle(
 // get notify function for handle
 event_notify_func_t
 get_notify_conn_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -317,7 +317,7 @@ get_notify_conn_func_for_handle(
 // get wait function for handle
 event_wait_func_t
 get_wait_conn_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -331,7 +331,7 @@ get_wait_conn_func_for_handle(
 // get notify function for handle
 event_notify_func_t
 get_notify_write_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -345,7 +345,7 @@ get_notify_write_func_for_handle(
 // get wait function for handle
 event_wait_func_t
 get_wait_write_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -359,7 +359,7 @@ get_wait_write_func_for_handle(
 // get notify function for handle
 event_notify_func_t
 get_notify_read_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -373,7 +373,7 @@ get_notify_read_func_for_handle(
 // get wait function for handle
 event_wait_func_t
 get_wait_read_func_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -387,7 +387,7 @@ get_wait_read_func_for_handle(
 // get dataport for handle
 const OS_Dataport_t*
 get_dataport_for_handle(
-    int handle)
+    const int handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -401,8 +401,8 @@ get_dataport_for_handle(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkStack_init(
-    const OS_NetworkStack_CamkesConfig_t*  camkes_config,
-    const OS_NetworkStack_AddressConfig_t* config)
+    const OS_NetworkStack_CamkesConfig_t* const camkes_config,
+    const OS_NetworkStack_AddressConfig_t* const config)
 {
     if ((NULL == camkes_config) || (NULL == config))
     {

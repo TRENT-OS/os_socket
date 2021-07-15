@@ -19,53 +19,53 @@ network_stack_pico_get_config(void);
 
 OS_Error_t
 network_stack_pico_socket_create(
-    int domain,
-    int socket_type,
-    int* pHandle);
+    const int domain,
+    const int socket_type,
+    int* const pHandle);
 
 OS_Error_t
 network_stack_pico_socket_close(
-    int handle);
+    const int handle);
 
 OS_Error_t
 network_stack_pico_socket_connect(
-    int handle,
-    const OS_NetworkSocket_Addr_t* dstAddr);
+    const int handle,
+    const OS_NetworkSocket_Addr_t* const dstAddr);
 
 OS_Error_t
 network_stack_pico_socket_bind(
-    int handle,
-    const OS_NetworkSocket_Addr_t* localAddr);
+    const int handle,
+    const OS_NetworkSocket_Addr_t* const localAddr);
 
 OS_Error_t
 network_stack_pico_socket_listen(
-    int handle,
-    int backlog);
+    const int handle,
+    const int backlog);
 
 OS_Error_t
 network_stack_pico_socket_accept(
-    int handle,
-    int* pClient_handle,
-    OS_NetworkSocket_Addr_t* srcAddr);
+    const int handle,
+    int* const pClient_handle,
+    OS_NetworkSocket_Addr_t* const srcAddr);
 
 OS_Error_t
 network_stack_pico_socket_write(
-    int handle,
-    size_t* pLen);
+    const int handle,
+    size_t* const pLen);
 
 OS_Error_t
 network_stack_pico_socket_read(
-    int handle,
-    size_t* pLen);
+    const int handle,
+    size_t* const pLen);
 
 OS_Error_t
 network_stack_pico_socket_sendto(
-    int handle,
-    size_t* pLen,
-    const OS_NetworkSocket_Addr_t* dstAddr);
+    const int handle,
+    size_t* const pLen,
+    const OS_NetworkSocket_Addr_t* const dstAddr);
 
 OS_Error_t
 network_stack_pico_socket_recvfrom(
-    int handle,
-    size_t* pLen,
-    OS_NetworkSocket_Addr_t* srcAddr);
+    const int handle,
+    size_t* const pLen,
+    OS_NetworkSocket_Addr_t* const srcAddr);

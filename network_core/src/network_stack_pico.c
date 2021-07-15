@@ -13,6 +13,7 @@
 #include "network/OS_Network_types.h"
 #include "network_config.h"
 #include "network_stack_core.h"
+#include "network_stack_pico.h"
 #include "network_stack_pico_nic.h"
 #include "pico_device.h"
 #include "pico_icmp4.h"
@@ -155,7 +156,7 @@ network_stack_pico_get_config(void)
 //------------------------------------------------------------------------------
 static int
 translate_socket_domain(
-    unsigned int domain)
+    const unsigned int domain)
 {
     switch (domain)
     {
@@ -179,7 +180,7 @@ translate_socket_domain(
 //------------------------------------------------------------------------------
 static int
 translate_socket_type(
-    unsigned int socket_type)
+    const unsigned int socket_type)
 {
     switch (socket_type)
     {
@@ -364,9 +365,9 @@ handle_pico_socket_event(
 
 OS_Error_t
 network_stack_pico_socket_create(
-    int  domain,
-    int  socket_type,
-    int* pHandle)
+    const int  domain,
+    const int  socket_type,
+    int* const pHandle)
 {
     CHECK_PTR_NOT_NULL(pHandle);
 
@@ -444,7 +445,7 @@ network_stack_pico_socket_create(
 
 OS_Error_t
 network_stack_pico_socket_close(
-    int handle)
+    const int handle)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -481,8 +482,8 @@ network_stack_pico_socket_close(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_connect(
-    int                            handle,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const int                            handle,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     CHECK_PTR_NOT_NULL(dstAddr);
 
@@ -542,8 +543,8 @@ network_stack_pico_socket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_bind(
-    int                            handle,
-    const OS_NetworkSocket_Addr_t* localAddr)
+    const int                            handle,
+    const OS_NetworkSocket_Addr_t* const localAddr)
 {
     CHECK_PTR_NOT_NULL(localAddr);
 
@@ -588,8 +589,8 @@ network_stack_pico_socket_bind(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_listen(
-    int handle,
-    int backlog)
+    const int handle,
+    const int backlog)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -622,9 +623,9 @@ network_stack_pico_socket_listen(
 // as we cannot accept incoming connections
 OS_Error_t
 network_stack_pico_socket_accept(
-    int                      handle,
-    int*                     pClient_handle,
-    OS_NetworkSocket_Addr_t* srcAddr)
+    const int                      handle,
+    int* const                     pClient_handle,
+    OS_NetworkSocket_Addr_t* const srcAddr)
 {
     CHECK_PTR_NOT_NULL(pClient_handle);
     CHECK_PTR_NOT_NULL(srcAddr);
@@ -694,8 +695,8 @@ network_stack_pico_socket_accept(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_write(
-    int     handle,
-    size_t* pLen)
+    const int     handle,
+    size_t* const pLen)
 {
     CHECK_PTR_NOT_NULL(pLen);
 
@@ -745,8 +746,8 @@ network_stack_pico_socket_write(
 // Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_read(
-    int     handle,
-    size_t* pLen)
+    const int     handle,
+    size_t* const pLen)
 {
     CHECK_PTR_NOT_NULL(pLen);
 
@@ -836,9 +837,9 @@ network_stack_pico_socket_read(
 //------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_sendto(
-    int                            handle,
-    size_t*                        pLen,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const int                            handle,
+    size_t* const                        pLen,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     CHECK_PTR_NOT_NULL(pLen);
     CHECK_PTR_NOT_NULL(dstAddr);
@@ -906,9 +907,9 @@ network_stack_pico_socket_sendto(
 // Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_recvfrom(
-    int                      handle,
-    size_t*                  pLen,
-    OS_NetworkSocket_Addr_t* srcAddr)
+    const int                      handle,
+    size_t* const                  pLen,
+    OS_NetworkSocket_Addr_t* const srcAddr)
 {
     CHECK_PTR_NOT_NULL(pLen);
 

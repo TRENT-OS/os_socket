@@ -17,10 +17,10 @@
 
 OS_Error_t
 OS_NetworkSocket_create(
-    const if_OS_Socket_t*      ctx,
-    OS_NetworkSocket_Handle_t* phandle,
-    int                        domain,
-    int                        type)
+    const if_OS_Socket_t* const      ctx,
+    OS_NetworkSocket_Handle_t* const phandle,
+    const int                        domain,
+    const int                        type)
 {
     CHECK_PTR_NOT_NULL(ctx);
     CHECK_PTR_NOT_NULL(phandle);
@@ -48,8 +48,8 @@ OS_NetworkSocket_create(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_connect(
-    OS_NetworkSocket_Handle_t      handle,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const OS_NetworkSocket_Handle_t      handle,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_connect);
     CHECK_PTR_NOT_NULL(dstAddr);
@@ -60,8 +60,8 @@ OS_NetworkSocket_connect(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_bind(
-    OS_NetworkSocket_Handle_t      handle,
-    const OS_NetworkSocket_Addr_t* localAddr)
+    const OS_NetworkSocket_Handle_t      handle,
+    const OS_NetworkSocket_Addr_t* const localAddr)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_bind);
 
@@ -71,8 +71,8 @@ OS_NetworkSocket_bind(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_listen(
-    OS_NetworkSocket_Handle_t handle,
-    int                       backlog)
+    const OS_NetworkSocket_Handle_t handle,
+    const int                       backlog)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_listen);
 
@@ -82,9 +82,9 @@ OS_NetworkSocket_listen(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_accept(
-    OS_NetworkSocket_Handle_t  handle,
-    OS_NetworkSocket_Handle_t* pClientHandle,
-    OS_NetworkSocket_Addr_t*   srcAddr)
+    const OS_NetworkSocket_Handle_t  handle,
+    OS_NetworkSocket_Handle_t* const pClientHandle,
+    OS_NetworkSocket_Addr_t* const   srcAddr)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_accept);
     CHECK_PTR_NOT_NULL(pClientHandle);
@@ -101,10 +101,10 @@ OS_NetworkSocket_accept(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_read(
-    OS_NetworkSocket_Handle_t handle,
-    void*                     buf,
-    size_t                    requestedLen,
-    size_t*                   actualLen)
+    const OS_NetworkSocket_Handle_t handle,
+    void* const                     buf,
+    const size_t                    requestedLen,
+    size_t* const                   actualLen)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_read);
     CHECK_PTR_NOT_NULL(buf);
@@ -135,11 +135,11 @@ OS_NetworkSocket_read(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_recvfrom(
-    OS_NetworkSocket_Handle_t handle,
-    void*                     buf,
-    size_t                    requestedLen,
-    size_t*                   actualLen,
-    OS_NetworkSocket_Addr_t*  srcAddr)
+    const OS_NetworkSocket_Handle_t handle,
+    void* const                     buf,
+    const size_t                    requestedLen,
+    size_t* const                   actualLen,
+    OS_NetworkSocket_Addr_t* const  srcAddr)
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(srcAddr);
@@ -173,10 +173,10 @@ OS_NetworkSocket_recvfrom(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_write(
-    OS_NetworkSocket_Handle_t handle,
-    const void*               buf,
-    size_t                    requestedLen,
-    size_t*                   actualLen)
+    const OS_NetworkSocket_Handle_t handle,
+    const void* const               buf,
+    const size_t                    requestedLen,
+    size_t* const                   actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_write);
@@ -201,11 +201,11 @@ OS_NetworkSocket_write(
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_sendto(
-    OS_NetworkSocket_Handle_t      handle,
-    const void*                    buf,
-    size_t                         requestedLen,
-    size_t*                        actualLen,
-    const OS_NetworkSocket_Addr_t* dstAddr)
+    const OS_NetworkSocket_Handle_t      handle,
+    const void* const                    buf,
+    const size_t                         requestedLen,
+    size_t* const                        actualLen,
+    const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(dstAddr);
@@ -242,7 +242,7 @@ OS_NetworkSocket_getPendingEvents(void)
 //------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_close(
-    OS_NetworkSocket_Handle_t handle)
+    const OS_NetworkSocket_Handle_t handle)
 {
     CHECK_PTR_NOT_NULL(handle.ctx.socket_close);
 

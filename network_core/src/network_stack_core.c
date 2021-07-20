@@ -196,10 +196,29 @@ get_handle_from_implementation_socket(
 // Reserve a free handle
 int
 reserve_handle(
-    void* impl_sock)
+    void* impl_sock,
+    int clientId)
 {
     int handle = -1;
+
+    if ((clientId < 0)
+        || (instance.camkes_cfg->internal.number_of_clients <= clientId))
+    {
+        Debug_LOG_ERROR("Invalid client %d", clientId);
+        return -1;
+    }
+
     internal_socket_control_block_mutex_lock();
+
+    if (!instance.camkes_cfg->internal.client_sockets_quota[clientId])
+    {
+        Debug_LOG_ERROR("No free sockets available for client %d", clientId);
+        internal_socket_control_block_mutex_unlock();
+        return -1;
+    }
+
+    instance.camkes_cfg->internal.client_sockets_quota[clientId]--;
+
     for (int i = 0; i < instance.number_of_sockets; i++)
         if (instance.sockets[i].status == SOCKET_FREE)
         {
@@ -207,6 +226,7 @@ reserve_handle(
             instance.sockets[i].implementation_socket = impl_sock;
             instance.sockets[i].accepted_handle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
+            instance.sockets[i].clientId = clientId;
             handle = i;
             break;
         }
@@ -232,9 +252,13 @@ free_handle(
         return;
     }
     internal_socket_control_block_mutex_lock();
+    instance.camkes_cfg->internal
+    .client_sockets_quota[instance.sockets[handle].clientId]++;
+
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
     instance.sockets[handle].accepted_handle = -1;
+    instance.sockets[handle].clientId = -1;
     internal_socket_control_block_mutex_unlock();
 }
 
@@ -257,6 +281,7 @@ set_accepted_handle(
     }
     internal_socket_control_block_mutex_lock();
     instance.sockets[handle].accepted_handle = accept_handle;
+    instance.sockets[accept_handle].clientId = instance.sockets[handle].clientId;
     internal_socket_control_block_mutex_unlock();
 }
 

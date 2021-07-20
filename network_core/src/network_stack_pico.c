@@ -259,7 +259,7 @@ handle_incoming_connection(OS_NetworkStack_SocketResources_t* socket)
     // timeout in ms for TCP keep alive retries
     helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
 
-    int accepted_handle = reserve_handle(s_in);
+    int accepted_handle = reserve_handle(s_in, socket->clientId);
     set_accepted_handle(get_handle_from_implementation_socket(pico_socket),
                         accepted_handle);
 }
@@ -405,7 +405,7 @@ network_stack_pico_socket_create(
         helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
     }
 
-    int handle = reserve_handle(pico_socket);
+    int handle = reserve_handle(pico_socket, get_client_id());
 
     if (handle == -1)
     {
@@ -426,6 +426,13 @@ network_stack_pico_socket_create(
     }
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    socket->buf_io = get_client_id_buf();
+    OS_Dataport_t tmp = OS_DATAPORT_ASSIGN_SIZE(
+                            socket->buf_io,
+                            get_client_id_buf_size());
+    socket->buf = tmp;
+
     Debug_ASSERT(socket != NULL); // can't be null, as we got a valid handle above
 
     socket->current_error   = pico_err2os(cur_pico_err);
@@ -644,7 +651,7 @@ network_stack_pico_socket_accept(
     internal_wait_connection(handle);
     internal_network_stack_thread_safety_mutex_lock();
     OS_Error_t err = socket->current_error;
-    internal_network_stack_thread_safety_mutex_unlock();
+
 
     *pClient_handle = get_accepted_handle(handle);
     Debug_LOG_INFO("Accepted [socket %d/%p]",
@@ -675,6 +682,16 @@ network_stack_pico_socket_accept(
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
                     handle, pico_socket, *pClient_handle, client_socket);
+
+    socket = get_socket_from_handle(*pClient_handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    socket->buf_io = get_client_id_buf();
+    OS_Dataport_t tmp =
+        OS_DATAPORT_CUSTOM_SIZE_ASSIGN(socket->buf_io, get_client_id_buf_size());
+    socket->buf = tmp;
+    internal_network_stack_thread_safety_mutex_unlock();
 
     return OS_SUCCESS;
 }

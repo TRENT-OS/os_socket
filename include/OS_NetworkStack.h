@@ -19,6 +19,7 @@ typedef struct
     // read from another (RPC thread) therefore volatile is needed to tell the
     // compiler that variable content can change outside of its control.
     volatile int status;
+    volatile int clientId;
     volatile int accepted_handle;
     volatile int event;
     volatile OS_Error_t current_error;
@@ -32,7 +33,8 @@ typedef struct
     event_notify_func_t notify_read; // e_read_emit
     event_wait_func_t wait_read;     // c_read_wait
 
-    const OS_Dataport_t buf;
+    void*      buf_io;
+    OS_Dataport_t buf;
 
     void* implementation_socket;
 } OS_NetworkStack_SocketResources_t;
@@ -47,6 +49,8 @@ typedef struct
 
         OS_NetworkStack_SocketResources_t* sockets;
         int number_of_sockets;
+        int number_of_clients;
+        int* client_sockets_quota;
 
         mutex_lock_func_t allocator_lock;
         mutex_unlock_func_t allocator_unlock;

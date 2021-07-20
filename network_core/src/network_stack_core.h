@@ -23,7 +23,8 @@ int get_handle_from_implementation_socket(
     void* impl_sock);
 
 int reserve_handle(
-    void* impl_sock);
+    void* impl_sock,
+    int clientId);
 
 void free_handle(
     int handle);

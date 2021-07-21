@@ -1,7 +1,7 @@
 /*
  * OS Network App CAmkES wrapper
  *
- * The API's provided here can be used by the Application to create,
+ * The API provided here can be used by the Application to create,
  * connect, write and read data over socket connections.
  *
  * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH

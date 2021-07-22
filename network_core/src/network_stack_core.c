@@ -348,7 +348,7 @@ free_handle(
 }
 
 //------------------------------------------------------------------------------
-// free a handle
+// assign an accepted handle to its listening socket
 void
 set_accepted_handle(
     const int handle,

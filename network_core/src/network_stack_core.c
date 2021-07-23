@@ -9,6 +9,7 @@
 
 #include "lib_debug/Debug.h"
 #include "OS_Network.h"
+#include "OS_NetworkStack.h"
 #include "network/OS_NetworkStack.h"
 #include "network/OS_Network_types.h"
 #include "OS_NetworkStack.h"
@@ -17,6 +18,7 @@
 #include "network_stack_pico.h"
 #include <stdlib.h>
 #include <stdint.h>
+#include "lib_macros/Check.h"
 
 #define SOCKET_FREE   0
 #define SOCKET_IN_USE 1
@@ -53,7 +55,14 @@ networkStack_rpc_socket_create(
     const int  socket_type,
     int* const pHandle)
 {
-    return network_stack_pico_socket_create(domain, socket_type, pHandle);
+    CHECK_PTR_NOT_NULL(pHandle);
+
+    return network_stack_pico_socket_create(domain,
+                                            socket_type,
+                                            pHandle,
+                                            get_client_id(),
+                                            get_client_id_buf(),
+                                            get_client_id_buf_size());
 }
 
 
@@ -62,6 +71,12 @@ OS_Error_t
 networkStack_rpc_socket_close(
     const int handle)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     return network_stack_pico_socket_close(handle);
 }
 
@@ -72,6 +87,16 @@ networkStack_rpc_socket_connect(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(dstAddr);
+
+    CHECK_STR_IS_NUL_TERMINATED(dstAddr->addr, 16);
+
     return network_stack_pico_socket_connect(handle, dstAddr);
 }
 
@@ -82,6 +107,16 @@ networkStack_rpc_socket_bind(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(localAddr);
+
+    CHECK_STR_IS_NUL_TERMINATED(localAddr->addr, 16);
+
     return network_stack_pico_socket_bind(handle, localAddr);
 }
 
@@ -92,6 +127,12 @@ networkStack_rpc_socket_listen(
     const int handle,
     const int backlog)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
     return network_stack_pico_socket_listen(handle, backlog);
 }
 
@@ -105,6 +146,16 @@ networkStack_rpc_socket_accept(
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(pClient_handle);
+
+    CHECK_PTR_NOT_NULL(srcAddr);
+
     return network_stack_pico_socket_accept(handle, pClient_handle, srcAddr);
 }
 
@@ -115,6 +166,14 @@ networkStack_rpc_socket_write(
     const int     handle,
     size_t* const pLen)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(pLen);
+
     return network_stack_pico_socket_write(handle, pLen);
 }
 
@@ -124,6 +183,14 @@ networkStack_rpc_socket_read(
     const int     handle,
     size_t* const pLen)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(pLen);
+
     return network_stack_pico_socket_read(handle, pLen);
 }
 
@@ -134,6 +201,16 @@ networkStack_rpc_socket_sendto(
     size_t* const                        pLen,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(pLen);
+
+    CHECK_PTR_NOT_NULL(dstAddr);
+
     return network_stack_pico_socket_sendto(handle, pLen, dstAddr);
 }
 
@@ -144,6 +221,14 @@ networkStack_rpc_socket_recvfrom(
     size_t* const                  pLen,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
+    OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    CHECK_SOCKET(socket, handle);
+
+    CHECK_CLIENT_ID(socket);
+
+    CHECK_PTR_NOT_NULL(pLen);
+
     return network_stack_pico_socket_recvfrom(handle, pLen, srcAddr);
 }
 

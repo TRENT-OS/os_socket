@@ -367,10 +367,11 @@ OS_Error_t
 network_stack_pico_socket_create(
     const int  domain,
     const int  socket_type,
-    int* const pHandle)
+    int* const pHandle,
+    const int  clientID,
+    void*      buffer,
+    const int  buffer_size)
 {
-    CHECK_PTR_NOT_NULL(pHandle);
-
     int pico_domain = translate_socket_domain(domain);
     if (pico_domain < 0)
     {
@@ -406,7 +407,7 @@ network_stack_pico_socket_create(
         helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
     }
 
-    int handle = reserve_handle(pico_socket, get_client_id());
+    int handle = reserve_handle(pico_socket, clientID);
 
     if (handle == -1)
     {
@@ -428,11 +429,9 @@ network_stack_pico_socket_create(
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
-    socket->buf_io = get_client_id_buf();
-    OS_Dataport_t tmp = OS_DATAPORT_ASSIGN_SIZE(
-                            socket->buf_io,
-                            get_client_id_buf_size());
-    socket->buf = tmp;
+    socket->buf_io    = buffer;
+    OS_Dataport_t tmp = OS_DATAPORT_ASSIGN_SIZE(socket->buf_io, buffer_size);
+    socket->buf       = tmp;
 
     Debug_ASSERT(socket != NULL); // can't be null, as we got a valid handle above
 
@@ -448,10 +447,6 @@ network_stack_pico_socket_close(
     const int handle)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -485,15 +480,7 @@ network_stack_pico_socket_connect(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
-    CHECK_PTR_NOT_NULL(dstAddr);
-
-    CHECK_STR_IS_NUL_TERMINATED(dstAddr->addr, 16);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -548,15 +535,7 @@ network_stack_pico_socket_bind(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
-    CHECK_PTR_NOT_NULL(localAddr);
-
-    CHECK_STR_IS_NUL_TERMINATED(localAddr->addr, 16);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -598,10 +577,6 @@ network_stack_pico_socket_listen(
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
-
     struct pico_socket* pico_socket = socket->implementation_socket;
 
     CHECK_SOCKET(pico_socket, handle);
@@ -631,14 +606,7 @@ network_stack_pico_socket_accept(
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
-    CHECK_PTR_NOT_NULL(pClient_handle);
-    CHECK_PTR_NOT_NULL(srcAddr);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -702,13 +670,7 @@ network_stack_pico_socket_write(
     const int     handle,
     size_t* const pLen)
 {
-    CHECK_PTR_NOT_NULL(pLen);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -753,13 +715,7 @@ network_stack_pico_socket_read(
     const int     handle,
     size_t* const pLen)
 {
-    CHECK_PTR_NOT_NULL(pLen);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -845,25 +801,11 @@ network_stack_pico_socket_sendto(
     size_t* const                        pLen,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
-    CHECK_PTR_NOT_NULL(pLen);
-    CHECK_PTR_NOT_NULL(dstAddr);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
-
     struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid handle above
 
-    if (NULL == pico_socket)
-    {
-        Debug_LOG_ERROR("[socket %d] sendto() with invalid handle", handle);
-        *pLen = 0;
-        return OS_ERROR_INVALID_HANDLE;
-    }
+    CHECK_SOCKET(pico_socket, handle);
 
     uint8_t* buf = OS_Dataport_getBuf(socket->buf);
     size_t len = *pLen;
@@ -915,13 +857,7 @@ network_stack_pico_socket_recvfrom(
     size_t* const                  pLen,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
-    CHECK_PTR_NOT_NULL(pLen);
-
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
-    CHECK_SOCKET(socket, handle);
-
-    CHECK_CLIENT_ID(socket);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 

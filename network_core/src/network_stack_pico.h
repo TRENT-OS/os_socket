@@ -21,7 +21,10 @@ OS_Error_t
 network_stack_pico_socket_create(
     const int domain,
     const int socket_type,
-    int* const pHandle);
+    int* const pHandle,
+    const int  clientID,
+    void*      buffer,
+    const int  buffer_size);
 
 OS_Error_t
 network_stack_pico_socket_close(

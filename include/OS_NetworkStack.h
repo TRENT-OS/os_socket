@@ -94,11 +94,6 @@ typedef struct
         } rpc;
     } drv_nic;
 
-    struct
-    {
-        OS_Dataport_t port;
-    } app;
-
 } OS_NetworkStack_CamkesConfig_t;
 
 typedef struct

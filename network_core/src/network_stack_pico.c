@@ -256,17 +256,20 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_CONN)
     {
-        Debug_LOG_DEBUG("[socket %p] PICO_SOCK_EV_CONN", pico_socket);
+        Debug_LOG_DEBUG("[socket %d/%p] PICO_SOCK_EV_CONN", handle, pico_socket);
 
         if (pico_socket->state & PICO_SOCKET_STATE_TCP_LISTEN)
         {
             // SYN has arrived
-            handle_incoming_connection(socket);
+            Debug_LOG_INFO("[socket %d/%p] incoming connection",
+                           handle,
+                           pico_socket);
         }
         else
         {
             // SYN-ACK has arrived
-            Debug_LOG_INFO("[socket %p] incoming connection established",
+            Debug_LOG_INFO("[socket %d/%p] incoming connection established",
+                           handle,
                            pico_socket);
         }
         internal_notify_connection(handle);
@@ -274,26 +277,26 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_RD)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_RD", pico_socket);
+        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_RD", handle, pico_socket);
         internal_notify_read(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_WR)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_WR", pico_socket);
+        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_WR", handle, pico_socket);
         // notify app, which is waiting to write
         internal_notify_write(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_CLOSE", pico_socket);
+        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_CLOSE", handle, pico_socket);
         internal_notify_read(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_FIN)
     {
-        Debug_LOG_TRACE("[socket %p] PICO_SOCK_EV_FIN", pico_socket);
+        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_FIN", handle, pico_socket);
         internal_notify_read(handle);
     }
 
@@ -301,7 +304,8 @@ handle_pico_socket_event(
     {
         OS_Error_t err          =  pico_err2os(pico_err);
         socket->current_error   = err;
-        Debug_LOG_ERROR("[socket %p] PICO_SOCK_EV_ERR, OS error = %d (%s)",
+        Debug_LOG_ERROR("[socket %d/%p] PICO_SOCK_EV_ERR, OS error = %d (%s)",
+                        handle,
                         pico_socket,
                         err,
                         Debug_OS_Error_toString(err));

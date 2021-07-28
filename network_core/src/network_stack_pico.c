@@ -768,7 +768,7 @@ network_stack_pico_socket_read(
                 socket->event  = 0;
                 Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
                                handle, pico_socket);
-                retval = OS_ERROR_CONNECTION_CLOSED; /* return 0 on a properly closed socket */
+                retval = OS_ERROR_NETWORK_CONN_SHUTDOWN; /* return 0 on a properly closed socket */
                 break;
             }
         }

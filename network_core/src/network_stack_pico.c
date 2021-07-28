@@ -213,59 +213,6 @@ helper_socket_set_option_int(
 
 
 //------------------------------------------------------------------------------
-static void
-handle_incoming_connection(OS_NetworkStack_SocketResources_t* socket)
-{
-    Debug_ASSERT(socket != NULL);// can't be null, as callers do the check
-    uint16_t port = 0;
-    struct pico_ip4 orig = {0};
-    struct pico_socket* pico_socket = socket->implementation_socket;
-    Debug_ASSERT(pico_socket !=
-                 NULL); // can't be null, as we got a valid socket above
-
-    // This call into the pico stack happens in the context of the stack tick
-    // function and is protected by a mutex used there.
-    struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
-    OS_Error_t err =  pico_err2os(pico_err);
-    socket->current_error = err;
-
-    if (NULL == s_in)
-    {
-        Debug_LOG_ERROR("[socket %p] nw_socket_accept() failed, OS error = %d (%s)",
-                        pico_socket, err, Debug_OS_Error_toString(err));
-        return;
-    }
-
-    char peer[30] = {0};
-    pico_ipv4_to_string(peer, orig.addr);
-
-    // ToDo: port might be in big endian here, in this case we should
-    //       better use short_be(port)
-
-    Debug_LOG_INFO("[socket %p] connection from %s:%d established using socket %p",
-                   pico_socket, peer, port, s_in);
-
-    // The default values below are taken from the TCP unit tests of
-    // PicoTCP, see tests/examples/tcpecho.c
-
-    // disable nagle algorithm (1=disable, 0=enable)
-    helper_socket_set_option_int(s_in, PICO_TCP_NODELAY, 1);
-
-    // number of probes for TCP keepalive
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPCNT, 5);
-
-    // timeout in ms for TCP keepalive probes
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPIDLE, 30000);
-
-    // timeout in ms for TCP keep alive retries
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
-
-    int accepted_handle = reserve_handle(s_in, socket->clientId);
-    set_accepted_handle(get_handle_from_implementation_socket(pico_socket),
-                        accepted_handle);
-}
-
-//------------------------------------------------------------------------------
 // This is called from the PicoTCP main tick loop to report socket events
 static void
 handle_pico_socket_event(
@@ -611,55 +558,78 @@ network_stack_pico_socket_listen(
 }
 
 //------------------------------------------------------------------------------
-// For server wait on accept until client connects. Not much useful for client
-// as we cannot accept incoming connections
 OS_Error_t
 network_stack_pico_socket_accept(
     const int                      handle,
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
+    uint16_t            port        = 0;
+    struct pico_ip4     orig        = { 0 };
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
-    // set default
-    *pClient_handle = -1;
-
     CHECK_SOCKET(pico_socket, handle);
 
     Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, pico_socket);
+
     internal_wait_connection(handle);
+
     internal_network_stack_thread_safety_mutex_lock();
-    OS_Error_t err = socket->current_error;
 
+    struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
+    OS_Error_t          err  = pico_err2os(pico_err);
+    socket->current_error     = err;
 
-    *pClient_handle = get_accepted_handle(handle);
-    Debug_LOG_INFO("Accepted [socket %d/%p]",
-                   get_accepted_handle(handle),
-                   get_implementation_socket_from_handle(get_accepted_handle(handle)));
+    if (NULL == s_in)
+    {
+        Debug_LOG_ERROR(
+            "[socket %p] nw_socket_accept() failed, OS error = %d (%s)",
+            pico_socket,
+            err,
+            Debug_OS_Error_toString(err));
+        internal_network_stack_thread_safety_mutex_unlock();
+        return err;
+    }
+
+    int accepted_handle = reserve_handle(s_in, socket->clientId);
+    if (accepted_handle == -1)
+    {
+        pico_socket_close(s_in);
+        internal_network_stack_thread_safety_mutex_unlock();
+        return OS_ERROR_INSUFFICIENT_SPACE;
+    }
+
+    // The default values below are taken from the TCP unit tests of
+    // PicoTCP, see tests/examples/tcpecho.c
+
+    // disable nagle algorithm (1=disable, 0=enable)
+    helper_socket_set_option_int(s_in, PICO_TCP_NODELAY, 1);
+
+    // number of probes for TCP keepalive
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPCNT, 5);
+
+    // timeout in ms for TCP keepalive probes
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPIDLE, 30000);
+
+    // timeout in ms for TCP keep alive retries
+    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
+
+    set_accepted_handle(
+        get_handle_from_implementation_socket(s_in),
+        accepted_handle);
+
+    *pClient_handle = accepted_handle;
+
+    Debug_LOG_INFO(
+        "Accepted [socket %d/%p]",
+        accepted_handle,
+        get_implementation_socket_from_handle(accepted_handle));
 
     struct pico_socket* client_socket = get_implementation_socket_from_handle(
                                             *pClient_handle);
-
-    if (client_socket == NULL)
-    {
-        if (err == OS_SUCCESS)
-        {
-            err = OS_ERROR_GENERIC;
-
-            Debug_LOG_ERROR("[socket %d/%p] OS success but no client to accept, "
-                            "escalated to OS error %d (%s)",
-                            handle, pico_socket, err, Debug_OS_Error_toString(err));
-        }
-        else
-        {
-            Debug_LOG_ERROR("[socket %d/%p] no client to accept, OS error %d (%s)",
-                            handle, pico_socket, err, Debug_OS_Error_toString(err));
-        }
-
-        return err;
-    }
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
                     handle, pico_socket, *pClient_handle, client_socket);

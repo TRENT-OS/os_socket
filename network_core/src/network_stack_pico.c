@@ -220,25 +220,37 @@ handle_pico_socket_event(
     struct pico_socket* pico_socket)
 {
     int handle = get_handle_from_implementation_socket(pico_socket);
+    // Negative handle means that there is no TRENTOS socket for the given pico
+    // socket. This can happen if accept wasn't called yet on an incoming
+    // connection or close was called on the socket and the socket is in the
+    // process of being shut down.
     if (handle < 0)
     {
-        if (pico_socket->state & (PICO_SOCKET_STATE_SHUT_LOCAL |
-                                  PICO_SOCKET_STATE_SHUT_REMOTE |
-                                  PICO_SOCKET_STATE_TCP_CLOSED))
+        if (TCPSTATE(pico_socket) == PICO_SOCKET_STATE_TCP_CLOSE_WAIT)
         {
-            // Don't log an ERROR here, as an invalid handle can also result
-            // from a recently closed socket that receives final teardown
-            // events.
-            Debug_LOG_TRACE(
-                "%s: invalid handle %d. "
-                "Handle might already be freed due to recent close(). ",
-                __func__, handle);
+            // if the remote closes the socket before we called accept on it,
+            // it enters the CLOSE WAIT state. There is no correstponding TRENTOS
+            // socket we can close and we can't create one so we have to close
+            // the pico socket here in order to avoid a handle leak.
+            pico_socket_close(pico_socket);
+            Debug_LOG_TRACE("[socket %d/%p] CLOSE WAIT", handle, pico_socket);
+            return;
         }
-        else
+        if (TCPSTATE(pico_socket) == PICO_SOCKET_STATE_TCP_CLOSING)
         {
-            Debug_LOG_ERROR("%s: invalid handle %d", __func__, handle);
+            Debug_LOG_TRACE("[socket %d/%p] SOCKET CLOSING", handle, pico_socket);
+            return;
         }
-
+        if (TCPSTATE(pico_socket) == PICO_SOCKET_STATE_TCP_CLOSED)
+        {
+            Debug_LOG_TRACE("[socket %d/%p] SOCKET CLOSED", handle, pico_socket);
+            return;
+        }
+        if (TCPSTATE(pico_socket) == PICO_SOCKET_STATE_TCP_TIME_WAIT)
+        {
+            Debug_LOG_TRACE("[socket %d/%p] TIME WAIT", handle, pico_socket);
+            return;
+        }
         return;
     }
 

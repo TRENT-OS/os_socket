@@ -439,6 +439,19 @@ network_stack_pico_socket_create(
     *pHandle                = handle;
 
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
+
+    // disable nagle algorithm (1=disable, 0=enable)
+    helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
+
+    // number of probes for TCP keepalive
+    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPCNT, 5);
+
+    // timeout in ms for TCP keepalive probes
+    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPIDLE, 30000);
+
+    // timeout in ms for TCP keep alive retries
+    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPINTVL, 5000);
+
     return OS_SUCCESS;
 }
 

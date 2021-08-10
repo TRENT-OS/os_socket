@@ -366,8 +366,10 @@ network_stack_pico_socket_create(
 
     if (socket_type == OS_SOCK_STREAM) // TCP socket
     {
-        // disable nagle algorithm (1=disable, 0=enable)
-        helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
+        helper_socket_set_option_int(
+            pico_socket,
+            PICO_TCP_NODELAY,
+            PICO_TCP_NAGLE_DISABLE);
     }
 
     int handle = reserve_handle(pico_socket, clientID);
@@ -403,17 +405,28 @@ network_stack_pico_socket_create(
 
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
 
-    // disable nagle algorithm (1=disable, 0=enable)
-    helper_socket_set_option_int(pico_socket, PICO_TCP_NODELAY, 1);
+    helper_socket_set_option_int(
+        pico_socket,
+        PICO_TCP_NODELAY,
+        PICO_TCP_NAGLE_DISABLE);
 
     // number of probes for TCP keepalive
-    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPCNT, 5);
+    helper_socket_set_option_int(
+        pico_socket,
+        PICO_SOCKET_OPT_KEEPCNT,
+        PICO_TCP_KEEPALIVE_COUNT);
 
     // timeout in ms for TCP keepalive probes
-    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPIDLE, 30000);
+    helper_socket_set_option_int(
+        pico_socket,
+        PICO_SOCKET_OPT_KEEPIDLE,
+        PICO_TCP_KEEPALIVE_PROBE_TIMEOUT);
 
     // timeout in ms for TCP keep alive retries
-    helper_socket_set_option_int(pico_socket, PICO_SOCKET_OPT_KEEPINTVL, 5000);
+    helper_socket_set_option_int(
+        pico_socket,
+        PICO_SOCKET_OPT_KEEPINTVL,
+        PICO_TCP_KEEPALIVE_RETRY_TIMEOUT);
 
     return OS_SUCCESS;
 }
@@ -621,17 +634,28 @@ network_stack_pico_socket_accept(
     // The default values below are taken from the TCP unit tests of
     // PicoTCP, see tests/examples/tcpecho.c
 
-    // disable nagle algorithm (1=disable, 0=enable)
-    helper_socket_set_option_int(s_in, PICO_TCP_NODELAY, 1);
+    helper_socket_set_option_int(
+        s_in,
+        PICO_TCP_NODELAY,
+        PICO_TCP_NAGLE_DISABLE);
 
     // number of probes for TCP keepalive
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPCNT, 5);
+    helper_socket_set_option_int(
+        s_in,
+        PICO_SOCKET_OPT_KEEPCNT,
+        PICO_TCP_KEEPALIVE_COUNT);
 
     // timeout in ms for TCP keepalive probes
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPIDLE, 30000);
+    helper_socket_set_option_int(
+        s_in,
+        PICO_SOCKET_OPT_KEEPIDLE,
+        PICO_TCP_KEEPALIVE_PROBE_TIMEOUT);
 
     // timeout in ms for TCP keep alive retries
-    helper_socket_set_option_int(s_in, PICO_SOCKET_OPT_KEEPINTVL, 5000);
+    helper_socket_set_option_int(
+        s_in,
+        PICO_SOCKET_OPT_KEEPINTVL,
+        PICO_TCP_KEEPALIVE_RETRY_TIMEOUT);
 
     set_accepted_handle(
         get_handle_from_implementation_socket(s_in),

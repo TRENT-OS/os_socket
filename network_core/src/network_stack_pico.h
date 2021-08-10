@@ -72,3 +72,10 @@ network_stack_pico_socket_recvfrom(
     const int handle,
     size_t* const pLen,
     OS_NetworkSocket_Addr_t* const srcAddr);
+
+#define PICO_TCP_NAGLE_DISABLE 1
+#define PICO_TCP_NAGLE_ENABLE  0
+
+#define PICO_TCP_KEEPALIVE_COUNT         5
+#define PICO_TCP_KEEPALIVE_PROBE_TIMEOUT 30000
+#define PICO_TCP_KEEPALIVE_RETRY_TIMEOUT 5000

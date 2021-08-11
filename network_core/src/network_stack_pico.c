@@ -433,7 +433,8 @@ network_stack_pico_socket_create(
 
 OS_Error_t
 network_stack_pico_socket_close(
-    const int handle)
+    const int handle,
+    const int clientID)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -452,11 +453,11 @@ network_stack_pico_socket_close(
         Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, translating to OS error %d (%s)",
                         handle, pico_socket, ret,
                         err, Debug_OS_Error_toString(err));
-        free_handle(handle);
+        free_handle(handle, clientID);
         return err;
     }
 
-    free_handle(handle);
+    free_handle(handle, clientID);
 
     Debug_LOG_INFO("[socket %d/%p] close() handle", handle, pico_socket);
 
@@ -623,7 +624,7 @@ network_stack_pico_socket_accept(
         return err;
     }
 
-    int accepted_handle = reserve_handle(s_in, socket->clientId);
+    int accepted_handle = reserve_handle(s_in, socket->client->clientId);
     if (accepted_handle == -1)
     {
         pico_socket_close(s_in);

@@ -29,6 +29,8 @@ typedef struct
     const OS_NetworkStack_CamkesConfig_t* camkes_cfg;
     const OS_NetworkStack_AddressConfig_t* cfg;
     OS_NetworkStack_SocketResources_t* sockets;
+    OS_NetworkStack_Client_t* clients;
+
     int number_of_sockets;
 } network_stack_t;
 
@@ -77,7 +79,7 @@ networkStack_rpc_socket_close(
 
     CHECK_CLIENT_ID(socket);
 
-    return network_stack_pico_socket_close(handle);
+    return network_stack_pico_socket_close(handle, get_client_id());
 }
 
 
@@ -295,14 +297,14 @@ reserve_handle(
 
     internal_socket_control_block_mutex_lock();
 
-    if (!instance.camkes_cfg->internal.client_sockets_quota[clientId])
+    if (!instance.clients[clientId].socketQuota)
     {
         Debug_LOG_ERROR("No free sockets available for client %d", clientId);
         internal_socket_control_block_mutex_unlock();
         return -1;
     }
 
-    instance.camkes_cfg->internal.client_sockets_quota[clientId]--;
+    instance.clients[clientId].socketQuota--;
 
     for (int i = 0; i < instance.number_of_sockets; i++)
         if (instance.sockets[i].status == SOCKET_FREE)
@@ -311,7 +313,7 @@ reserve_handle(
             instance.sockets[i].implementation_socket = impl_sock;
             instance.sockets[i].accepted_handle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
-            instance.sockets[i].clientId = clientId;
+            instance.sockets[i].client = &instance.clients[clientId];
             handle = i;
             break;
         }
@@ -329,7 +331,8 @@ reserve_handle(
 // free a handle
 void
 free_handle(
-    const int handle)
+    const int handle,
+    const int clientId)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
@@ -337,13 +340,13 @@ free_handle(
         return;
     }
     internal_socket_control_block_mutex_lock();
-    instance.camkes_cfg->internal
-    .client_sockets_quota[instance.sockets[handle].clientId]++;
+
+    instance.clients[clientId].socketQuota++;
 
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
     instance.sockets[handle].accepted_handle = -1;
-    instance.sockets[handle].clientId = -1;
+    instance.sockets[handle].client = NULL;
     internal_socket_control_block_mutex_unlock();
 }
 
@@ -366,7 +369,7 @@ set_accepted_handle(
     }
     internal_socket_control_block_mutex_lock();
     instance.sockets[handle].accepted_handle = accept_handle;
-    instance.sockets[accept_handle].clientId = instance.sockets[handle].clientId;
+    instance.sockets[accept_handle].client = instance.sockets[handle].client;
     internal_socket_control_block_mutex_unlock();
 }
 
@@ -501,6 +504,8 @@ OS_NetworkStack_init(
     instance.sockets    = instance.camkes_cfg->internal.sockets;
     instance.number_of_sockets
         = camkes_config->internal.number_of_sockets;
+
+    instance.clients    = instance.camkes_cfg->internal.clients;
 
     network_stack_interface_t network_stack = network_stack_pico_get_config();
 

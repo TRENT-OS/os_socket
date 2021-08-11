@@ -28,7 +28,8 @@ network_stack_pico_socket_create(
 
 OS_Error_t
 network_stack_pico_socket_close(
-    const int handle);
+    const int handle,
+    const int clientID);
 
 OS_Error_t
 network_stack_pico_socket_connect(

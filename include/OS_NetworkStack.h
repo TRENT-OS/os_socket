@@ -18,11 +18,24 @@ typedef struct
     // The following variables are written from one thread (control thread) and
     // read from another (RPC thread) therefore volatile is needed to tell the
     // compiler that variable content can change outside of its control.
+    volatile bool hasPendingEvents;
+    volatile int  socketQuota;
+
+    int           clientID;
+
+} OS_NetworkStack_Client_t;
+
+typedef struct
+{
+    // The following variables are written from one thread (control thread) and
+    // read from another (RPC thread) therefore volatile is needed to tell the
+    // compiler that variable content can change outside of its control.
     volatile int status;
-    volatile int clientId;
     volatile int accepted_handle;
     volatile int event;
     volatile OS_Error_t current_error;
+
+    OS_NetworkStack_Client_t* client;
 
     event_notify_func_t notify_connection;
     event_wait_func_t wait_connection;
@@ -48,6 +61,9 @@ typedef struct
         event_notify_func_t notify_loop; // -> wait_event
 
         OS_NetworkStack_SocketResources_t* sockets;
+
+        OS_NetworkStack_Client_t* clients;
+
         int number_of_sockets;
         int number_of_clients;
         int* client_sockets_quota;

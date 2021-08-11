@@ -324,6 +324,8 @@ handle_pico_socket_event(
         internal_notify_connection(handle);
         internal_notify_read(handle);
     }
+
+    socket->client->needsToBeNotified = true;
 }
 
 OS_Error_t

@@ -485,6 +485,24 @@ get_dataport_for_handle(
     return &(instance.sockets[handle].buf);
 }
 
+//------------------------------------------------------------------------------
+// notify any client that has pending socket events
+static void
+notify_clients_about_pending_events(
+    void)
+{
+    for (int i = 0; i < instance.camkes_cfg->internal.number_of_clients; i++)
+    {
+        if (instance.clients[i].needsToBeNotified)
+        {
+            Debug_LOG_DEBUG("Client %d has pending events",
+                            instance.clients[i].clientId);
+
+            instance.clients[i].eventNotify();
+            instance.clients[i].needsToBeNotified = false;
+        }
+    }
+}
 
 //------------------------------------------------------------------------------
 OS_Error_t
@@ -545,6 +563,7 @@ OS_NetworkStack_run(void)
         internal_network_stack_thread_safety_mutex_lock();
         // let stack process the event
         network_stack.stack_tick();
+        notify_clients_about_pending_events();
         internal_network_stack_thread_safety_mutex_unlock();
     }
 

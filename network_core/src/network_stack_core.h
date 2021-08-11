@@ -94,14 +94,14 @@ get_client_id_buf_size(void);
 #define CHECK_CLIENT_ID(_socket_)                                              \
     do                                                                         \
     {                                                                          \
-        if (_socket_->client->clientID != get_client_id())                     \
+        if (_socket_->client->clientId != get_client_id())                     \
         {                                                                      \
             Debug_LOG_ERROR(                                                   \
                 "%s: invalid clientId number. Called by %d on a socket "       \
                 "belonging to %d",                                             \
                 __func__,                                                      \
                 get_client_id(),                                               \
-                _socket_->client->clientID);                                   \
+                _socket_->client->clientId);                                   \
             return OS_ERROR_INVALID_HANDLE;                                    \
         }                                                                      \
     } while (0)

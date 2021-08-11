@@ -22,14 +22,14 @@ network_stack_pico_socket_create(
     const int domain,
     const int socket_type,
     int* const pHandle,
-    const int  clientID,
+    const int  clientId,
     void*      buffer,
     const int  buffer_size);
 
 OS_Error_t
 network_stack_pico_socket_close(
     const int handle,
-    const int clientID);
+    const int clientId);
 
 OS_Error_t
 network_stack_pico_socket_connect(

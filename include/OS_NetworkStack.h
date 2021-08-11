@@ -21,8 +21,7 @@ typedef struct
     volatile bool hasPendingEvents;
     volatile int  socketQuota;
 
-    int           clientID;
-
+    int clientId;
 } OS_NetworkStack_Client_t;
 
 typedef struct

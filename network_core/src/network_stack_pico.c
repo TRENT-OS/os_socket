@@ -313,8 +313,8 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_ERR)
     {
-        OS_Error_t err          =  pico_err2os(pico_err);
-        socket->current_error   = err;
+        OS_Error_t err        = pico_err2os(pico_err);
+        socket->current_error = err;
         Debug_LOG_ERROR("[socket %d/%p] PICO_SOCK_EV_ERR, OS error = %d (%s)",
                         handle,
                         pico_socket,
@@ -400,8 +400,8 @@ network_stack_pico_socket_create(
 
     Debug_ASSERT(socket != NULL); // can't be null, as we got a valid handle above
 
-    socket->current_error   = pico_err2os(cur_pico_err);
-    *pHandle                = handle;
+    socket->current_error = pico_err2os(cur_pico_err);
+    *pHandle              = handle;
 
     Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
 
@@ -529,7 +529,7 @@ network_stack_pico_socket_bind(
     uint16_t be_port = short_be(localAddr->port);
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_bind(pico_socket, &convertedAddr, &be_port);
-    OS_Error_t err =  pico_err2os(pico_err);
+    OS_Error_t err = pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
     if (ret < 0)
@@ -578,8 +578,8 @@ network_stack_pico_socket_accept(
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
-    uint16_t            port        = 0;
-    struct pico_ip4     orig        = { 0 };
+    uint16_t        port = 0;
+    struct pico_ip4 orig = { 0 };
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -591,7 +591,7 @@ network_stack_pico_socket_accept(
 
     struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
     OS_Error_t          err  = pico_err2os(pico_err);
-    socket->current_error     = err;
+    socket->current_error    = err;
 
     if (NULL == s_in)
     {
@@ -689,7 +689,7 @@ network_stack_pico_socket_write(
     int ret = pico_socket_write(pico_socket,
                                 buf,
                                 len);
-    OS_Error_t err =  pico_err2os(pico_err);
+    OS_Error_t err = pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 
@@ -702,7 +702,7 @@ network_stack_pico_socket_write(
         return err;
     }
 
-    *pLen       = ret;
+    *pLen = ret;
 
     return OS_SUCCESS;
 }
@@ -729,7 +729,7 @@ network_stack_pico_socket_read(
 
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_read(pico_socket, buf, len);
-    OS_Error_t err =  pico_err2os(pico_err);
+    OS_Error_t err = pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 
@@ -797,7 +797,7 @@ network_stack_pico_socket_sendto(
                                  len,
                                  &dst,
                                  dport);
-    OS_Error_t err =  pico_err2os(pico_err);
+    OS_Error_t err = pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 
@@ -815,7 +815,7 @@ network_stack_pico_socket_sendto(
         return err;
     }
 
-    *pLen       = ret;
+    *pLen = ret;
 
     return OS_SUCCESS;
 }
@@ -847,7 +847,7 @@ network_stack_pico_socket_recvfrom(
 
     internal_network_stack_thread_safety_mutex_lock();
     ret = pico_socket_recvfrom(pico_socket, buf, len, &src, &sport);
-    OS_Error_t err =  pico_err2os(pico_err);
+    OS_Error_t err = pico_err2os(pico_err);
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 

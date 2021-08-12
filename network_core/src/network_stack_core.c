@@ -59,12 +59,13 @@ networkStack_rpc_socket_create(
 {
     CHECK_PTR_NOT_NULL(pHandle);
 
-    return network_stack_pico_socket_create(domain,
-                                            socket_type,
-                                            pHandle,
-                                            get_client_id(),
-                                            get_client_id_buf(),
-                                            get_client_id_buf_size());
+    return network_stack_pico_socket_create(
+               domain,
+               socket_type,
+               pHandle,
+               get_client_id(),
+               get_client_id_buf(),
+               get_client_id_buf_size());
 }
 
 
@@ -277,7 +278,6 @@ get_handle_from_implementation_socket(
         }
     return handle;
 }
-
 
 //------------------------------------------------------------------------------
 // Reserve a free handle

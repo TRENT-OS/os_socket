@@ -12,8 +12,6 @@
 #include "network_stack_core.h"
 #include <stddef.h>
 
-
-
 //------------------------------------------------------------------------------
 void
 wait_network_event(void)
@@ -140,7 +138,6 @@ internal_socket_control_block_mutex_lock(void)
     Debug_LOG_TRACE("%s", __func__);
     lock_mutex();
 }
-
 
 //------------------------------------------------------------------------------
 void internal_socket_control_block_mutex_unlock(void)

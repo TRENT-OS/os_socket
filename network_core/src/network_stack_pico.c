@@ -274,7 +274,7 @@ handle_pico_socket_event(
             Debug_LOG_INFO("[socket %d/%p] incoming connection",
                            handle,
                            pico_socket);
-            socket->eventMask = OS_SOCK_EV_CONN_ACPT;
+            socket->eventMask |= OS_SOCK_EV_CONN_ACPT;
         }
         else
         {
@@ -282,33 +282,33 @@ handle_pico_socket_event(
             Debug_LOG_INFO("[socket %d/%p] incoming connection established",
                            handle,
                            pico_socket);
-            socket->eventMask = OS_SOCK_EV_CONN_EST;
+            socket->eventMask |= OS_SOCK_EV_CONN_EST;
         }
     }
 
     if (event_mask & PICO_SOCK_EV_RD)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_RD", handle, pico_socket);
-        socket->eventMask = OS_SOCK_EV_READ;
+        socket->eventMask |= OS_SOCK_EV_READ;
     }
 
     if (event_mask & PICO_SOCK_EV_WR)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_WR", handle, pico_socket);
         // notify app, which is waiting to write
-        socket->eventMask = OS_SOCK_EV_WRITE;
+        socket->eventMask |= OS_SOCK_EV_WRITE;
     }
 
     if (event_mask & PICO_SOCK_EV_CLOSE)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_CLOSE", handle, pico_socket);
-        socket->eventMask = OS_SOCK_EV_CLOSE;
+        socket->eventMask |= OS_SOCK_EV_CLOSE;
     }
 
     if (event_mask & PICO_SOCK_EV_FIN)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_FIN", handle, pico_socket);
-        socket->eventMask = OS_SOCK_EV_FIN;
+        socket->eventMask |= OS_SOCK_EV_FIN;
     }
 
     if (event_mask & PICO_SOCK_EV_ERR)
@@ -320,7 +320,7 @@ handle_pico_socket_event(
                         pico_socket,
                         err,
                         Debug_OS_Error_toString(err));
-        socket->eventMask = OS_SOCK_EV_ERROR;
+        socket->eventMask |= OS_SOCK_EV_ERROR;
     }
 
     socket->client->needsToBeNotified = true;

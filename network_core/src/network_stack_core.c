@@ -307,14 +307,7 @@ networkStack_rpc_socket_getPendingEvents(
 
     instance.clients[clientId].tail = instance.clients[clientId].head;
 
-    if (socketsWithEvents > 0)
-    {
-        *pNumberOfEvents = socketsWithEvents;
-    }
-    else
-    {
-        *pNumberOfEvents = 0;
-    }
+    *pNumberOfEvents = socketsWithEvents;
 
     return OS_SUCCESS;
 }

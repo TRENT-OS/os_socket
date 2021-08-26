@@ -498,6 +498,7 @@ notify_clients_about_pending_events(
             Debug_LOG_DEBUG("Client %d has pending events",
                             instance.clients[i].clientId);
 
+            Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
             instance.clients[i].eventNotify();
             instance.clients[i].needsToBeNotified = false;
         }

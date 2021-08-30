@@ -416,6 +416,13 @@ free_handle(
         Debug_LOG_ERROR("Trying to free invalid handle");
         return;
     }
+
+    if (instance.sockets[handle].client->clientId != clientId)
+    {
+        Debug_LOG_ERROR("Trying to free handle that does not belong to client");
+        return;
+    }
+
     internal_socket_control_block_mutex_lock();
 
     instance.clients[clientId].socketQuota++;

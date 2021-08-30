@@ -323,7 +323,10 @@ handle_pico_socket_event(
         socket->eventMask |= OS_SOCK_EV_ERROR;
     }
 
-    socket->client->needsToBeNotified = true;
+    OS_NetworkStack_Client_t* client = get_client_from_clientId(
+                                           socket->clientId);
+
+    client->needsToBeNotified = true;
 }
 
 OS_Error_t
@@ -604,7 +607,7 @@ network_stack_pico_socket_accept(
         return err;
     }
 
-    int accepted_handle = reserve_handle(s_in, socket->client->clientId);
+    int accepted_handle = reserve_handle(s_in, socket->clientId);
     if (accepted_handle == -1)
     {
         pico_socket_close(s_in);

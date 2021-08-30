@@ -27,8 +27,6 @@ typedef struct
     int tail;
 
     event_notify_func_t eventNotify;
-
-    int clientId;
 } OS_NetworkStack_Client_t;
 
 typedef struct
@@ -41,7 +39,7 @@ typedef struct
     volatile uint16_t eventMask;
     volatile OS_Error_t current_error;
 
-    OS_NetworkStack_Client_t* client;
+    int clientId;
 
     void*      buf_io;
     OS_Dataport_t buf;

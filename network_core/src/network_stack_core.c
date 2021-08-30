@@ -265,20 +265,18 @@ networkStack_rpc_socket_getPendingEvents(
     {
         int i = instance.clients[clientId].head;
 
-        if (instance.sockets[i].client != NULL)
+        if (instance.sockets[i].clientId == clientId)
         {
-            if (instance.sockets[i].client->clientId == clientId)
+            if (instance.sockets[i].eventMask)
             {
-                if (instance.sockets[i].eventMask)
-                {
-                    socketsWithEvents++;
-                    OS_NetworkSocket_Evt_t event;
+                socketsWithEvents++;
+                OS_NetworkSocket_Evt_t event;
 
                     internal_network_stack_thread_safety_mutex_lock();
-                    event.eventMask = instance.sockets[i].eventMask;
-                    event.socketHandle = i;
-                    event.currentError = instance.sockets[i].current_error;
-                    instance.sockets[i].eventMask = 0;
+                event.eventMask = instance.sockets[i].eventMask;
+                event.socketHandle = i;
+                event.currentError = instance.sockets[i].current_error;
+                instance.sockets[i].eventMask = 0;
                     internal_network_stack_thread_safety_mutex_unlock();
 
                 memcpy(&clientDataport[offset], &event, sizeof(event));
@@ -357,6 +355,22 @@ get_handle_from_implementation_socket(
 }
 
 //------------------------------------------------------------------------------
+// get client from a given clientId
+void*
+get_client_from_clientId(
+    const int clientId)
+{
+    if ((clientId < 0)
+        || (instance.camkes_cfg->internal.number_of_clients <= clientId))
+    {
+        Debug_LOG_ERROR("Invalid client %d", clientId);
+        return NULL;
+    }
+
+    return &instance.clients[clientId];
+}
+
+//------------------------------------------------------------------------------
 // Reserve a free handle
 int
 reserve_handle(
@@ -390,7 +404,7 @@ reserve_handle(
             instance.sockets[i].implementation_socket = impl_sock;
             instance.sockets[i].accepted_handle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
-            instance.sockets[i].client = &instance.clients[clientId];
+            instance.sockets[i].clientId = clientId;
             handle = i;
             break;
         }
@@ -417,7 +431,7 @@ free_handle(
         return;
     }
 
-    if (instance.sockets[handle].client->clientId != clientId)
+    if (instance.sockets[handle].clientId != clientId)
     {
         Debug_LOG_ERROR("Trying to free handle that does not belong to client");
         return;
@@ -430,7 +444,7 @@ free_handle(
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
     instance.sockets[handle].accepted_handle = -1;
-    instance.sockets[handle].client = NULL;
+    instance.sockets[handle].clientId = -1;
     internal_socket_control_block_mutex_unlock();
 }
 
@@ -453,7 +467,7 @@ set_accepted_handle(
     }
     internal_socket_control_block_mutex_lock();
     instance.sockets[handle].accepted_handle = accept_handle;
-    instance.sockets[accept_handle].client = instance.sockets[handle].client;
+    instance.sockets[accept_handle].clientId = instance.sockets[handle].clientId;
     internal_socket_control_block_mutex_unlock();
 }
 
@@ -495,8 +509,7 @@ notify_clients_about_pending_events(
     {
         if (instance.clients[i].needsToBeNotified)
         {
-            Debug_LOG_DEBUG("Client %d has pending events",
-                            instance.clients[i].clientId);
+            Debug_LOG_DEBUG("Client %d has pending events", i);
 
             Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
             instance.clients[i].eventNotify();

@@ -272,12 +272,12 @@ networkStack_rpc_socket_getPendingEvents(
                 socketsWithEvents++;
                 OS_NetworkSocket_Evt_t event;
 
-                    internal_network_stack_thread_safety_mutex_lock();
+                internal_network_stack_thread_safety_mutex_lock();
                 event.eventMask = instance.sockets[i].eventMask;
                 event.socketHandle = i;
                 event.currentError = instance.sockets[i].current_error;
                 instance.sockets[i].eventMask = 0;
-                    internal_network_stack_thread_safety_mutex_unlock();
+                internal_network_stack_thread_safety_mutex_unlock();
 
                 memcpy(&clientDataport[offset], &event, sizeof(event));
                 offset += sizeof(event);

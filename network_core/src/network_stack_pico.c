@@ -647,8 +647,20 @@ network_stack_pico_socket_accept(
 
     if (client_socket == NULL)
     {
-        Debug_LOG_ERROR("[socket %d/%p] no client to accept, OS error %d (%s)",
+        if (err == OS_SUCCESS)
+        {
+            err = OS_ERROR_GENERIC;
+
+            Debug_LOG_ERROR("[socket %d/%p] OS success but no client to accept, "
+                        "escalated to OS error %d (%s)",
                         handle, pico_socket, err, Debug_OS_Error_toString(err));
+        }
+        else
+        {
+            Debug_LOG_ERROR("[socket %d/%p] no client to accept, OS error %d (%s)",
+                        handle, pico_socket, err, Debug_OS_Error_toString(err));
+        }
+
         return err;
     }
 

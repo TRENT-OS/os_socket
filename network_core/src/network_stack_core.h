@@ -44,10 +44,6 @@ set_accepted_handle(
     const int handle,
     const int accepted_handle);
 
-int
-get_accepted_handle(
-    const int handle);
-
 const OS_Dataport_t*
 get_dataport_for_handle(
     const int handle);

@@ -473,20 +473,6 @@ set_accepted_handle(
 }
 
 //------------------------------------------------------------------------------
-// get handle of the accepted connection
-int
-get_accepted_handle(
-    const int handle)
-{
-    if (handle < 0 || handle >= instance.number_of_sockets)
-    {
-        Debug_LOG_ERROR("get_accepted_handle: Invalid handle");
-        return -1;
-    }
-    return instance.sockets[handle].accepted_handle;
-}
-
-//------------------------------------------------------------------------------
 // get dataport for handle
 const OS_Dataport_t*
 get_dataport_for_handle(

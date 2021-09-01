@@ -1,10 +1,8 @@
-# TRENTOS-M Network Stack
+# OS Network
 
-## Dependencies
+## Overview
 
-The TRENTOS-M  Network Stack uses PicoTCP
-
-The Network stack can be used in two different ways, in a SERVER configuration
+The Network Stack can be used in two different ways, in a SERVER configuration
 (where the APP listens for an incoming connection) and a CLIENT configuration
 (where the APP can connect to a remote host).
 
@@ -29,8 +27,10 @@ Network Stack components.
 
 ## Dependencies
 
-The Network depends on a network interface driver, the configuration server
-and the system libraries.
+- PicoTCP
+- Network interface driver
+- Configuration server
+- System libraries
 
 ## Network interface file
 
@@ -51,8 +51,8 @@ In order to use the Stack, your component definition needs to include the
     }
 
 ## Limitations
-* Only IPv4 connections are supported
-* Only TCP socket is supported
-* Only 1 connection can be active at a given time
-* Each APP needs its own Network Stack
-* Network Stack needs to be specialized in Server/Client
+- Only IPv4 connections are supported
+- Only TCP socket is supported
+- Only 1 connection can be active at a given time
+- Each APP needs its own Network Stack
+- Network Stack needs to be specialized in Server/Client

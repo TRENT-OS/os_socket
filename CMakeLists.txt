@@ -1,5 +1,5 @@
 #
-# OS Network Stack library
+# OS Network
 #
 # Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
 #

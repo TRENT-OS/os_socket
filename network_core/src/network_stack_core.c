@@ -32,6 +32,7 @@ typedef struct
     OS_NetworkStack_Client_t* clients;
 
     int number_of_sockets;
+    int number_of_clients;
 } network_stack_t;
 
 // network stack state
@@ -361,7 +362,7 @@ get_client_from_clientId(
     const int clientId)
 {
     if ((clientId < 0)
-        || (instance.camkes_cfg->internal.number_of_clients <= clientId))
+        || (instance.number_of_clients <= clientId))
     {
         Debug_LOG_ERROR("Invalid client %d", clientId);
         return NULL;
@@ -380,7 +381,7 @@ reserve_handle(
     int handle = -1;
 
     if ((clientId < 0)
-        || (instance.camkes_cfg->internal.number_of_clients <= clientId))
+        || (instance.number_of_clients <= clientId))
     {
         Debug_LOG_ERROR("Invalid client %d", clientId);
         return -1;
@@ -505,7 +506,7 @@ static void
 notify_clients_about_pending_events(
     void)
 {
-    for (int i = 0; i < instance.camkes_cfg->internal.number_of_clients; i++)
+    for (int i = 0; i < instance.number_of_clients; i++)
     {
         if (instance.clients[i].needsToBeNotified)
         {
@@ -536,7 +537,8 @@ OS_NetworkStack_init(
     instance.sockets    = instance.camkes_cfg->internal.sockets;
     instance.number_of_sockets
         = camkes_config->internal.number_of_sockets;
-
+    instance.number_of_clients
+        = camkes_config->internal.number_of_clients;
     instance.clients    = instance.camkes_cfg->internal.clients;
 
     network_stack_interface_t network_stack = network_stack_pico_get_config();

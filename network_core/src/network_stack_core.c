@@ -454,21 +454,21 @@ free_handle(
 void
 set_accepted_handle(
     const int handle,
-    const int accept_handle)
+    const int accepted_handle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
         Debug_LOG_ERROR("set_accepted_handle: Invalid handle");
         return;
     }
-    if (accept_handle < 0 || accept_handle >= instance.number_of_sockets)
+    if (accepted_handle < 0 || accepted_handle >= instance.number_of_sockets)
     {
         Debug_LOG_ERROR("set_accepted_handle: Invalid accepted_handle");
         return;
     }
     internal_socket_control_block_mutex_lock();
-    instance.sockets[handle].accepted_handle = accept_handle;
-    instance.sockets[accept_handle].clientId = instance.sockets[handle].clientId;
+    instance.sockets[handle].accepted_handle = accepted_handle;
+    instance.sockets[accepted_handle].clientId = instance.sockets[handle].clientId;
     internal_socket_control_block_mutex_unlock();
 }
 

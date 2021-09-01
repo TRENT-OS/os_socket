@@ -42,7 +42,7 @@ free_handle(
 void
 set_accepted_handle(
     const int handle,
-    const int accept_handle);
+    const int accepted_handle);
 
 int
 get_accepted_handle(

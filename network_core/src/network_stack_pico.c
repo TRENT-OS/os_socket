@@ -329,6 +329,7 @@ handle_pico_socket_event(
     client->needsToBeNotified = true;
 }
 
+//------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_create(
     const int  domain,
@@ -434,6 +435,7 @@ network_stack_pico_socket_create(
     return OS_SUCCESS;
 }
 
+//------------------------------------------------------------------------------
 OS_Error_t
 network_stack_pico_socket_close(
     const int handle,

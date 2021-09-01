@@ -264,8 +264,6 @@ handle_pico_socket_event(
     Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",
                     handle, pico_socket, event_mask, TCPSTATE(pico_socket));
 
-    socket->event = event_mask;
-
     if (event_mask & PICO_SOCK_EV_CONN)
     {
         Debug_LOG_DEBUG("[socket %d/%p] PICO_SOCK_EV_CONN", handle, pico_socket);
@@ -276,6 +274,7 @@ handle_pico_socket_event(
             Debug_LOG_INFO("[socket %d/%p] incoming connection",
                            handle,
                            pico_socket);
+            socket->eventMask = OS_SOCK_EV_CONN_ACPT;
         }
         else
         {
@@ -283,33 +282,33 @@ handle_pico_socket_event(
             Debug_LOG_INFO("[socket %d/%p] incoming connection established",
                            handle,
                            pico_socket);
+            socket->eventMask = OS_SOCK_EV_CONN_EST;
         }
-        internal_notify_connection(handle);
     }
 
     if (event_mask & PICO_SOCK_EV_RD)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_RD", handle, pico_socket);
-        internal_notify_read(handle);
+        socket->eventMask = OS_SOCK_EV_READ;
     }
 
     if (event_mask & PICO_SOCK_EV_WR)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_WR", handle, pico_socket);
         // notify app, which is waiting to write
-        internal_notify_write(handle);
+        socket->eventMask = OS_SOCK_EV_WRITE;
     }
 
     if (event_mask & PICO_SOCK_EV_CLOSE)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_CLOSE", handle, pico_socket);
-        internal_notify_read(handle);
+        socket->eventMask = OS_SOCK_EV_CLOSE;
     }
 
     if (event_mask & PICO_SOCK_EV_FIN)
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_FIN", handle, pico_socket);
-        internal_notify_read(handle);
+        socket->eventMask = OS_SOCK_EV_FIN;
     }
 
     if (event_mask & PICO_SOCK_EV_ERR)
@@ -321,8 +320,7 @@ handle_pico_socket_event(
                         pico_socket,
                         err,
                         Debug_OS_Error_toString(err));
-        internal_notify_connection(handle);
-        internal_notify_read(handle);
+        socket->eventMask = OS_SOCK_EV_ERROR;
     }
 
     socket->client->needsToBeNotified = true;
@@ -502,22 +500,6 @@ network_stack_pico_socket_connect(
         return err;
     }
 
-    Debug_LOG_DEBUG("[socket %d/%p] connect waiting ...", handle, pico_socket);
-    internal_wait_connection(handle);
-    internal_network_stack_thread_safety_mutex_lock();
-    err = socket->current_error;
-    internal_network_stack_thread_safety_mutex_unlock();
-
-    if ((pico_socket->state & PICO_SOCKET_STATE_CONNECTED) == 0)
-    {
-        Debug_LOG_ERROR("[socket %d/%p] could not connect socket, OS error %d (%s)",
-                        handle, pico_socket, err, Debug_OS_Error_toString(err));
-        return err;
-    }
-
-    Debug_LOG_INFO("[socket %d/%p] connection established to %s:%u",
-                   handle, pico_socket, dstAddr->addr, dstAddr->port);
-
     return OS_SUCCESS;
 }
 
@@ -604,10 +586,6 @@ network_stack_pico_socket_accept(
     struct pico_socket* pico_socket = socket->implementation_socket;
 
     CHECK_SOCKET(pico_socket, handle);
-
-    Debug_LOG_DEBUG("[socket %d/%p] accept waiting ...", handle, pico_socket);
-
-    internal_wait_connection(handle);
 
     internal_network_stack_thread_safety_mutex_lock();
 
@@ -707,8 +685,6 @@ network_stack_pico_socket_write(
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
-    internal_wait_write(handle);
-
     internal_network_stack_thread_safety_mutex_lock();
     int ret = pico_socket_write(pico_socket,
                                 buf,
@@ -726,16 +702,12 @@ network_stack_pico_socket_write(
         return err;
     }
 
-    socket->event = 0;
     *pLen       = ret;
-
-    internal_notify_main_loop();
 
     return OS_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
-// Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_read(
     const int     handle,
@@ -748,74 +720,50 @@ network_stack_pico_socket_read(
     CHECK_SOCKET(pico_socket, handle);
 
     OS_Error_t retval = OS_SUCCESS;
-    int tot_len = 0;
+
     size_t len = *pLen; /* App requested length */
 
     uint8_t* buf = OS_Dataport_getBuf(socket->buf);
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
-    internal_notify_main_loop();
+    internal_network_stack_thread_safety_mutex_lock();
+    int ret = pico_socket_read(pico_socket, buf, len);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
+    internal_network_stack_thread_safety_mutex_unlock();
 
-    do
+    if (ret < 0)
     {
-        internal_network_stack_thread_safety_mutex_lock();
-        int ret = pico_socket_read(pico_socket, buf + tot_len, len - tot_len);
-        OS_Error_t err =  pico_err2os(pico_err);
-        socket->current_error = err;
-        internal_network_stack_thread_safety_mutex_unlock();
-
-        if (ret < 0)
+        if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
         {
-            if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
-            {
-                Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
-                               handle, pico_socket);
-            }
-            else
-            {
-                Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with "
-                                "error %d, translating to OS error %d (%s)",
-                                handle, pico_socket, ret, err,
-                                Debug_OS_Error_toString(err));
-            }
-
-            retval = err;
-            break;
+            Debug_LOG_INFO("[socket %d/%p] read() found connection closed",
+                           handle, pico_socket);
+        }
+        else
+        {
+            Debug_LOG_ERROR("[socket %d/%p] nw_socket_read() failed with "
+                            "error %d, translating to OS error %d (%s)",
+                            handle, pico_socket, ret, err,
+                            Debug_OS_Error_toString(err));
         }
 
-        if ((0 == ret) && (len > 0))
-        {
-            /* wait for a new RD event -- also wait possibly for a CLOSE event */
-            internal_wait_read(handle);
-            if (socket->event  & PICO_SOCK_EV_CLOSE)
-            {
-                /* closing of socket must be done by the app after return */
-                socket->event  = 0;
-                Debug_LOG_INFO("[socket %d/%p] read() unblocked due to connection closed",
-                               handle, pico_socket);
-                retval = OS_ERROR_NETWORK_CONN_SHUTDOWN; /* return 0 on a properly closed socket */
-                break;
-            }
-        }
-
-        tot_len += (unsigned)ret;
+        retval = err;
     }
-    while (0 == tot_len);
 
 #if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
 
     Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
-                    handle, pico_socket, tot_len);
+                    handle, pico_socket, ret);
 
     Debug_hexDump(
         Debug_LOG_LEVEL_TRACE,
         "",
         OS_Dataport_getBuf(*app_port),
-        tot_len);
+        ret);
 #endif
 
-    *pLen = tot_len;
+    *pLen = ret;
 
     return retval;
 }
@@ -867,16 +815,12 @@ network_stack_pico_socket_sendto(
         return err;
     }
 
-    socket->event = 0;
     *pLen       = ret;
-
-    internal_notify_main_loop();
 
     return OS_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
-// Is a blocking call. Wait until we get a read event from Stack
 OS_Error_t
 network_stack_pico_socket_recvfrom(
     const int                      handle,
@@ -901,42 +845,29 @@ network_stack_pico_socket_recvfrom(
 
     int ret;
 
-    internal_notify_main_loop();
+    internal_network_stack_thread_safety_mutex_lock();
+    ret = pico_socket_recvfrom(pico_socket, buf, len, &src, &sport);
+    OS_Error_t err =  pico_err2os(pico_err);
+    socket->current_error = err;
+    internal_network_stack_thread_safety_mutex_unlock();
 
-    // pico_socket_recvfrom will from time to time return 0 bytes read,
-    // even though there is a valid datagram to return. Although 0 payload is a
-    // valid UDP packet, it looks like picotcp treats it as a try-again
-    // condition (see example apps). So we wait/loop here until we get
-    // something to return.
-    do
+    if (ret < 0)
     {
-        internal_wait_read(handle);
+        Debug_LOG_ERROR(
+            "[socket %d/%p] nw_socket_read() failed with error %d, "
+            "translating to OS error %d (%s)", handle, pico_socket, ret, err,
+            Debug_OS_Error_toString(err));
 
-        internal_network_stack_thread_safety_mutex_lock();
-        ret = pico_socket_recvfrom(pico_socket, buf, len, &src, &sport);
-        OS_Error_t err =  pico_err2os(pico_err);
-        socket->current_error = err;
-        internal_network_stack_thread_safety_mutex_unlock();
-
-        if (ret < 0)
-        {
-            Debug_LOG_ERROR(
-                "[socket %d/%p] nw_socket_read() failed with error %d, "
-                "translating to OS error %d (%s)", handle, pico_socket, ret, err,
-                Debug_OS_Error_toString(err));
-
-            return err;
-        }
-        // If srcAddr is NULL it means the user doesn't want the
-        // sender's information.
-        if (NULL != srcAddr)
-        {
-            pico_ipv4_to_string((char*)srcAddr->addr, src.addr);
-
-            srcAddr->port = short_be(sport);
-        }
+        return err;
     }
-    while (ret == 0);
+    // If srcAddr is NULL it means the user doesn't want the
+    // sender's information.
+    if (NULL != srcAddr)
+    {
+        pico_ipv4_to_string((char*)srcAddr->addr, src.addr);
+
+        srcAddr->port = short_be(sport);
+    }
 
 #if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
 

@@ -33,24 +33,6 @@ void wait_network_event(void);
 
 void internal_notify_main_loop(void);
 
-void internal_notify_read(
-    int handle);
-
-void internal_wait_read(
-    int handle);
-
-void internal_notify_write(
-    int handle);
-
-void internal_wait_write(
-    int handle);
-
-void internal_notify_connection(
-    int handle);
-
-void internal_wait_connection(
-    int handle);
-
 const OS_Dataport_t* get_nic_port_from(void);
 const OS_Dataport_t* get_nic_port_to(void);
 

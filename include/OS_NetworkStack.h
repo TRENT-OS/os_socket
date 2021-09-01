@@ -33,19 +33,10 @@ typedef struct
     // compiler that variable content can change outside of its control.
     volatile int status;
     volatile int accepted_handle;
-    volatile int event;
+    volatile uint16_t eventMask;
     volatile OS_Error_t current_error;
 
     OS_NetworkStack_Client_t* client;
-
-    event_notify_func_t notify_connection;
-    event_wait_func_t wait_connection;
-
-    event_notify_func_t notify_write; // e_write_emit
-    event_wait_func_t wait_write;     // c_write_wait
-
-    event_notify_func_t notify_read; // e_read_emit
-    event_wait_func_t wait_read;     // c_read_wait
 
     void*      buf_io;
     OS_Dataport_t buf;

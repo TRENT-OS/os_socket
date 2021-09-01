@@ -44,30 +44,6 @@ int
 get_accepted_handle(
     const int handle);
 
-event_notify_func_t
-get_notify_conn_func_for_handle(
-    const int handle);
-
-event_wait_func_t
-get_wait_conn_func_for_handle(
-    const int handle);
-
-event_notify_func_t
-get_notify_write_func_for_handle(
-    const int handle);
-
-event_wait_func_t
-get_wait_write_func_for_handle(
-    const int handle);
-
-event_notify_func_t
-get_notify_read_func_for_handle(
-    const int handle);
-
-event_wait_func_t
-get_wait_read_func_for_handle(
-    const int handle);
-
 const OS_Dataport_t*
 get_dataport_for_handle(
     const int handle);

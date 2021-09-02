@@ -390,14 +390,15 @@ reserve_handle(
 
     internal_socket_control_block_mutex_lock();
 
-    if (!instance.clients[clientId].socketQuota)
+    if (instance.clients[clientId].currentSocketsInUse >=
+        instance.clients[clientId].socketQuota)
     {
         Debug_LOG_ERROR("No free sockets available for client %d", clientId);
         internal_socket_control_block_mutex_unlock();
         return -1;
     }
 
-    instance.clients[clientId].socketQuota--;
+    instance.clients[clientId].currentSocketsInUse++;
 
     for (int i = 0; i < instance.number_of_sockets; i++)
         if (instance.sockets[i].status == SOCKET_FREE)
@@ -441,7 +442,7 @@ free_handle(
 
     internal_socket_control_block_mutex_lock();
 
-    instance.clients[clientId].socketQuota++;
+    instance.clients[clientId].currentSocketsInUse--;
 
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;

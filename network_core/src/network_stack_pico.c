@@ -451,6 +451,7 @@ network_stack_pico_socket_close(
     int ret = pico_socket_close(pico_socket);
     OS_Error_t err =  pico_err2os(pico_err);
     socket->current_error = err;
+    socket->eventMask     &= ~(OS_SOCK_EV_FIN | OS_SOCK_EV_CLOSE);
     internal_network_stack_thread_safety_mutex_unlock();
 
     if (ret < 0)
@@ -597,6 +598,7 @@ network_stack_pico_socket_accept(
     struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
     OS_Error_t          err  = pico_err2os(pico_err);
     socket->current_error    = err;
+    socket->eventMask        &= ~OS_SOCK_EV_CONN_ACPT;
 
     if (NULL == s_in)
     {
@@ -766,6 +768,11 @@ network_stack_pico_socket_read(
         ret);
 #endif
 
+    if (ret <= 0)
+    {
+        socket->eventMask &= ~OS_SOCK_EV_READ;
+    }
+
     *pLen = ret;
 
     return retval;
@@ -886,6 +893,11 @@ network_stack_pico_socket_recvfrom(
         OS_Dataport_getBuf(*app_port),
         len);
 #endif
+
+    if (len > ret)
+    {
+        socket->eventMask &= ~OS_SOCK_EV_READ;
+    }
 
     *pLen = ret;
 

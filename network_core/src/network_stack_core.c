@@ -236,6 +236,90 @@ networkStack_rpc_socket_recvfrom(
 }
 
 //------------------------------------------------------------------------------
+OS_Error_t
+networkStack_rpc_socket_getPendingEvents(
+    const size_t  maxRequestedSize,
+    size_t* const pNumberOfEvents)
+{
+    CHECK_PTR_NOT_NULL(pNumberOfEvents);
+
+    const int clientId = get_client_id();
+
+    uint8_t* const clientDataport = get_client_id_buf();
+    const size_t clientDataportSize = get_client_id_buf_size();
+
+    int socketsWithEvents = 0;
+    int offset = 0;
+    int upperLimit = 0;
+
+    if (maxRequestedSize <= clientDataportSize)
+    {
+        upperLimit = (maxRequestedSize - sizeof(OS_NetworkSocket_Evt_t));
+    }
+    else
+    {
+        upperLimit = (clientDataportSize - sizeof(OS_NetworkSocket_Evt_t));
+    }
+
+    do
+    {
+        int i = instance.clients[clientId].head;
+
+        if (instance.sockets[i].client != NULL)
+        {
+            if (instance.sockets[i].client->clientId == clientId)
+            {
+                if (instance.sockets[i].eventMask)
+                {
+                    socketsWithEvents++;
+                    OS_NetworkSocket_Evt_t event;
+
+                    internal_network_stack_thread_safety_mutex_lock();
+                    event.eventMask = instance.sockets[i].eventMask;
+                    event.socketHandle = i;
+                    event.currentError = instance.sockets[i].current_error;
+                    instance.sockets[i].eventMask = 0;
+                    internal_network_stack_thread_safety_mutex_unlock();
+
+                memcpy(&clientDataport[offset], &event, sizeof(event));
+                offset += sizeof(event);
+            }
+        }
+
+        instance.clients[clientId].head++;
+
+        if (instance.clients[clientId].head == instance.number_of_sockets)
+        {
+            instance.clients[clientId].head = 0;
+        }
+    }
+    while ((instance.clients[clientId].head != instance.clients[clientId].tail)
+           && (offset < upperLimit));
+
+    // The loop was exited due to the fact that it reached the upperLimit of the
+    // buffer to place the events in. Signal the client with the next tick, that
+    // there are still events left.
+    if (offset >= upperLimit
+        && (instance.clients[clientId].head != instance.clients[clientId].tail))
+    {
+        instance.clients[clientId].needsToBeNotified = true;
+    }
+
+    instance.clients[clientId].tail = instance.clients[clientId].head;
+
+    if (socketsWithEvents > 0)
+    {
+        *pNumberOfEvents = socketsWithEvents;
+    }
+    else
+    {
+        *pNumberOfEvents = 0;
+    }
+
+    return OS_SUCCESS;
+}
+
+//------------------------------------------------------------------------------
 // get implementation socket from a given handle
 void*
 get_implementation_socket_from_handle(

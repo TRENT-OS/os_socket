@@ -232,10 +232,32 @@ OS_NetworkSocket_sendto(
 
 //------------------------------------------------------------------------------
 OS_Error_t
-OS_NetworkSocket_getPendingEvents(void)
+OS_NetworkSocket_getPendingEvents(
+    const if_OS_Socket_t* const ctx,
+    void* const                 buf,
+    const size_t                bufSize,
+    int* const                  numberOfEvents)
 {
-    // TODO: Implement this functions with SEOS-2933.
-    return OS_ERROR_NOT_IMPLEMENTED;
+    CHECK_PTR_NOT_NULL(ctx->socket_getPendingEvents);
+    CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(numberOfEvents);
+
+    CHECK_DATAPORT_SET(ctx->dataport);
+
+    OS_Error_t err = ctx->socket_getPendingEvents(bufSize, numberOfEvents);
+
+    if (err != OS_SUCCESS)
+    {
+        return err;
+    }
+
+    const int eventDataSize = *numberOfEvents * sizeof(OS_NetworkSocket_Evt_t);
+
+    CHECK_VALUE_IN_CLOSED_INTERVAL(eventDataSize, 0, bufSize);
+
+    memcpy(buf, OS_Dataport_getBuf(ctx->dataport), eventDataSize);
+
+    return OS_SUCCESS;
 }
 
 //------------------------------------------------------------------------------

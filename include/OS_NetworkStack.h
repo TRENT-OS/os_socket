@@ -21,6 +21,11 @@ typedef struct
     volatile bool needsToBeNotified;
     volatile int  socketQuota;
 
+    // Use head and tail per client to circulate through the pending events
+    // whenever _getPendingEvents() is called.
+    int head;
+    int tail;
+
     event_notify_func_t eventNotify;
 
     int clientId;

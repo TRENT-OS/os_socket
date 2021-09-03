@@ -21,6 +21,7 @@ typedef struct
     volatile bool needsToBeNotified;
     volatile int currentSocketsInUse;
 
+    bool inUse;
     int socketQuota;
 
     // Use head and tail per client to circulate through the pending events

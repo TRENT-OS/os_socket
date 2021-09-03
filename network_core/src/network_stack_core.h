@@ -40,7 +40,7 @@ free_handle(
     const int clientId);
 
 void
-set_accepted_handle(
+set_parent_handle(
     const int handle,
     const int accepted_handle);
 

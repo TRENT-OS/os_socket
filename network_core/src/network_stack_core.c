@@ -276,6 +276,7 @@ networkStack_rpc_socket_getPendingEvents(
                 internal_network_stack_thread_safety_mutex_lock();
                 event.eventMask = instance.sockets[i].eventMask;
                 event.socketHandle = i;
+                event.parentSocketHandle = instance.sockets[i].parentHandle;
                 event.currentError = instance.sockets[i].current_error;
                 instance.sockets[i].eventMask = 0;
                 internal_network_stack_thread_safety_mutex_unlock();
@@ -403,7 +404,7 @@ reserve_handle(
         {
             instance.sockets[i].status = SOCKET_IN_USE;
             instance.sockets[i].implementation_socket = impl_sock;
-            instance.sockets[i].accepted_handle = -1;
+            instance.sockets[i].parentHandle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
             instance.sockets[i].clientId = clientId;
             handle = i;
@@ -444,31 +445,31 @@ free_handle(
 
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
-    instance.sockets[handle].accepted_handle = -1;
+    instance.sockets[handle].parentHandle = -1;
     instance.sockets[handle].clientId = -1;
     internal_socket_control_block_mutex_unlock();
 }
 
 //------------------------------------------------------------------------------
-// assign an accepted handle to its listening socket
+// assign an accepted handle to its listening parent socket
 void
-set_accepted_handle(
+set_parent_handle(
     const int handle,
-    const int accepted_handle)
+    const int parentHandle)
 {
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
-        Debug_LOG_ERROR("set_accepted_handle: Invalid handle");
+        Debug_LOG_ERROR("set_parent_handle: Invalid handle");
         return;
     }
-    if (accepted_handle < 0 || accepted_handle >= instance.number_of_sockets)
+    if (parentHandle < 0 || parentHandle >= instance.number_of_sockets)
     {
-        Debug_LOG_ERROR("set_accepted_handle: Invalid accepted_handle");
+        Debug_LOG_ERROR("set_parent_handle: Invalid parent handle");
         return;
     }
     internal_socket_control_block_mutex_lock();
-    instance.sockets[handle].accepted_handle = accepted_handle;
-    instance.sockets[accepted_handle].clientId = instance.sockets[handle].clientId;
+    instance.sockets[handle].parentHandle = parentHandle;
+    instance.sockets[handle].clientId = instance.sockets[parentHandle].clientId;
     internal_socket_control_block_mutex_unlock();
 }
 

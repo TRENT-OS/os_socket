@@ -35,7 +35,7 @@ typedef struct
     // read from another (RPC thread) therefore volatile is needed to tell the
     // compiler that variable content can change outside of its control.
     volatile int status;
-    volatile int accepted_handle;
+    volatile int parentHandle;
     volatile uint16_t eventMask;
     volatile OS_Error_t current_error;
 

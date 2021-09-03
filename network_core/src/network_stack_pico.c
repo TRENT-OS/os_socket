@@ -643,9 +643,7 @@ network_stack_pico_socket_accept(
         PICO_SOCKET_OPT_KEEPINTVL,
         PICO_TCP_KEEPALIVE_RETRY_TIMEOUT);
 
-    set_accepted_handle(
-        get_handle_from_implementation_socket(s_in),
-        accepted_handle);
+    set_parent_handle(accepted_handle, handle);
 
     *pClient_handle = accepted_handle;
 

@@ -453,6 +453,7 @@ free_handle(
     instance.sockets[handle].implementation_socket = NULL;
     instance.sockets[handle].parentHandle = -1;
     instance.sockets[handle].clientId = -1;
+    instance.sockets[handle].eventMask = 0;
     internal_socket_control_block_mutex_unlock();
 }
 

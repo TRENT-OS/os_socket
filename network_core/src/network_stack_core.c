@@ -502,13 +502,16 @@ notify_clients_about_pending_events(
 {
     for (int i = 0; i < instance.number_of_clients; i++)
     {
-        if (instance.clients[i].needsToBeNotified)
+        if (instance.clients[i].inUse)
         {
-            Debug_LOG_DEBUG("Client %d has pending events", i);
+            if (instance.clients[i].needsToBeNotified)
+            {
+                Debug_LOG_DEBUG("Client %d has pending events", i);
 
-            Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
-            instance.clients[i].eventNotify();
-            instance.clients[i].needsToBeNotified = false;
+                Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
+                instance.clients[i].eventNotify();
+                instance.clients[i].needsToBeNotified = false;
+            }
         }
     }
 }

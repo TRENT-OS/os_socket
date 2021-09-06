@@ -390,8 +390,6 @@ reserve_handle(
     void* impl_sock,
     int clientId)
 {
-    int handle = -1;
-
     if ((clientId < 0)
         || (instance.number_of_clients <= clientId))
     {
@@ -415,7 +413,7 @@ reserve_handle(
         return -1;
     }
 
-    instance.clients[clientId].currentSocketsInUse++;
+    int handle = -1;
 
     for (int i = 0; i < instance.number_of_sockets; i++)
     {
@@ -432,9 +430,14 @@ reserve_handle(
     }
     internal_socket_control_block_mutex_unlock();
 
-    if ( handle == -1)
+    if (handle == -1)
     {
-        Debug_LOG_ERROR("No free sockets available %d", instance.number_of_sockets);
+        Debug_LOG_ERROR("No free sockets available");
+    }
+    else
+    {
+        Debug_LOG_DEBUG("Reserved socket handle %d", handle);
+        instance.clients[clientId].currentSocketsInUse++;
     }
 
     return handle;

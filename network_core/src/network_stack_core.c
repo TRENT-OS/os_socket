@@ -374,6 +374,12 @@ get_client_from_clientId(
         return NULL;
     }
 
+    if (!instance.clients[clientId].inUse)
+    {
+        Debug_LOG_ERROR("Unused client %d", clientId);
+        return NULL;
+    }
+
     return &instance.clients[clientId];
 }
 
@@ -390,6 +396,12 @@ reserve_handle(
         || (instance.number_of_clients <= clientId))
     {
         Debug_LOG_ERROR("Invalid client %d", clientId);
+        return -1;
+    }
+
+    if (!instance.clients[clientId].inUse)
+    {
+        Debug_LOG_ERROR("Unused client %d", clientId);
         return -1;
     }
 
@@ -436,6 +448,12 @@ free_handle(
     if (handle < 0 || handle >= instance.number_of_sockets)
     {
         Debug_LOG_ERROR("Trying to free invalid handle");
+        return;
+    }
+
+    if (!instance.clients[clientId].inUse)
+    {
+        Debug_LOG_ERROR("Trying to free handle for unused client %d", clientId);
         return;
     }
 

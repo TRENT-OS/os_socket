@@ -418,6 +418,7 @@ reserve_handle(
     instance.clients[clientId].currentSocketsInUse++;
 
     for (int i = 0; i < instance.number_of_sockets; i++)
+    {
         if (instance.sockets[i].status == SOCKET_FREE)
         {
             instance.sockets[i].status = SOCKET_IN_USE;
@@ -428,6 +429,7 @@ reserve_handle(
             handle = i;
             break;
         }
+    }
     internal_socket_control_block_mutex_unlock();
 
     if ( handle == -1)

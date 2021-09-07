@@ -724,8 +724,6 @@ network_stack_pico_socket_read(
 
     CHECK_SOCKET(pico_socket, handle);
 
-    OS_Error_t retval = OS_SUCCESS;
-
     size_t len = *pLen; /* App requested length */
 
     uint8_t* buf = OS_Dataport_getBuf(socket->buf);
@@ -738,6 +736,7 @@ network_stack_pico_socket_read(
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 
+    // Encountered a read error in picoTcp.
     if (ret < 0)
     {
         if (err == OS_ERROR_NETWORK_CONN_SHUTDOWN)
@@ -753,29 +752,43 @@ network_stack_pico_socket_read(
                             Debug_OS_Error_toString(err));
         }
 
-        retval = err;
+        socket->eventMask &= ~OS_SOCK_EV_READ;
+
+        *pLen = 0;
+
+        return err;
     }
 
-#if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
-
-    Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
-                    handle, pico_socket, ret);
-
-    Debug_hexDump(
-        Debug_LOG_LEVEL_TRACE,
-        "",
-        OS_Dataport_getBuf(*app_port),
-        ret);
-#endif
-
-    if (ret <= 0)
+    // No further data available in the queue.
+    else if (ret == 0)
     {
         socket->eventMask &= ~OS_SOCK_EV_READ;
+        *pLen = ret;
+
+        return OS_ERROR_TRY_AGAIN;
     }
 
-    *pLen = ret;
+    // Successfully read some data.
+    else if (ret > 0)
+    {
+#if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
+        Debug_LOG_TRACE("[socket %d/%p] read data length=%d, data follows below",
+                        handle, pico_socket, ret);
 
-    return retval;
+        Debug_hexDump(
+            Debug_LOG_LEVEL_TRACE,
+            "",
+            OS_Dataport_getBuf(*app_port),
+            ret);
+#endif
+        if (len > ret)
+        {
+            socket->eventMask &= ~OS_SOCK_EV_READ;
+        }
+        *pLen = ret;
+    }
+
+    return OS_SUCCESS;
 }
 
 //------------------------------------------------------------------------------
@@ -843,15 +856,14 @@ network_stack_pico_socket_recvfrom(
 
     CHECK_SOCKET(pico_socket, handle);
 
-    OS_Error_t retval = OS_SUCCESS;
-    size_t     len    = *pLen;
+    size_t len = *pLen;
 
     uint8_t* buf = OS_Dataport_getBuf(socket->buf);
 
     CHECK_DATAPORT_SIZE(socket->buf, len);
 
-    struct pico_ip4 src = {};
-    uint16_t        sport;
+    struct pico_ip4 src = {0};
+    uint16_t sport = 0;
 
     int ret;
 
@@ -861,45 +873,59 @@ network_stack_pico_socket_recvfrom(
     socket->current_error = err;
     internal_network_stack_thread_safety_mutex_unlock();
 
+    // Encountered a read error in picoTcp.
     if (ret < 0)
     {
         Debug_LOG_ERROR(
-            "[socket %d/%p] nw_socket_read() failed with error %d, "
+            "[socket %d/%p] nw_socket_recvfrom() failed with error %d, "
             "translating to OS error %d (%s)", handle, pico_socket, ret, err,
             Debug_OS_Error_toString(err));
 
+        socket->eventMask &= ~OS_SOCK_EV_READ;
+        *pLen = 0;
+
         return err;
     }
-    // If srcAddr is NULL it means the user doesn't want the
-    // sender's information.
-    if (NULL != srcAddr)
+    else
     {
-        pico_ipv4_to_string((char*)srcAddr->addr, src.addr);
+        // No further data could be read and the origin address and remote port
+        // number are unchanged, meaning there is no further data in the queue.
+        if ((ret == 0) && (src.addr == 0) && (sport == 0))
+        {
+            socket->eventMask &= ~OS_SOCK_EV_READ;
+            *pLen = ret;
 
-        srcAddr->port = short_be(sport);
-    }
-
+            return OS_ERROR_TRY_AGAIN;
+        }
+        // No further data could be read but the origin address and remote port
+        // number were changed, meaning there is further data in the queue.
+        else
+        {
 #if (Debug_Config_LOG_LEVEL >= Debug_LOG_LEVEL_TRACE)
+            Debug_LOG_TRACE(
+                "[socket %d/%p] read data length=%d, data follows below",
+                handle,
+                socket,
+                len);
 
-    Debug_LOG_TRACE(
-        "[socket %d/%p] read data length=%d, data follows below",
-        handle,
-        socket,
-        len);
-
-    Debug_hexDump(
-        Debug_LOG_LEVEL_TRACE,
-        "",
-        OS_Dataport_getBuf(*app_port),
-        len);
+            Debug_hexDump(
+                Debug_LOG_LEVEL_TRACE,
+                "",
+                OS_Dataport_getBuf(*app_port),
+                len);
 #endif
+            *pLen = ret;
 
-    if (len > ret)
-    {
-        socket->eventMask &= ~OS_SOCK_EV_READ;
+            // If srcAddr is NULL it means the user doesn't want the
+            // sender's information.
+            if (NULL != srcAddr)
+            {
+                pico_ipv4_to_string((char*)srcAddr->addr, src.addr);
+
+                srcAddr->port = short_be(sport);
+            }
+        }
     }
 
-    *pLen = ret;
-
-    return retval;
+    return OS_SUCCESS;
 }

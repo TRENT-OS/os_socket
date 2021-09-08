@@ -211,11 +211,11 @@ import <if_OS_Timer.camkes>;
         to   inst.event_tick_or_data); \
     \
     IF_OS_NIC_CONNECT(\
+        nic_inst, \
+        nic, \
         inst, \
         nic, \
-        event_tick_or_data, \
-        nic_inst, \
-        nic)
+        event_tick_or_data)
 
 /**
  * Connects a client component to a network stack through sockets.

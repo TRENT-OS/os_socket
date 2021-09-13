@@ -281,9 +281,9 @@ networkStack_rpc_socket_getPendingEvents(
                 // Unmask all events that require no follow up communication
                 // with the NetworkStack and should only inform the client about
                 // specific events.
-                event.eventMask &= ~(OS_SOCK_EV_CONN_EST
-                                     | OS_SOCK_EV_WRITE
-                                     | OS_SOCK_EV_ERROR);
+                instance.sockets[i].eventMask &= ~(OS_SOCK_EV_CONN_EST
+                                                   | OS_SOCK_EV_WRITE
+                                                   | OS_SOCK_EV_ERROR);
                 internal_network_stack_thread_safety_mutex_unlock();
 
                 memcpy(&clientDataport[offset], &event, sizeof(event));

@@ -37,6 +37,7 @@ typedef struct
 
 // network stack state
 static network_stack_t instance = {0};
+volatile static bool isRunning = false;
 
 
 //------------------------------------------------------------------------------
@@ -58,6 +59,8 @@ networkStack_rpc_socket_create(
     const int  socket_type,
     int* const pHandle)
 {
+    CHECK_IS_RUNNING();
+
     CHECK_PTR_NOT_NULL(pHandle);
 
     return network_stack_pico_socket_create(
@@ -75,6 +78,8 @@ OS_Error_t
 networkStack_rpc_socket_close(
     const int handle)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -91,6 +96,8 @@ networkStack_rpc_socket_connect(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -111,6 +118,8 @@ networkStack_rpc_socket_bind(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -131,6 +140,8 @@ networkStack_rpc_socket_listen(
     const int handle,
     const int backlog)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -150,6 +161,8 @@ networkStack_rpc_socket_accept(
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -170,6 +183,8 @@ networkStack_rpc_socket_write(
     const int     handle,
     size_t* const pLen)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -187,6 +202,8 @@ networkStack_rpc_socket_read(
     const int     handle,
     size_t* const pLen)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -205,6 +222,8 @@ networkStack_rpc_socket_sendto(
     size_t* const                        pLen,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -225,6 +244,8 @@ networkStack_rpc_socket_recvfrom(
     size_t* const                  pLen,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
+    CHECK_IS_RUNNING();
+
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
     CHECK_SOCKET(socket, handle);
@@ -242,6 +263,8 @@ networkStack_rpc_socket_getPendingEvents(
     const size_t  maxRequestedSize,
     size_t* const pNumberOfEvents)
 {
+    CHECK_IS_RUNNING();
+
     CHECK_PTR_NOT_NULL(pNumberOfEvents);
 
     if (maxRequestedSize < sizeof(OS_NetworkSocket_Evt_t))
@@ -597,6 +620,7 @@ OS_NetworkStack_run(void)
     }
 
     network_stack_interface_t network_stack = network_stack_pico_get_config();
+    isRunning = true;
 
     // enter endless loop processing events
     for (;;)
@@ -611,6 +635,7 @@ OS_NetworkStack_run(void)
         internal_network_stack_thread_safety_mutex_unlock();
     }
 
+    isRunning = false;
     Debug_LOG_WARNING("network_stack_event_loop() terminated gracefully");
 
     return OS_SUCCESS;

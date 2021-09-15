@@ -81,3 +81,14 @@ get_client_id_buf_size(void);
             return OS_ERROR_INVALID_HANDLE;                                    \
         }                                                                      \
     } while (0)
+
+#define CHECK_IS_RUNNING()                                                     \
+    do                                                                         \
+    {                                                                          \
+        if (!isRunning)                                                        \
+        {                                                                      \
+            Debug_LOG_ERROR("%s: called when NetworkStack not yet ready",      \
+                            __func__);                                         \
+            return OS_ERROR_NOT_INITIALIZED;                                   \
+        }                                                                      \
+    } while (0)

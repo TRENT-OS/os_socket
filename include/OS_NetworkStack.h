@@ -9,8 +9,11 @@
 #include "OS_Error.h"
 #include "OS_Network.h"
 #include "OS_Types.h"
+
 #include <stdlib.h>
 #include <stdint.h>
+#include <arpa/inet.h>
+
 #include "OS_Dataport.h"
 
 typedef struct
@@ -96,9 +99,9 @@ typedef struct
 
 typedef struct
 {
-    char* dev_addr;     /**< pointer to device address e.g. tap0, tap1 */
-    char* gateway_addr; /**< pointer to gateway addr */
-    char* subnet_mask;  /**< pointer to subnet mask */
+    char dev_addr[INET_ADDRSTRLEN];     /**< device address, e.g. tap0, tap1 */
+    char gateway_addr[INET_ADDRSTRLEN]; /**< gateway addr */
+    char subnet_mask[INET_ADDRSTRLEN];  /**< subnet mask */
 } OS_NetworkStack_AddressConfig_t;
 
 /**

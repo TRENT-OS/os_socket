@@ -454,6 +454,7 @@ reserve_handle(
             instance.sockets[i].parentHandle = -1;
             instance.sockets[i].current_error = OS_SUCCESS;
             instance.sockets[i].clientId = clientId;
+            instance.sockets[i].acceptedCount = 0;
             handle = i;
             break;
         }
@@ -506,6 +507,7 @@ free_handle(
     instance.sockets[handle].implementation_socket = NULL;
     instance.sockets[handle].parentHandle = -1;
     instance.sockets[handle].clientId = -1;
+    instance.sockets[handle].acceptedCount = -1;
     instance.sockets[handle].eventMask = 0;
     instance.sockets[handle].current_error = 0;
     internal_socket_control_block_mutex_unlock();

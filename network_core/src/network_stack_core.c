@@ -562,11 +562,34 @@ notify_clients_about_pending_events(
         {
             if (instance.clients[i].needsToBeNotified)
             {
-                Debug_LOG_DEBUG("Client %d has pending events", i);
-
                 Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
                 instance.clients[i].eventNotify();
                 instance.clients[i].needsToBeNotified = false;
+            }
+            // Client might still have pending events that we will continue to
+            // notify about.
+            else
+            {
+                // Make use of the needsToBeNotified flag to track if the client
+                // was already notified for the current tick loop.
+                instance.clients[i].needsToBeNotified = true;
+
+                for (int j = 0; j < instance.number_of_sockets; j++)
+                {
+                    if ((instance.sockets[j].status == SOCKET_IN_USE)
+                        && (instance.sockets[j].clientId == i)
+                        && (instance.sockets[j].eventMask != 0)
+                        && (instance.clients[i].needsToBeNotified))
+                    {
+                        Debug_LOG_DEBUG("Client %d - socket %d - pending events: 0x%x",
+                                        i, j, instance.sockets[j].eventMask);
+                        Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
+                        instance.clients[i].eventNotify();
+                        // Only notify client once per tick about still pending
+                        // events.
+                        instance.clients[i].needsToBeNotified = false;
+                    }
+                }
             }
         }
     }

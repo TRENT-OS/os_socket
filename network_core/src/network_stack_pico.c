@@ -309,6 +309,8 @@ handle_pico_socket_event(
     {
         Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_FIN", handle, pico_socket);
         socket->eventMask |= OS_SOCK_EV_FIN;
+        // If PICO_SOCK_EV_FIN is set by picoTCP, the implementation_socket will
+        // be freed automatically and may not be accessed any more.
     }
 
     if (event_mask & PICO_SOCK_EV_ERR)
@@ -321,6 +323,17 @@ handle_pico_socket_event(
                         err,
                         Debug_OS_Error_toString(err));
         socket->eventMask |= OS_SOCK_EV_ERROR;
+
+        // If err = PICO_ERR_ECONNREFUSED is set by picoTCP, the
+        // implementation_socket will be freed automatically and may not be
+        // accessed any more;
+        // Workaround: set OS_SOCK_EV_FIN.
+        if (pico_err == PICO_ERR_ECONNREFUSED)
+        {
+            Debug_LOG_DEBUG("[socket %d/%p] PICO_SOCK_EV_ERR & PICO_ERR_ECONNREFUSED",
+                            handle, pico_socket);
+            socket->eventMask |= OS_SOCK_EV_FIN;
+        }
     }
 
     OS_NetworkStack_Client_t* client = get_client_from_clientId(
@@ -442,30 +455,32 @@ network_stack_pico_socket_close(
     const int clientId)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
-
     struct pico_socket* pico_socket = socket->implementation_socket;
 
-    CHECK_SOCKET(pico_socket, handle);
-
-    internal_network_stack_thread_safety_mutex_lock();
-    int ret = pico_socket_close(pico_socket);
-    OS_Error_t err =  pico_err2os(pico_err);
-    socket->current_error = err;
-    socket->eventMask     &= ~(OS_SOCK_EV_FIN | OS_SOCK_EV_CLOSE);
-    internal_network_stack_thread_safety_mutex_unlock();
-
-    if (ret < 0)
+    if (!(socket->eventMask & OS_SOCK_EV_FIN))
     {
-        Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, translating to OS error %d (%s)",
-                        handle, pico_socket, ret,
-                        err, Debug_OS_Error_toString(err));
-        free_handle(handle, clientId);
-        return err;
+        CHECK_SOCKET(pico_socket, handle);
+
+        internal_network_stack_thread_safety_mutex_lock();
+        int ret = pico_socket_close(pico_socket);
+        OS_Error_t err =  pico_err2os(pico_err);
+        socket->current_error = err;
+        socket->eventMask     &= ~(OS_SOCK_EV_CLOSE);
+        internal_network_stack_thread_safety_mutex_unlock();
+
+        if (ret < 0)
+        {
+            Debug_LOG_ERROR("[socket %d/%p] nw_socket_close() failed with error %d, translating to OS error %d (%s)",
+                            handle, pico_socket, ret,
+                            err, Debug_OS_Error_toString(err));
+            free_handle(handle, clientId);
+            return err;
+        }
     }
 
     free_handle(handle, clientId);
 
-    Debug_LOG_INFO("[socket %d/%p] close() handle", handle, pico_socket);
+    Debug_LOG_INFO("[socket %d/%p] free_handle()", handle, pico_socket);
 
     return OS_SUCCESS;
 }
@@ -477,6 +492,11 @@ network_stack_pico_socket_connect(
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -516,6 +536,11 @@ network_stack_pico_socket_bind(
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -557,6 +582,11 @@ network_stack_pico_socket_listen(
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
+
     struct pico_socket* pico_socket = socket->implementation_socket;
 
     CHECK_SOCKET(pico_socket, handle);
@@ -588,6 +618,11 @@ network_stack_pico_socket_accept(
     struct pico_ip4 orig = { 0 };
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -681,6 +716,11 @@ network_stack_pico_socket_write(
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
+
     struct pico_socket* pico_socket = socket->implementation_socket;
 
     CHECK_SOCKET(pico_socket, handle);
@@ -719,6 +759,11 @@ network_stack_pico_socket_read(
     size_t* const pLen)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 
@@ -800,6 +845,11 @@ network_stack_pico_socket_sendto(
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
+
     struct pico_socket* pico_socket = socket->implementation_socket;
 
     CHECK_SOCKET(pico_socket, handle);
@@ -851,6 +901,11 @@ network_stack_pico_socket_recvfrom(
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
+
+    if (socket->eventMask & OS_SOCK_EV_FIN)
+    {
+        return OS_ERROR_CONNECTION_CLOSED;
+    }
 
     struct pico_socket* pico_socket = socket->implementation_socket;
 

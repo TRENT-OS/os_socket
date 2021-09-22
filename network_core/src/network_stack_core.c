@@ -244,23 +244,30 @@ networkStack_rpc_socket_getPendingEvents(
 {
     CHECK_PTR_NOT_NULL(pNumberOfEvents);
 
+    if (maxRequestedSize < sizeof(OS_NetworkSocket_Evt_t))
+    {
+        Debug_LOG_ERROR("Received invalid buffer size");
+        return OS_ERROR_BUFFER_TOO_SMALL;
+    }
+
     const int clientId = get_client_id();
 
     uint8_t* const clientDataport = get_client_id_buf();
     const size_t clientDataportSize = get_client_id_buf_size();
 
-    int socketsWithEvents = 0;
-    int offset = 0;
-    int upperLimit = 0;
+    int maxSocketsWithEvents;
 
     if (maxRequestedSize <= clientDataportSize)
     {
-        upperLimit = (maxRequestedSize - sizeof(OS_NetworkSocket_Evt_t));
+        maxSocketsWithEvents = ((maxRequestedSize) / sizeof(OS_NetworkSocket_Evt_t));
     }
     else
     {
-        upperLimit = (clientDataportSize - sizeof(OS_NetworkSocket_Evt_t));
+        maxSocketsWithEvents = ((clientDataportSize) / sizeof(OS_NetworkSocket_Evt_t));
     }
+
+    int offset = 0;
+    int socketsWithEvents = 0;
 
     do
     {
@@ -299,12 +306,12 @@ networkStack_rpc_socket_getPendingEvents(
         }
     }
     while ((instance.clients[clientId].head != instance.clients[clientId].tail)
-           && (offset < upperLimit));
+           && (socketsWithEvents < maxSocketsWithEvents));
 
-    // The loop was exited due to the fact that it reached the upperLimit of the
-    // buffer to place the events in. Signal the client with the next tick, that
-    // there are still events left.
-    if (offset >= upperLimit
+    // The loop was exited due to the fact that it reached the maximum number of
+    // events that were requested by the caller. Signal the caller with the next
+    // tick, that events might still be left.
+    if ((socketsWithEvents >= maxSocketsWithEvents)
         && (instance.clients[clientId].head != instance.clients[clientId].tail))
     {
         instance.clients[clientId].needsToBeNotified = true;

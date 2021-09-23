@@ -694,8 +694,9 @@ network_stack_pico_socket_accept(
         accepted_handle,
         get_implementation_socket_from_handle(accepted_handle));
 
-    struct pico_socket* client_socket = get_implementation_socket_from_handle(
-                                            *pClient_handle);
+    DECL_UNUSED_VAR(struct pico_socket * client_socket) =
+        get_implementation_socket_from_handle(
+            *pClient_handle);
 
     Debug_LOG_DEBUG("[socket %d/%p] incoming connection socket %d/%p",
                     handle, pico_socket, *pClient_handle, client_socket);
@@ -828,7 +829,7 @@ network_stack_pico_socket_read(
         Debug_hexDump(
             Debug_LOG_LEVEL_TRACE,
             "",
-            OS_Dataport_getBuf(*app_port),
+            OS_Dataport_getBuf(socket->buf),
             ret);
 #endif
         if (len > ret)
@@ -971,7 +972,7 @@ network_stack_pico_socket_recvfrom(
             Debug_hexDump(
                 Debug_LOG_LEVEL_TRACE,
                 "",
-                OS_Dataport_getBuf(*app_port),
+                OS_Dataport_getBuf(socket->buf),
                 len);
 #endif
             *pLen = ret;

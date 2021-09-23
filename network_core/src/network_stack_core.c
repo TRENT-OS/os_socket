@@ -605,8 +605,15 @@ notify_clients_about_pending_events(
         {
             if (instance.clients[i].needsToBeNotified)
             {
-                Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
-                instance.clients[i].eventNotify();
+                if (NULL != instance.clients[i].eventNotify)
+                {
+                    instance.clients[i].eventNotify();
+                }
+                else
+                {
+                    Debug_LOG_ERROR("Found empty function pointer. "
+                                    "Cannot signal Client %d", i);
+                }
                 instance.clients[i].needsToBeNotified = false;
             }
             // Client might still have pending events that we will continue to
@@ -628,10 +635,18 @@ notify_clients_about_pending_events(
                     {
                         Debug_LOG_DEBUG("Client %d - socket %d - pending events: 0x%x",
                                         i, j, instance.sockets[j].eventMask);
-                        Debug_ASSERT(NULL != &instance.clients[i].eventNotify);
-                        instance.clients[i].eventNotify();
-                        // Only notify client once per tick about still pending
-                        // events.
+
+                        if (NULL != instance.clients[i].eventNotify)
+                        {
+                            instance.clients[i].eventNotify();
+                        }
+                        else
+                        {
+                            Debug_LOG_ERROR("Found empty function pointer. "
+                                            "Cannot signal Client %d", i);
+                        }
+                        // Only try to notify client once per tick about still
+                        // pending events.
                         instance.clients[i].needsToBeNotified = false;
                     }
                 }

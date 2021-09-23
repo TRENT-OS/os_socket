@@ -25,6 +25,10 @@ int
 get_handle_from_implementation_socket(
     void* impl_sock);
 
+const int
+get_client_index_from_clientId(
+    const int clientId);
+
 void*
 get_client_from_clientId(
     const int clientId);

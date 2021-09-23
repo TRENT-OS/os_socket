@@ -274,6 +274,12 @@ networkStack_rpc_socket_getPendingEvents(
     }
 
     const int clientId = get_client_id();
+    const int clientIndex = get_client_index_from_clientId(clientId);
+    if (clientIndex < 0)
+    {
+        Debug_LOG_ERROR("Failed to get client index from clientId %d", clientId);
+        return OS_ERROR_ABORTED;
+    }
 
     uint8_t* const clientDataport = get_client_id_buf();
     const size_t clientDataportSize = get_client_id_buf_size();
@@ -294,7 +300,7 @@ networkStack_rpc_socket_getPendingEvents(
 
     do
     {
-        int i = instance.clients[clientId].head;
+        int i = instance.clients[clientIndex].head;
 
         if (instance.sockets[i].clientId == clientId)
         {
@@ -321,26 +327,27 @@ networkStack_rpc_socket_getPendingEvents(
             }
         }
 
-        instance.clients[clientId].head++;
+        instance.clients[clientIndex].head++;
 
-        if (instance.clients[clientId].head == instance.number_of_sockets)
+        if (instance.clients[clientIndex].head == instance.number_of_sockets)
         {
-            instance.clients[clientId].head = 0;
+            instance.clients[clientIndex].head = 0;
         }
     }
-    while ((instance.clients[clientId].head != instance.clients[clientId].tail)
+    while ((instance.clients[clientIndex].head !=
+            instance.clients[clientIndex].tail)
            && (socketsWithEvents < maxSocketsWithEvents));
 
     // The loop was exited due to the fact that it reached the maximum number of
     // events that were requested by the caller. Signal the caller with the next
     // tick, that events might still be left.
     if ((socketsWithEvents >= maxSocketsWithEvents)
-        && (instance.clients[clientId].head != instance.clients[clientId].tail))
+        && (instance.clients[clientIndex].head != instance.clients[clientIndex].tail))
     {
-        instance.clients[clientId].needsToBeNotified = true;
+        instance.clients[clientIndex].needsToBeNotified = true;
     }
 
-    instance.clients[clientId].tail = instance.clients[clientId].head;
+    instance.clients[clientIndex].tail = instance.clients[clientIndex].head;
 
     *pNumberOfEvents = socketsWithEvents;
 
@@ -392,25 +399,51 @@ get_handle_from_implementation_socket(
 }
 
 //------------------------------------------------------------------------------
+// get client index from a given clientId
+const int
+get_client_index_from_clientId(
+    const int clientId)
+{
+    if (clientId < 0)
+    {
+        Debug_LOG_ERROR("Invalid clientId %d", clientId);
+        return -1;
+    }
+
+    for (int i = 0; i < instance.number_of_clients; i++)
+    {
+        if (clientId == instance.clients[i].clientId && instance.clients[i].inUse)
+        {
+            Debug_LOG_TRACE("Found client index %d for clientId %d", i, clientId);
+            return i;
+        }
+    }
+
+    Debug_LOG_ERROR("Could not find any client index for clientId %d", clientId);
+
+    return -1;
+}
+
+//------------------------------------------------------------------------------
 // get client from a given clientId
 void*
 get_client_from_clientId(
     const int clientId)
 {
-    if ((clientId < 0)
-        || (instance.number_of_clients <= clientId))
+    const int clientIndex = get_client_index_from_clientId(clientId);
+    if (clientIndex < 0)
     {
-        Debug_LOG_ERROR("Invalid client %d", clientId);
+        Debug_LOG_ERROR("Failed to get client index from clientId %d", clientId);
         return NULL;
     }
 
-    if (!instance.clients[clientId].inUse)
+    if (!instance.clients[clientIndex].inUse)
     {
-        Debug_LOG_ERROR("Unused client %d", clientId);
+        Debug_LOG_ERROR("Unused client %d", clientIndex);
         return NULL;
     }
 
-    return &instance.clients[clientId];
+    return &instance.clients[clientIndex];
 }
 
 //------------------------------------------------------------------------------
@@ -420,14 +453,14 @@ reserve_handle(
     void* impl_sock,
     int clientId)
 {
-    if ((clientId < 0)
-        || (instance.number_of_clients <= clientId))
+    const int clientIndex = get_client_index_from_clientId(clientId);
+    if (clientIndex < 0)
     {
-        Debug_LOG_ERROR("Invalid client %d", clientId);
+        Debug_LOG_ERROR("Failed to get client index from clientId %d", clientId);
         return -1;
     }
 
-    if (!instance.clients[clientId].inUse)
+    if (!instance.clients[clientIndex].inUse)
     {
         Debug_LOG_ERROR("Unused client %d", clientId);
         return -1;
@@ -435,10 +468,13 @@ reserve_handle(
 
     internal_socket_control_block_mutex_lock();
 
-    if (instance.clients[clientId].currentSocketsInUse >=
-        instance.clients[clientId].socketQuota)
+    if (instance.clients[clientIndex].currentSocketsInUse >=
+        instance.clients[clientIndex].currentSocketsInUse);
+
+    if (instance.clients[clientIndex].currentSocketsInUse >=
+        instance.clients[clientIndex].socketQuota)
     {
-        Debug_LOG_ERROR("No free sockets available for client %d", clientId);
+        Debug_LOG_ERROR("No free sockets available for client %d", clientIndex);
         internal_socket_control_block_mutex_unlock();
         return -1;
     }
@@ -468,7 +504,7 @@ reserve_handle(
     else
     {
         Debug_LOG_DEBUG("Reserved socket handle %d", handle);
-        instance.clients[clientId].currentSocketsInUse++;
+        instance.clients[clientIndex].currentSocketsInUse++;
     }
 
     return handle;
@@ -487,7 +523,14 @@ free_handle(
         return;
     }
 
-    if (!instance.clients[clientId].inUse)
+    const int clientIndex = get_client_index_from_clientId(clientId);
+    if (clientIndex < 0)
+    {
+        Debug_LOG_ERROR("Failed to get client index from clientId %d", clientId);
+        return;
+    }
+
+    if (!instance.clients[clientIndex].inUse)
     {
         Debug_LOG_ERROR("Trying to free handle for unused client %d", clientId);
         return;
@@ -501,7 +544,7 @@ free_handle(
 
     internal_socket_control_block_mutex_lock();
 
-    instance.clients[clientId].currentSocketsInUse--;
+    instance.clients[clientIndex].currentSocketsInUse--;
 
     instance.sockets[handle].status = SOCKET_FREE;
     instance.sockets[handle].implementation_socket = NULL;
@@ -574,10 +617,12 @@ notify_clients_about_pending_events(
                 // was already notified for the current tick loop.
                 instance.clients[i].needsToBeNotified = true;
 
+                const int currentClientId = instance.clients[i].clientId;
+
                 for (int j = 0; j < instance.number_of_sockets; j++)
                 {
                     if ((instance.sockets[j].status == SOCKET_IN_USE)
-                        && (instance.sockets[j].clientId == i)
+                        && (instance.sockets[j].clientId == currentClientId)
                         && (instance.sockets[j].eventMask != 0)
                         && (instance.clients[i].needsToBeNotified))
                     {

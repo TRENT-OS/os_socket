@@ -24,6 +24,7 @@ typedef struct
     volatile bool needsToBeNotified;
     volatile int currentSocketsInUse;
 
+    int clientId;
     bool inUse;
     int socketQuota;
 

@@ -275,7 +275,7 @@ handle_pico_socket_event(
                            handle,
                            pico_socket);
             socket->eventMask |= OS_SOCK_EV_CONN_ACPT;
-            socket->acceptedCount++;
+            socket->pendingConnections++;
         }
         else
         {
@@ -634,8 +634,8 @@ network_stack_pico_socket_accept(
     struct pico_socket* s_in = pico_socket_accept(pico_socket, &orig, &port);
     OS_Error_t          err  = pico_err2os(pico_err);
     socket->current_error    = err;
-    socket->acceptedCount--;
-    if (socket->acceptedCount == 0)
+    socket->pendingConnections--;
+    if (socket->pendingConnections == 0)
     {
         socket->eventMask        &= ~OS_SOCK_EV_CONN_ACPT;
     }

@@ -45,7 +45,7 @@ typedef struct
     volatile int parentHandle;
     volatile uint16_t eventMask;
     volatile OS_Error_t current_error;
-    volatile int acceptedCount;
+    volatile int pendingConnections;
 
     int clientId;
 

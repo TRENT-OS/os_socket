@@ -400,7 +400,7 @@ get_handle_from_implementation_socket(
 
 //------------------------------------------------------------------------------
 // get client index from a given clientId
-const int
+int
 get_client_index_from_clientId(
     const int clientId)
 {
@@ -599,10 +599,26 @@ static void
 notify_clients_about_pending_events(
     void)
 {
+    // loop through all clients
     for (int i = 0; i < instance.number_of_clients; i++)
     {
         if (instance.clients[i].inUse)
         {
+            // check for sockets with old pending events
+            if (!instance.clients[i].needsToBeNotified)
+            {
+                for (int j = 0; j < instance.number_of_sockets; j++)
+                {
+                    if ((instance.sockets[j].status == SOCKET_IN_USE)
+                        && (instance.sockets[i].eventMask != 0)
+                        && (instance.sockets[j].clientId == instance.clients[i].clientId))
+                    {
+                        instance.clients[i].needsToBeNotified = true;
+                    }
+                }
+            }
+
+            // send out notifications to all client with pending events
             if (instance.clients[i].needsToBeNotified)
             {
                 if (NULL != instance.clients[i].eventNotify)
@@ -615,41 +631,6 @@ notify_clients_about_pending_events(
                                     "Cannot signal Client %d", i);
                 }
                 instance.clients[i].needsToBeNotified = false;
-            }
-            // Client might still have pending events that we will continue to
-            // notify about.
-            else
-            {
-                // Make use of the needsToBeNotified flag to track if the client
-                // was already notified for the current tick loop.
-                instance.clients[i].needsToBeNotified = true;
-
-                const int currentClientId = instance.clients[i].clientId;
-
-                for (int j = 0; j < instance.number_of_sockets; j++)
-                {
-                    if ((instance.sockets[j].status == SOCKET_IN_USE)
-                        && (instance.sockets[j].clientId == currentClientId)
-                        && (instance.sockets[j].eventMask != 0)
-                        && (instance.clients[i].needsToBeNotified))
-                    {
-                        Debug_LOG_DEBUG("Client %d - socket %d - pending events: 0x%x",
-                                        i, j, instance.sockets[j].eventMask);
-
-                        if (NULL != instance.clients[i].eventNotify)
-                        {
-                            instance.clients[i].eventNotify();
-                        }
-                        else
-                        {
-                            Debug_LOG_ERROR("Found empty function pointer. "
-                                            "Cannot signal Client %d", i);
-                        }
-                        // Only try to notify client once per tick about still
-                        // pending events.
-                        instance.clients[i].needsToBeNotified = false;
-                    }
-                }
             }
         }
     }

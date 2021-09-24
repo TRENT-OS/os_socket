@@ -114,21 +114,22 @@ OS_NetworkSocket_read(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
+    handle.ctx.shared_resource_mutex_lock();
+
     OS_Error_t err = handle.ctx.socket_read(handle.handleID, &tempLen);
+    if (err == OS_SUCCESS)
+    {
+        memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
+    }
+
+    handle.ctx.shared_resource_mutex_unlock();
 
     if (actualLen != NULL)
     {
         *actualLen = tempLen;
     }
 
-    if (err != OS_SUCCESS)
-    {
-        return err;
-    }
-
-    memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
-
-    return OS_SUCCESS;
+    return err;
 }
 
 //------------------------------------------------------------------------------
@@ -149,24 +150,25 @@ OS_NetworkSocket_recvfrom(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
+    handle.ctx.shared_resource_mutex_lock();
+
     OS_Error_t err = handle.ctx.socket_recvfrom(
                          handle.handleID,
                          &tempLen,
                          srcAddr);
+    if (err == OS_SUCCESS)
+    {
+        memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
+    }
+
+    handle.ctx.shared_resource_mutex_unlock();
 
     if (actualLen != NULL)
     {
         *actualLen = tempLen;
     }
 
-    if (err != OS_SUCCESS)
-    {
-        return err;
-    }
-
-    memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
-
-    return OS_SUCCESS;
+    return err;
 }
 
 //------------------------------------------------------------------------------
@@ -185,9 +187,13 @@ OS_NetworkSocket_write(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
+    handle.ctx.shared_resource_mutex_lock();
+
     memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLen);
 
     OS_Error_t err = handle.ctx.socket_write(handle.handleID, &tempLen);
+
+    handle.ctx.shared_resource_mutex_unlock();
 
     if (actualLen != NULL)
     {
@@ -215,12 +221,16 @@ OS_NetworkSocket_sendto(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_DATAPORT_SIZE(handle.ctx.dataport, requestedLen);
 
+    handle.ctx.shared_resource_mutex_lock();
+
     memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLen);
 
     OS_Error_t err = handle.ctx.socket_sendto(
                          handle.handleID,
                          &tempLen,
                          dstAddr);
+
+    handle.ctx.shared_resource_mutex_unlock();
 
     if (actualLen != NULL)
     {
@@ -244,20 +254,21 @@ OS_NetworkSocket_getPendingEvents(
 
     CHECK_DATAPORT_SET(ctx->dataport);
 
-    OS_Error_t err = ctx->socket_getPendingEvents(bufSize, numberOfEvents);
+    ctx->shared_resource_mutex_lock();
 
-    if (err != OS_SUCCESS)
+    OS_Error_t err = ctx->socket_getPendingEvents(bufSize, numberOfEvents);
+    if (err == OS_SUCCESS)
     {
-        return err;
+        const int eventDataSize = *numberOfEvents * sizeof(OS_NetworkSocket_Evt_t);
+
+        CHECK_VALUE_IN_CLOSED_INTERVAL(eventDataSize, 0, bufSize);
+
+        memcpy(buf, OS_Dataport_getBuf(ctx->dataport), eventDataSize);
     }
 
-    const int eventDataSize = *numberOfEvents * sizeof(OS_NetworkSocket_Evt_t);
+    ctx->shared_resource_mutex_unlock();
 
-    CHECK_VALUE_IN_CLOSED_INTERVAL(eventDataSize, 0, bufSize);
-
-    memcpy(buf, OS_Dataport_getBuf(ctx->dataport), eventDataSize);
-
-    return OS_SUCCESS;
+    return err;
 }
 
 //------------------------------------------------------------------------------

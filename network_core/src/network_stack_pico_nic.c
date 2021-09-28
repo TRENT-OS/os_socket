@@ -147,6 +147,13 @@ nic_poll_data(
             loop_score--;
             isDetectionDone = true;
         }
+
+        if (loop_score == 0 && framesRemaining)
+        {
+            internal_notify_main_loop();
+            Debug_LOG_TRACE("Loop score is 0 but there is still data in the NIC");
+        }
+
     }
     if (isLegacyInterface == true)
     {

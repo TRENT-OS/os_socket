@@ -642,7 +642,7 @@ network_stack_pico_socket_accept(
     socket->pendingConnections--;
     if (socket->pendingConnections == 0)
     {
-        socket->eventMask        &= ~OS_SOCK_EV_CONN_ACPT;
+        socket->eventMask &= ~OS_SOCK_EV_CONN_ACPT;
     }
 
     if (NULL == s_in)

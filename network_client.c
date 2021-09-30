@@ -34,7 +34,7 @@ OS_NetworkSocket_create(
                          &localHandle.handleID);
     if (err != OS_SUCCESS)
     {
-        Debug_LOG_ERROR("os_socket_create() failed with error %d", err);
+        Debug_LOG_TRACE("os_socket_create() failed with error %d", err);
         localHandle = OS_NetworkSocket_Handle_INVALID;
         return err;
     }

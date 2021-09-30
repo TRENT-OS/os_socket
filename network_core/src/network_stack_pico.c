@@ -261,17 +261,20 @@ handle_pico_socket_event(
                         __func__, handle);
         return;
     }
-    Debug_LOG_DEBUG("Event for handle %d/%p Value: 0x%x State %x",
+    Debug_LOG_TRACE("Event for handle %d/%p Value: 0x%x State %x",
                     handle, pico_socket, event_mask, TCPSTATE(pico_socket));
+
+    char srcAddr[IP_ADD_STR_MAX_LEN];
+    pico_ipv4_to_string(srcAddr, pico_socket->remote_addr.ip4.addr);
 
     if (event_mask & PICO_SOCK_EV_CONN)
     {
-        Debug_LOG_DEBUG("[socket %d/%p] PICO_SOCK_EV_CONN", handle, pico_socket);
+        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_CONN", handle, pico_socket);
 
         if (pico_socket->state & PICO_SOCKET_STATE_TCP_LISTEN)
         {
             // SYN has arrived
-            Debug_LOG_INFO("[socket %d/%p] incoming connection",
+            Debug_LOG_INFO("[socket %d/%p] received incoming connection request",
                            handle,
                            pico_socket);
             socket->eventMask |= OS_SOCK_EV_CONN_ACPT;
@@ -280,9 +283,10 @@ handle_pico_socket_event(
         else
         {
             // SYN-ACK has arrived
-            Debug_LOG_INFO("[socket %d/%p] incoming connection established",
+            Debug_LOG_INFO("[socket %d/%p] connection established to %s",
                            handle,
-                           pico_socket);
+                           pico_socket,
+                           srcAddr);
             socket->eventMask |= OS_SOCK_EV_CONN_EST;
         }
     }
@@ -302,7 +306,8 @@ handle_pico_socket_event(
 
     if (event_mask & PICO_SOCK_EV_CLOSE)
     {
-        Debug_LOG_TRACE("[socket %d/%p] PICO_SOCK_EV_CLOSE", handle, pico_socket);
+        Debug_LOG_INFO("[socket %d/%p] connection closed by %s",
+                       handle, pico_socket, srcAddr);
         socket->eventMask |= OS_SOCK_EV_CLOSE;
     }
 
@@ -421,7 +426,7 @@ network_stack_pico_socket_create(
     socket->current_error = pico_err2os(cur_pico_err);
     *pHandle              = handle;
 
-    Debug_LOG_INFO("[socket %d/%p] created new socket", handle, pico_socket);
+    Debug_LOG_INFO("[socket %d/%p] socket opened", handle, pico_socket);
 
     helper_socket_set_option_int(
         pico_socket,
@@ -481,7 +486,7 @@ network_stack_pico_socket_close(
 
     free_handle(handle, clientId);
 
-    Debug_LOG_INFO("[socket %d/%p] free_handle()", handle, pico_socket);
+    Debug_LOG_INFO("[socket %d/%p] socket closed", handle, pico_socket);
 
     return OS_SUCCESS;
 }
@@ -642,11 +647,14 @@ network_stack_pico_socket_accept(
 
     if (NULL == s_in)
     {
-        Debug_LOG_ERROR(
-            "[socket %p] nw_socket_accept() failed, OS error = %d (%s)",
-            pico_socket,
-            err,
-            Debug_OS_Error_toString(err));
+        if (err != OS_ERROR_TRY_AGAIN)
+        {
+            Debug_LOG_ERROR(
+                "[socket %p] nw_socket_accept() failed, OS error = %d (%s)",
+                pico_socket,
+                err,
+                Debug_OS_Error_toString(err));
+        }
         internal_network_stack_thread_safety_mutex_unlock();
         return err;
     }
@@ -689,10 +697,15 @@ network_stack_pico_socket_accept(
 
     *pClient_handle = accepted_handle;
 
+    char acptAddr[IP_ADD_STR_MAX_LEN];
+    pico_ipv4_to_string(acptAddr, orig.addr);
+
     Debug_LOG_INFO(
-        "Accepted [socket %d/%p]",
+        "[socket %d/%p] accepted incoming connection from %s:%d",
         accepted_handle,
-        get_implementation_socket_from_handle(accepted_handle));
+        get_implementation_socket_from_handle(accepted_handle),
+        acptAddr,
+        port);
 
     DECL_UNUSED_VAR(struct pico_socket * client_socket) =
         get_implementation_socket_from_handle(

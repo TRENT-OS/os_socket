@@ -554,6 +554,8 @@ free_handle(
     instance.sockets[handle].eventMask = 0;
     instance.sockets[handle].current_error = 0;
     internal_socket_control_block_mutex_unlock();
+
+    Debug_LOG_DEBUG("Freed socket handle %d", handle);
 }
 
 //------------------------------------------------------------------------------

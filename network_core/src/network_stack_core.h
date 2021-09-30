@@ -91,7 +91,7 @@ get_client_id_buf_size(void);
     {                                                                          \
         if (!isRunning)                                                        \
         {                                                                      \
-            Debug_LOG_ERROR("%s: called when NetworkStack not yet ready",      \
+            Debug_LOG_TRACE("%s: called when NetworkStack not yet ready",      \
                             __func__);                                         \
             return OS_ERROR_NOT_INITIALIZED;                                   \
         }                                                                      \

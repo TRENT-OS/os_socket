@@ -241,6 +241,18 @@ OS_NetworkSocket_sendto(
 }
 
 //------------------------------------------------------------------------------
+OS_NetworkStack_State_t
+OS_NetworkSocket_getStatus(
+    const if_OS_Socket_t* const ctx)
+{
+    CHECK_PTR_NOT_NULL(ctx->socket_getStatus);
+
+    OS_NetworkStack_State_t networkStackState = ctx->socket_getStatus();
+
+    return networkStackState;
+}
+
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_NetworkSocket_getPendingEvents(
     const if_OS_Socket_t* const ctx,

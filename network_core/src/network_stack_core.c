@@ -24,6 +24,12 @@
 #define SOCKET_IN_USE 1
 #define CONNECTED 1
 
+// TODO: The implementation for this function is provided by the implementing
+// NetworkStack component. This should be reworked so that we do not have this
+// close coupling here and move the whole state management to the implementing
+// component.
+extern OS_NetworkStack_State_t networkStack_getState();
+
 typedef struct
 {
     const OS_NetworkStack_CamkesConfig_t* camkes_cfg;
@@ -37,8 +43,6 @@ typedef struct
 
 // network stack state
 static network_stack_t instance = {0};
-volatile static bool isRunning = false;
-
 
 //------------------------------------------------------------------------------
 const OS_NetworkStack_CamkesConfig_t*
@@ -59,7 +63,7 @@ networkStack_rpc_socket_create(
     const int  socket_type,
     int* const pHandle)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     CHECK_PTR_NOT_NULL(pHandle);
 
@@ -78,7 +82,7 @@ OS_Error_t
 networkStack_rpc_socket_close(
     const int handle)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -96,7 +100,7 @@ networkStack_rpc_socket_connect(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -118,7 +122,7 @@ networkStack_rpc_socket_bind(
     const int                            handle,
     const OS_NetworkSocket_Addr_t* const localAddr)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -140,7 +144,7 @@ networkStack_rpc_socket_listen(
     const int handle,
     const int backlog)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -161,7 +165,7 @@ networkStack_rpc_socket_accept(
     int* const                     pClient_handle,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -183,7 +187,7 @@ networkStack_rpc_socket_write(
     const int     handle,
     size_t* const pLen)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -202,7 +206,7 @@ networkStack_rpc_socket_read(
     const int     handle,
     size_t* const pLen)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -222,7 +226,7 @@ networkStack_rpc_socket_sendto(
     size_t* const                        pLen,
     const OS_NetworkSocket_Addr_t* const dstAddr)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -244,7 +248,7 @@ networkStack_rpc_socket_recvfrom(
     size_t* const                  pLen,
     OS_NetworkSocket_Addr_t* const srcAddr)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     OS_NetworkStack_SocketResources_t* socket = get_socket_from_handle(handle);
 
@@ -258,12 +262,20 @@ networkStack_rpc_socket_recvfrom(
 }
 
 //------------------------------------------------------------------------------
+OS_NetworkStack_State_t
+networkStack_rpc_socket_getStatus(
+    void)
+{
+    return networkStack_getState();
+}
+
+//------------------------------------------------------------------------------
 OS_Error_t
 networkStack_rpc_socket_getPendingEvents(
     const size_t  maxRequestedSize,
     size_t* const pNumberOfEvents)
 {
-    CHECK_IS_RUNNING();
+    CHECK_IS_RUNNING(networkStack_getState());
 
     CHECK_PTR_NOT_NULL(pNumberOfEvents);
 
@@ -684,11 +696,10 @@ OS_NetworkStack_run(void)
     if ((NULL == instance.camkes_cfg) || (NULL == instance.cfg))
     {
         Debug_LOG_ERROR("%s: cannot run on missing or failed initialization", __func__);
-        return OS_ERROR_INVALID_STATE;
+        return OS_ERROR_NOT_INITIALIZED;
     }
 
     network_stack_interface_t network_stack = network_stack_pico_get_config();
-    isRunning = true;
 
     // enter endless loop processing events
     for (;;)
@@ -703,7 +714,6 @@ OS_NetworkStack_run(void)
         internal_network_stack_thread_safety_mutex_unlock();
     }
 
-    isRunning = false;
     Debug_LOG_WARNING("network_stack_event_loop() terminated gracefully");
 
     return OS_SUCCESS;

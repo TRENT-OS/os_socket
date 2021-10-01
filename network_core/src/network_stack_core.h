@@ -86,13 +86,22 @@ get_client_id_buf_size(void);
         }                                                                      \
     } while (0)
 
-#define CHECK_IS_RUNNING()                                                     \
+#define CHECK_IS_RUNNING(_currentState_)                                       \
     do                                                                         \
     {                                                                          \
-        if (!isRunning)                                                        \
+        if (_currentState_ != RUNNING)                                         \
         {                                                                      \
-            Debug_LOG_TRACE("%s: called when NetworkStack not yet ready",      \
-                            __func__);                                         \
-            return OS_ERROR_NOT_INITIALIZED;                                   \
+            if (_currentState_ == FATAL_ERROR)                                 \
+            {                                                                  \
+                Debug_LOG_ERROR("%s: FATAL_ERROR occurred in the NetworkStack" \
+                                , __func__);                                   \
+                return OS_ERROR_ABORTED;                                       \
+            }                                                                  \
+            else                                                               \
+            {                                                                  \
+                Debug_LOG_TRACE("%s: NetworkStack currently not running",      \
+                __func__);                                                     \
+               return OS_ERROR_NOT_INITIALIZED;                                \
+            }                                                                  \
         }                                                                      \
     } while (0)

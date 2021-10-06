@@ -624,7 +624,7 @@ notify_clients_about_pending_events(
                 for (int j = 0; j < instance.number_of_sockets; j++)
                 {
                     if ((instance.sockets[j].status == SOCKET_IN_USE)
-                        && (instance.sockets[i].eventMask != 0)
+                        && (instance.sockets[j].eventMask != 0)
                         && (instance.sockets[j].clientId == instance.clients[i].clientId))
                     {
                         instance.clients[i].needsToBeNotified = true;

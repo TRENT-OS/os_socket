@@ -285,6 +285,60 @@ OS_NetworkSocket_getPendingEvents(
 
 //------------------------------------------------------------------------------
 OS_Error_t
+OS_NetworkSocket_wait(
+    const if_OS_Socket_t* const ctx)
+{
+    CHECK_PTR_NOT_NULL(ctx->socket_wait);
+
+    ctx->socket_wait();
+
+    return OS_SUCCESS;
+}
+
+//------------------------------------------------------------------------------
+OS_Error_t
+OS_NetworkSocket_poll(
+    const if_OS_Socket_t* const ctx)
+{
+    CHECK_PTR_NOT_NULL(ctx->socket_poll);
+
+    // Returns non-zero if an event was found.
+    int ret = ctx->socket_poll();
+    if (ret == 0)
+    {
+        return OS_ERROR_TRY_AGAIN;
+    }
+    else
+    {
+        return OS_SUCCESS;
+    }
+}
+
+//------------------------------------------------------------------------------
+OS_Error_t
+OS_NetworkSocket_regCallback(
+    const if_OS_Socket_t* const ctx,
+    void (*callback)(void*),
+    void* arg)
+{
+    CHECK_PTR_NOT_NULL(ctx->socket_regCallback);
+    CHECK_PTR_NOT_NULL(callback);
+    CHECK_PTR_NOT_NULL(arg);
+
+    // Returns non-zero if the callback could not be registered.
+    int ret = ctx->socket_regCallback(callback, arg);
+    if (ret)
+    {
+        return OS_ERROR_GENERIC;
+    }
+    else
+    {
+        return OS_SUCCESS;
+    }
+}
+
+//------------------------------------------------------------------------------
+OS_Error_t
 OS_NetworkSocket_close(
     const OS_NetworkSocket_Handle_t handle)
 {

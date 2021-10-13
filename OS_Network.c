@@ -1,7 +1,7 @@
 /*
- * OS Network Client Implementation
+ * OS Network Client API Implementation
  *
- * The OS Socket API implementation provided here can be used by client
+ * The OS Network Client API implementation provided here can be used by client
  * applications connected to a Network Stack component to create, connect, write
  * and read data over socket connections.
  *

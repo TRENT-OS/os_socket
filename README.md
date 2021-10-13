@@ -1,5 +1,6 @@
-# OS Network
+# OS Network Client API Implementation
 
 ## Overview
 
-The OS Network library provides the client implementation of the OS Socket API.
+The OS Network Client API Implementation provides the client implementation of
+the Network API.

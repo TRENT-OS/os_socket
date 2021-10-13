@@ -1,5 +1,5 @@
 #
-# OS Network
+# OS Network Client API Implementation
 #
 # Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
 #
@@ -12,13 +12,13 @@ cmake_policy(SET CMP0076 NEW)
 
 
 #-------------------------------------------------------------------------------
-project(os_network_api C)
+project(os_network C)
 
 add_library(${PROJECT_NAME} INTERFACE)
 
 target_sources(${PROJECT_NAME}
     INTERFACE
-        OS_NetworkClient.c
+        OS_Network.c
 )
 
 target_link_libraries(${PROJECT_NAME}

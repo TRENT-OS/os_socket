@@ -1,3 +1,0 @@
-[submodule "3rdParty/picotcp"]
-	path = 3rdParty/picotcp
-	url = ../../ext/picotcp.git

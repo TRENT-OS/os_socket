@@ -1,8 +1,9 @@
 /*
- * OS Network App CAmkES wrapper
+ * OS Network Client Implementation
  *
- * The API provided here can be used by the Application to create,
- * connect, write and read data over socket connections.
+ * The OS Socket API implementation provided here can be used by client
+ * applications connected to a Network Stack component to create, connect, write
+ * and read data over socket connections.
  *
  * Copyright (C) 2019-2021, HENSOLDT Cyber GmbH
  */

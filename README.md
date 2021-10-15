@@ -1,6 +1,6 @@
-# OS Network Client API Implementation
+# OS Socket Client API Implementation
 
 ## Overview
 
-The OS Network Client API Implementation provides the client implementation of
-the Network API.
+The OS Socket Client API Implementation provides the client implementation of
+the Socket API.

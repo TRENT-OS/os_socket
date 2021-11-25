@@ -137,10 +137,7 @@ OS_Socket_read(
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    if (actualLen != NULL)
-    {
-        *actualLen = tempLen;
-    }
+    *actualLen = tempLen;
 
     return err;
 }
@@ -156,6 +153,7 @@ OS_Socket_recvfrom(
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(srcAddr);
+    CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_recvfrom);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
 
@@ -186,10 +184,7 @@ OS_Socket_recvfrom(
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    if (actualLen != NULL)
-    {
-        *actualLen = tempLen;
-    }
+    *actualLen = tempLen;
 
     return err;
 }
@@ -203,6 +198,7 @@ OS_Socket_write(
     size_t* const            actualLen)
 {
     CHECK_PTR_NOT_NULL(buf);
+    CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_write);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
 
@@ -228,10 +224,7 @@ OS_Socket_write(
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    if (actualLen != NULL)
-    {
-        *actualLen = tempLen;
-    }
+    *actualLen = tempLen;
 
     return err;
 }
@@ -247,6 +240,7 @@ OS_Socket_sendto(
 {
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(dstAddr);
+    CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_sendto);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
 
@@ -275,10 +269,7 @@ OS_Socket_sendto(
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    if (actualLen != NULL)
-    {
-        *actualLen = tempLen;
-    }
+    *actualLen = tempLen;
 
     return err;
 }

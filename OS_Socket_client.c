@@ -112,6 +112,7 @@ OS_Socket_read(
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(actualLen);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
     // If the requested length exceeds the dataport size, reduce it to the size
     // of the dataport.
@@ -156,6 +157,7 @@ OS_Socket_recvfrom(
     CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_recvfrom);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
     // If the requested length exceeds the dataport size, reduce it to the size
     // of the dataport.
@@ -201,6 +203,7 @@ OS_Socket_write(
     CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_write);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
     // If the requested length exceeds the dataport size, reduce it to the size
     // of the dataport.
@@ -243,6 +246,7 @@ OS_Socket_sendto(
     CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_sendto);
     CHECK_DATAPORT_SET(handle.ctx.dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
     // If the requested length exceeds the dataport size, reduce it to the size
     // of the dataport.
@@ -299,6 +303,7 @@ OS_Socket_getPendingEvents(
     CHECK_PTR_NOT_NULL(numberOfEvents);
 
     CHECK_DATAPORT_SET(ctx->dataport);
+    CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(ctx->dataport));
 
     ctx->shared_resource_mutex_lock();
 

@@ -17,6 +17,24 @@
 
 #include <string.h>
 
+//------------------------------------------------------------------------------
+static size_t
+getLimitedRequestedLen(
+    const size_t requestedLen,
+    const size_t maxPossibleLen
+)
+{
+    size_t requestedLenLimited = requestedLen;
+
+    if (requestedLen > maxPossibleLen)
+    {
+        requestedLenLimited = maxPossibleLen;
+    }
+
+    return requestedLenLimited;
+}
+
+//------------------------------------------------------------------------------
 OS_Error_t
 OS_Socket_create(
     const if_OS_Socket_t* const ctx,
@@ -114,31 +132,26 @@ OS_Socket_read(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
-    // If the requested length exceeds the dataport size, reduce it to the size
-    // of the dataport.
-    const size_t maxPossibleLen = OS_Dataport_getSize(handle.ctx.dataport);
-    size_t tempLen;
-
-    if (requestedLen > maxPossibleLen)
-    {
-        tempLen = maxPossibleLen;
-    }
-    else
-    {
-        tempLen = requestedLen;
-    }
+    size_t requestedLenLimited = getLimitedRequestedLen(
+                                     requestedLen,
+                                     OS_Dataport_getSize(handle.ctx.dataport));
 
     handle.ctx.shared_resource_mutex_lock();
 
-    OS_Error_t err = handle.ctx.socket_read(handle.handleID, &tempLen);
+    OS_Error_t err = handle.ctx.socket_read(
+                         handle.handleID,
+                         &requestedLenLimited);
     if (err == OS_SUCCESS)
     {
-        memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
+        memcpy(
+            buf,
+            OS_Dataport_getBuf(handle.ctx.dataport),
+            requestedLenLimited);
     }
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    *actualLen = tempLen;
+    *actualLen = requestedLenLimited;
 
     return err;
 }
@@ -159,34 +172,27 @@ OS_Socket_recvfrom(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
-    // If the requested length exceeds the dataport size, reduce it to the size
-    // of the dataport.
-    const size_t maxPossibleLen = OS_Dataport_getSize(handle.ctx.dataport);
-    size_t tempLen;
-
-    if (requestedLen > maxPossibleLen)
-    {
-        tempLen = maxPossibleLen;
-    }
-    else
-    {
-        tempLen = requestedLen;
-    }
+    size_t requestedLenLimited = getLimitedRequestedLen(
+                                     requestedLen,
+                                     OS_Dataport_getSize(handle.ctx.dataport));
 
     handle.ctx.shared_resource_mutex_lock();
 
     OS_Error_t err = handle.ctx.socket_recvfrom(
                          handle.handleID,
-                         &tempLen,
+                         &requestedLenLimited,
                          srcAddr);
     if (err == OS_SUCCESS)
     {
-        memcpy(buf, OS_Dataport_getBuf(handle.ctx.dataport), tempLen);
+        memcpy(
+            buf,
+            OS_Dataport_getBuf(handle.ctx.dataport),
+            requestedLenLimited);
     }
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    *actualLen = tempLen;
+    *actualLen = requestedLenLimited;
 
     return err;
 }
@@ -205,29 +211,21 @@ OS_Socket_write(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
-    // If the requested length exceeds the dataport size, reduce it to the size
-    // of the dataport.
-    const size_t maxPossibleLen = OS_Dataport_getSize(handle.ctx.dataport);
-    size_t tempLen;
-
-    if (requestedLen > maxPossibleLen)
-    {
-        tempLen = maxPossibleLen;
-    }
-    else
-    {
-        tempLen = requestedLen;
-    }
+    size_t requestedLenLimited = getLimitedRequestedLen(
+                                     requestedLen,
+                                     OS_Dataport_getSize(handle.ctx.dataport));
 
     handle.ctx.shared_resource_mutex_lock();
 
-    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, tempLen);
+    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLenLimited);
 
-    OS_Error_t err = handle.ctx.socket_write(handle.handleID, &tempLen);
+    OS_Error_t err = handle.ctx.socket_write(
+                         handle.handleID,
+                         &requestedLenLimited);
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    *actualLen = tempLen;
+    *actualLen = requestedLenLimited;
 
     return err;
 }
@@ -248,32 +246,22 @@ OS_Socket_sendto(
     CHECK_DATAPORT_SET(handle.ctx.dataport);
     CHECK_VALUE_NOT_ZERO(OS_Dataport_getSize(handle.ctx.dataport));
 
-    // If the requested length exceeds the dataport size, reduce it to the size
-    // of the dataport.
-    const size_t maxPossibleLen = OS_Dataport_getSize(handle.ctx.dataport);
-    size_t tempLen;
-
-    if (requestedLen > maxPossibleLen)
-    {
-        tempLen = maxPossibleLen;
-    }
-    else
-    {
-        tempLen = requestedLen;
-    }
+    size_t requestedLenLimited = getLimitedRequestedLen(
+                                     requestedLen,
+                                     OS_Dataport_getSize(handle.ctx.dataport));
 
     handle.ctx.shared_resource_mutex_lock();
 
-    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, tempLen);
+    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLenLimited);
 
     OS_Error_t err = handle.ctx.socket_sendto(
                          handle.handleID,
-                         &tempLen,
+                         &requestedLenLimited,
                          dstAddr);
 
     handle.ctx.shared_resource_mutex_unlock();
 
-    *actualLen = tempLen;
+    *actualLen = requestedLenLimited;
 
     return err;
 }

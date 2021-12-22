@@ -126,6 +126,17 @@ OS_Socket_read(
     const size_t             requestedLen,
     size_t* const            actualLen)
 {
+    return OS_Socket_readCustom(handle, buf, requestedLen, actualLen, NULL);
+}
+
+OS_Error_t
+OS_Socket_readCustom(
+    const OS_Socket_Handle_t handle,
+    void* const              buf,
+    const size_t             requestedLen,
+    size_t* const            actualLen,
+    OS_Socket_copy_t         copy_func)
+{
     CHECK_PTR_NOT_NULL(handle.ctx.socket_read);
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(actualLen);
@@ -143,7 +154,12 @@ OS_Socket_read(
                          &requestedLenLimited);
     if (err == OS_SUCCESS)
     {
-        memcpy(
+        if(NULL == copy_func)
+        {
+            copy_func = memcpy;
+        }
+
+        copy_func(
             buf,
             OS_Dataport_getBuf(handle.ctx.dataport),
             requestedLenLimited);
@@ -205,6 +221,17 @@ OS_Socket_write(
     const size_t             requestedLen,
     size_t* const            actualLen)
 {
+    return OS_Socket_writeCustom(handle, buf, requestedLen, actualLen, NULL);
+}
+
+OS_Error_t
+OS_Socket_writeCustom(
+    const OS_Socket_Handle_t handle,
+    const void* const        buf,
+    const size_t             requestedLen,
+    size_t* const            actualLen,
+    OS_Socket_copy_t         copy_func)
+{
     CHECK_PTR_NOT_NULL(buf);
     CHECK_PTR_NOT_NULL(actualLen);
     CHECK_PTR_NOT_NULL(handle.ctx.socket_write);
@@ -217,7 +244,15 @@ OS_Socket_write(
 
     handle.ctx.shared_resource_mutex_lock();
 
-    memcpy(OS_Dataport_getBuf(handle.ctx.dataport), buf, requestedLenLimited);
+    if(NULL == copy_func)
+    {
+        copy_func = memcpy;
+    }
+
+    copy_func(
+        OS_Dataport_getBuf(handle.ctx.dataport),
+        buf,
+        requestedLenLimited);
 
     OS_Error_t err = handle.ctx.socket_write(
                          handle.handleID,
